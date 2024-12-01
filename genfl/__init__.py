@@ -1,1 +1,1 @@
-"""genfl: A Flower / PyTorch app."""
+"""genfl: A Flower Baseline."""

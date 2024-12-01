@@ -1,0 +1,57 @@
+"""genfl: A Flower Baseline."""
+
+from logging import INFO
+
+import flwr as fl
+from flwr.common.logger import log
+
+from genfl.model import train_neural_network
+from genfl.utils import get_parameters, set_parameters
+
+
+class FlowerClient(fl.client.NumPyClient):
+    """Flower client for training a CNN model."""
+
+    def __init__(self, args):
+        """Initialize the client with the given configuration."""
+        self.args = args
+
+    def fit(self, parameters, config):
+        """Train the model on the local dataset."""
+        nk_client_data_points = len(self.args["client_data_train"])
+        model = self.args["model"]
+
+        set_parameters(model, parameters=parameters)
+        train_dict = train_neural_network(
+            {
+                "lr": config["lr"],
+                "epochs": config["local_epochs"],
+                "batch_size": config["batch_size"],
+                "model": model,
+                "train_data": self.args["client_data_train"],
+                "device": self.args["device"],
+            }
+        )
+
+        parameters = get_parameters(model)
+
+        client_train_dict = {"cid": self.args["cid"]} | train_dict
+
+        log(INFO, "Client %s trained.", self.args["cid"])
+        return parameters, nk_client_data_points, client_train_dict
+
+# def client_fn(context: Context):
+#     """Construct a Client that will be run in a ClientApp."""
+#     # Load model and data
+#     net = Net()
+#     partition_id = int(context.node_config["partition-id"])
+#     num_partitions = int(context.node_config["num-partitions"])
+#     trainloader, valloader = load_data(partition_id, num_partitions)
+#     local_epochs = context.run_config["local-epochs"]
+
+#     # Return Client instance
+#     return FlowerClient(net, trainloader, valloader, local_epochs).to_client()
+
+
+# # Flower ClientApp
+# app = ClientApp(client_fn)
