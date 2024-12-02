@@ -5,7 +5,7 @@ from logging import INFO
 import flwr as fl
 from flwr.common.logger import log
 
-from genfl.model import train_neural_network
+from genfl.model import train
 from genfl.utils import get_parameters, set_parameters
 
 
@@ -22,7 +22,7 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
 
         set_parameters(model, parameters=parameters)
-        train_dict = train_neural_network(
+        train_dict = train(
             {
                 "lr": config["lr"],
                 "epochs": config["local_epochs"],
@@ -30,6 +30,7 @@ class FlowerClient(fl.client.NumPyClient):
                 "model": model,
                 "train_data": self.args["client_data_train"],
                 "device": self.args["device"],
+                "dir": self.args["dir"],
             }
         )
 

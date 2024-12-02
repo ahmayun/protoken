@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from flwr.common.logger import log
-from torchvision import transforms
+
 from collections import OrderedDict
 
 def seed_everything(seed=786):
@@ -31,10 +31,7 @@ def calculate_localization_accuracy(true_faulty_clients, predicted_faulty_client
     return accuracy
 
 
-def create_transform():
-    """Create the transform for the dataset."""
-    tfms = transforms.Compose([transforms.Normalize((0.5,), (0.5,))])
-    return tfms
+
 
 
 def set_exp_key(cfg):

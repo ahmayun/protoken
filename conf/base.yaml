@@ -3,11 +3,14 @@ num_rounds: 5
 num_clients: 10
 clients_per_round: ${num_clients}
 
+server_batch_size: 16
+load_server_data: true
+
 # Client Configuration
 client:
   epochs: 3
   lr: 0.001
-  batch_size: 256
+  batch_size: 16
 
 # # Adversarial Settings
 # noise_rate: 1
@@ -21,31 +24,37 @@ client:
 #   na_t: 0.00 # neuron activation threshold
 
 # Model Configuration
-model: lenet # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
+model: bert-base-cased #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
 
 # Dataset Configuration
 distribution: "iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
-dataset_channels:
-  cifar10: 3 # RGB
-  mnist: 1
+
+
+column_of_label:
+  yahoo_answers_topics: "topic"
+
+column_of_text:
+  yahoo_answers_topics: "question_content"
 
 dataset_classes:
-  cifar10: 10
-  mnist: 10
+  yahoo_answers_topics: 10 # Text
 
 dataset:
-  name: mnist
+  name: yahoo_answers_topics
   num_classes: ${dataset_classes.${dataset.name}}
-  channels: ${dataset_channels.${dataset.name}}
+  label_column: ${column_of_label.${dataset.name}}
+  text_column: ${column_of_text.${dataset.name}}
+  max_length: 256
+  
 
 # Device and Resource Configuration
 device: cpu
 total_gpus: 1
-total_cpus: 10
+total_cpus: 8
 
 client_resources:
-  num_cpus: 2
-  num_gpus: 0.2 # Note that `num_gpus` is only used when the device is set to `cuda` (i.e., `device = cuda`)
+  num_cpus: 8
+  num_gpus: 1 # Note that `num_gpus` is only used when the device is set to `cuda` (i.e., `device = cuda`)
 
 # Logging Configuration (Hydra)
 hydra:

@@ -51,14 +51,14 @@ def run_simulation(cfg):
     log(DEBUG, "Simulation Configuration: %s", cfg)
 
     ds_prep = ClientsAndServerDatasets(cfg)
-    ds_dict = ds_prep.get_data()
-    server_testdata = ds_dict["server_testdata"]
+    ds_dict = ds_prep.get_datasets()
+    server_testdata = ds_dict["server_dataset"]
 
     round2gm_accs = []
     
 
     def _create_model():
-        return initialize_model(cfg.model, cfg.dataset)
+        return initialize_model(cfg.model, cfg.dataset.num_classes)
 
     def _get_fit_config(server_round):
         return {
@@ -71,7 +71,8 @@ def run_simulation(cfg):
     def _eval_gm(server_round, parameters, config):
         gm_model = _create_model()
         utils.set_parameters(gm_model, parameters)
-        d_res = test(gm_model, server_testdata, device=cfg.device)
+        test_cfg = {'model': gm_model, 'test_data':server_testdata, 'dir': save_path}
+        d_res = test(test_cfg)
         round2gm_accs.append(d_res["accuracy"])
         log(DEBUG, "config: %s", config)
         return d_res["loss"], {
@@ -82,7 +83,6 @@ def run_simulation(cfg):
     
     def _client_fn(context: Context):
         """Give the new client."""
-        client2data = ds_dict["client2data"]
         # print("context", context)
         partition_id = context.node_config["partition-id"]
         cid = f"{partition_id}" 
@@ -90,8 +90,9 @@ def run_simulation(cfg):
         args = {
             "cid": cid,
             "model": _create_model(),
-            "client_data_train": client2data[cid],
+            "client_data_train": ds_dict["client2dataset"][cid],
             "device": torch.device(cfg.device),
+            'dir': save_path
         }
         client = FlowerClient(args).to_client()
         return client
