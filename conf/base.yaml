@@ -1,30 +1,21 @@
 # General Configuration
-num_rounds: 5
-num_clients: 10
+num_rounds: 10
+num_clients: 5
 clients_per_round: ${num_clients}
 
-server_batch_size: 16
+server_batch_size: 128
 load_server_data: true
 
 # Client Configuration
 client:
   epochs: 3
   lr: 0.001
-  batch_size: 16
+  batch_size: 32
 
-# # Adversarial Settings
-# noise_rate: 1
-# malicious_clients_ids: [0] # Malicious (also called faulty) client IDs (Ground Truth). Default client 0 is malicious.
-# total_malicious_clients: null # For inducing multiple malicious clients in Table-2. e.g., 2 means clients [0, 1] are malicious
 
-# # FedDebug Configuration
-# feddebug:
-#   fast: true # to generate randome inputs faster
-#   r_inputs: 10 # number of random inputs to generate
-#   na_t: 0.00 # neuron activation threshold
 
-# Model Configuration
-model: bert-base-cased #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
+peft: true
+model: openai-community/gpt2 #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
 
 # Dataset Configuration
 distribution: "iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
@@ -48,7 +39,7 @@ dataset:
   
 
 # Device and Resource Configuration
-device: cpu
+device: cuda
 total_gpus: 1
 total_cpus: 8
 

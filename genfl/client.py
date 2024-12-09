@@ -5,8 +5,7 @@ from logging import INFO
 import flwr as fl
 from flwr.common.logger import log
 
-from genfl.model import train
-from genfl.utils import get_parameters, set_parameters
+from genfl.model import train, get_parameters, set_parameters
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -21,7 +20,7 @@ class FlowerClient(fl.client.NumPyClient):
         nk_client_data_points = len(self.args["client_data_train"])
         model = self.args["model"]
 
-        set_parameters(model, parameters=parameters)
+        set_parameters(model, parameters=parameters, peft=self.args["peft"])
         train_dict = train(
             {
                 "lr": config["lr"],
@@ -34,7 +33,7 @@ class FlowerClient(fl.client.NumPyClient):
             }
         )
 
-        parameters = get_parameters(model)
+        parameters = get_parameters(model, peft=self.args["peft"])
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
 

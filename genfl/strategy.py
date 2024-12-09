@@ -1,12 +1,7 @@
 """genfl: A Flower Baseline."""
 
 
-from collections import Counter
-
 import flwr as fl
-
-from genfl import utils
-# from feddebu.differential_testing import differential_testing_fl_clients
 
 
 class FedAvgWithGenFL(fl.server.strategy.FedAvg):
@@ -36,12 +31,12 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         # potential_mal_clients = self._run_differential_testing_helper(results)
         aggregated_parameters, aggregated_metrics = super(
         ).aggregate_fit(server_round, results, failures)
-        
+
         # aggregated_metrics["potential_malicious_clients"] = potential_mal_clients
-        
+
         # self.callback_fed_debug_evaluate_fn(
         #     server_round, potential_mal_clients)
-        
+
         return aggregated_parameters, aggregated_metrics
 
     # def _get_model_from_parameters(self, parameters):

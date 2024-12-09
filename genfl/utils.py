@@ -8,7 +8,6 @@ import numpy as np
 import torch
 from flwr.common.logger import log
 
-from collections import OrderedDict
 
 def seed_everything(seed=786):
     """Seed everything."""
@@ -29,9 +28,6 @@ def calculate_localization_accuracy(true_faulty_clients, predicted_faulty_client
 
     accuracy = (true_preds / total) * 100
     return accuracy
-
-
-
 
 
 def set_exp_key(cfg):
@@ -61,34 +57,6 @@ def config_sim_resources(cfg):
         "init_args": init_args,
     }
     return backend_config
-
-
-def get_weights(net):
-    """Extract model parameters as numpy arrays from state_dict."""
-    return [val.cpu().numpy() for _, val in net.state_dict().items()]
-
-
-def set_weights(net, parameters):
-    """Apply parameters to an existing model."""
-    params_dict = zip(net.state_dict().keys(), parameters)
-    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-    net.load_state_dict(state_dict, strict=True)
-
-
-
-
-def get_parameters(model):
-    """Return model parameters as a list of NumPy ndarrays."""
-    model = model.cpu()
-    return [val.cpu().detach().clone().numpy() for _, val in model.state_dict().items()]
-
-
-def set_parameters(net, parameters):
-    """Set model parameters from a list of NumPy ndarrays."""
-    net = net.cpu()
-    params_dict = zip(net.state_dict().keys(), parameters)
-    new_state_dict = {k: torch.from_numpy(v) for k, v in params_dict}
-    net.load_state_dict(new_state_dict, strict=True)
 
 
 def plot_metrics(gm_accs, feddebug_accs, cfg, save_path):

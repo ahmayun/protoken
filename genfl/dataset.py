@@ -20,25 +20,15 @@ class ClientsAndServerDatasets:
             cfg (Config): Configuration object containing dataset details and parameters.
         """
         self.cfg = cfg
-        
+
         tokenizer = AutoTokenizer.from_pretrained(cfg.model)
+
         if tokenizer.pad_token is None:
-            if tokenizer.eos_token is not None:
-                tokenizer.pad_token = tokenizer.eos_token
-            else:
-                tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+            if tokenizer.eos_token is None:
+                tokenizer.add_special_tokens({'eos_token':  '<|endoftext|>'})
+            tokenizer.pad_token = tokenizer.eos_token
+
         self.tokenizer = tokenizer
-        
-        # if self.tokenizer.pad_token is None:
-        #     print(self.tokenizer.eos_token)
-        #     if self.tokenizer.eos_token is None:
-        #         self.tokenizer.add_special_tokens({'eos_token':  '<|endoftext|>'})
-        #     self.tokenizer.pad_token = self.tokenizer.eos_token
-        
-        # print(self.tokenizer.pad_token)
-        # _ = input("Press Enter to continue...")
-        
-            
         self.client2dataset = {}
         self.server_dataset = None
 
@@ -48,8 +38,10 @@ class ClientsAndServerDatasets:
 
         self.logger.info("Initializing FederatedDataset.")
         # Initialize Flower FederatedDataset with the specified partitioner
-        partitioner = self._initialize_partitioner() # IidPartitioner or DirichletPartitioner
-        self.federated_dataset = FederatedDataset(dataset=cfg.dataset.name, partitioners={'train': partitioner})
+        # IidPartitioner or DirichletPartitioner
+        partitioner = self._initialize_partitioner()
+        self.federated_dataset = FederatedDataset(
+            dataset=cfg.dataset.name, partitioners={'train': partitioner})
 
         self.logger.info("Loading client partitions.")
         # Load client partitions
@@ -80,7 +72,8 @@ class ClientsAndServerDatasets:
                 self_balancing=True,
             )
         else:
-            raise ValueError(f"Unsupported distribution type: {self.cfg.distribution}")
+            raise ValueError(
+                f"Unsupported distribution type: {self.cfg.distribution}")
 
     def _load_client_partitions(self):
         """
@@ -97,7 +90,8 @@ class ClientsAndServerDatasets:
             #     shuffle=True
             # )
             self.client2dataset[client_id] = tokenized_partition
-            self.logger.debug(f"DataLoader created for {client_id} with batch size {self.cfg.client.batch_size}.")
+            self.logger.debug(
+                f"DataLoader created for {client_id} with batch size {self.cfg.client.batch_size}.")
 
     def _load_server_data(self):
         """
@@ -106,15 +100,15 @@ class ClientsAndServerDatasets:
         server_data = self.federated_dataset.load_split('test')
         tokenized_server = self._tokenize_partition(server_data)
         self.server_dataset = tokenized_server
-        self.logger.debug(f"Server DataLoader created with batch size {self.cfg.server_batch_size}.")
+        self.logger.debug(
+            f"Server DataLoader created with batch size {self.cfg.server_batch_size}.")
 
-    
-    
     def _tokenize_partition(self, partition: Dataset) -> Dataset:
-        
-        self.logger.debug("Applying tokenization transform to dataset partition.")
 
-        text_column = self.cfg.dataset.text_column 
+        self.logger.debug(
+            "Applying tokenization transform to dataset partition.")
+
+        text_column = self.cfg.dataset.text_column
 
         # Define the transformation function for a batch of examples
         def tokenize_batch(batch):
@@ -123,25 +117,24 @@ class ClientsAndServerDatasets:
             tokenized_batch = self.tokenizer(
                 text,
                 padding="max_length",
-                truncation=True, # This ensures that text longer than max_length is truncated
+                truncation=True,  # This ensures that text longer than max_length is truncated
                 max_length=self.cfg.dataset.max_length,
                 # return_tensors="pt",
             )
             # Assign labels
             tokenized_batch["labels"] = batch[self.cfg.dataset.label_column]
-            
+
             necessary_columns = ["input_ids", "attention_mask", "labels"]
             return {k: tokenized_batch[k] for k in necessary_columns}
-        
+
         # Apply the transformation to the entire partition
         # on the fly
-        partition = partition.select(range(2048)).map(tokenize_batch, batched=True)
+        partition = partition.select(range(2048)).map(
+            tokenize_batch, batched=True)
 
         self.logger.debug("Tokenization transform applied successfully.")
         return partition
-    
-    
-    
+
     def get_datasets(self) -> Dict[str, Optional[DataLoader]]:
         """
         Retrieve the client and server DataLoaders.
@@ -152,4 +145,5 @@ class ClientsAndServerDatasets:
         return {
             "client2dataset": self.client2dataset,
             "server_dataset": self.server_dataset,
+            'tokenizer': self.tokenizer
         }
