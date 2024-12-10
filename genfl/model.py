@@ -78,8 +78,7 @@ def _hf_train(train_cfg):
 
 def _hf_test(model, test_data, test_cfg):
     metric = evaluate.load("accuracy")
-    training_args = get_training_arguments(
-        test_cfg, do_train=False, do_eval=True)
+    training_args = get_training_arguments(test_cfg, do_train=False, do_eval=True)
     trainer = Trainer(model=model, args=training_args, eval_dataset=test_data,
                       compute_metrics=partial(compute_metrics, metric))
     eval_result = trainer.evaluate()
@@ -94,7 +93,8 @@ def test(test_cfg, device=None):
 
 def train(tconfig):
     """Train the neural network."""
-    return _hf_train(tconfig)
+    # return _hf_train(tconfig)
+    return {'accuracy': -1, 'loss': -1}
 
 
 def _get_state_dict(net, peft):

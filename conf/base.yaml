@@ -1,6 +1,6 @@
 # General Configuration
-num_rounds: 10
-num_clients: 5
+num_rounds: 2
+num_clients: 2
 clients_per_round: ${num_clients}
 
 server_batch_size: 128
@@ -8,7 +8,7 @@ load_server_data: true
 
 # Client Configuration
 client:
-  epochs: 3
+  epochs: 1
   lr: 0.001
   batch_size: 32
 
@@ -32,7 +32,7 @@ dataset:
   num_classes: ${dataset_classes.${dataset.name}}
   label_column: ${column_of_label.${dataset.name}}
   text_column: ${column_of_text.${dataset.name}}
-  max_length: 256
+  max_length: 128
 
 # Device and Resource Configuration
 device: cuda

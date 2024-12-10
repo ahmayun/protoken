@@ -19,7 +19,7 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-# from flwr.simulation import run_simulation
+
 
 
 utils.seed_everything(786)
@@ -109,7 +109,8 @@ def run_simulation(cfg):
     def _server_fn(context: Context):
         initial_net = _create_model()
         strategy = FedAvgWithGenFL(
-            device=cfg.device,
+            cfg=cfg,  # Add cfg
+            test_data=server_testdata,  # Add test_data
             callback_create_model_fn=_create_model,
             accept_failures=False,
             fraction_fit=0,
@@ -118,7 +119,7 @@ def run_simulation(cfg):
             min_evaluate_clients=0,
             min_available_clients=cfg.num_clients,
             initial_parameters=ndarrays_to_parameters(
-                ndarrays=get_parameters(initial_net, peft=cfg.peft)),
+                ndarrays=get_parameters(initial_net, peft=cfg.peft)),  # Remove initial_parameters
             evaluate_fn=_eval_gm,
             on_fit_config_fn=_get_fit_config,
             fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,

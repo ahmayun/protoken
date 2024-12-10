@@ -2,69 +2,49 @@
 
 
 import flwr as fl
+from genfl.model import set_parameters
+from genfl.neuron_provenance import NeuronProvenance  # Add import
 
 
 class FedAvgWithGenFL(fl.server.strategy.FedAvg):
     """FedAvg with Differential Testing."""
 
-    def __init__(
-        self,
-        device,
-        callback_create_model_fn,
-        # callback_fed_debug_evaluate_fn,
-        *args,
-        **kwargs,
-    ):
+    def __init__(self, cfg, test_data, callback_create_model_fn, *args, **kwargs):
         """Initialize."""
         super().__init__(*args, **kwargs)
-        # self.input_shape = input_shape
-        # self.num_bugs = num_bugs
-        # self.num_inputs = num_inputs
-        # self.na_t = na_t
-        self.device = device
-        # self.fast = fast
         self.create_model_fn = callback_create_model_fn
-        # self.callback_fed_debug_evaluate_fn = callback_fed_debug_evaluate_fn
+        self.cfg = cfg
+        self.test_data = test_data
+        # ...existing code...
+        # Remove initialization of self.provenance here
 
     def aggregate_fit(self, server_round, results, failures):
         """Aggregate clients updates."""
-        # potential_mal_clients = self._run_differential_testing_helper(results)
+
+        client2model = {fit_res.metrics["cid"]: self._to_pt_model(
+            fit_res.parameters) for _, fit_res in results}
+        c2nk = {fit_res.metrics["cid"]: fit_res.metrics.get("data_points", 0) for _, fit_res in results}
+
         aggregated_parameters, aggregated_metrics = super(
         ).aggregate_fit(server_round, results, failures)
+        # do provenance here
 
-        # aggregated_metrics["potential_malicious_clients"] = potential_mal_clients
+        global_model = self._to_pt_model(aggregated_parameters)
 
-        # self.callback_fed_debug_evaluate_fn(
-        #     server_round, potential_mal_clients)
+        self.provenance = NeuronProvenance(gmodel=global_model,
+            c2model=client2model,
+            c2nk=c2nk,
+            test_data=self.test_data
+        )  # Initialize NeuronProvenance
+        provenance_results = self.provenance.run()  # Compute provenance
+        aggregated_metrics['provenance'] = provenance_results  # Add to metrics
 
         return aggregated_parameters, aggregated_metrics
 
-    # def _get_model_from_parameters(self, parameters):
-    #     """Convert parameters to state_dict."""
-    #     ndarr = fl.common.parameters_to_ndarrays(parameters)
-    #     temp_net = self.create_model_fn()
-    #     utils.set_parameters(temp_net, ndarr)
-    #     return temp_net
+    def _to_pt_model(self, parameters):
+        """Convert parameters to state_dict."""
+        ndarr = fl.common.parameters_to_ndarrays(parameters)
+        model = self.create_model_fn()
+        set_parameters(model, ndarr, peft=self.cfg.peft)
+        return model
 
-    # def _run_differential_testing_helper(self, results):
-    #     client2model = {
-    #         fit_res.metrics["cid"]: self._get_model_from_parameters(fit_res.parameters)
-    #         for _, fit_res in results
-    #     }
-    #     predicted_faulty_clients_on_each_input = differential_testing_fl_clients(
-    #         client2model,
-    #         self.num_bugs,
-    #         self.num_inputs,
-    #         self.input_shape,
-    #         self.na_t,
-    #         self.fast,
-    #         self.device,
-    #     )
-    #     mal_clients_dict = Counter(
-    #         [
-    #             f"{e}"
-    #             for temp_set in predicted_faulty_clients_on_each_input
-    #             for e in temp_set
-    #         ]
-    #     )
-    #     return dict(mal_clients_dict)

@@ -21,17 +21,8 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
 
         set_parameters(model, parameters=parameters, peft=self.args["peft"])
-        train_dict = train(
-            {
-                "lr": config["lr"],
-                "epochs": config["local_epochs"],
-                "batch_size": config["batch_size"],
-                "model": model,
-                "train_data": self.args["client_data_train"],
-                "device": self.args["device"],
-                "dir": self.args["dir"],
-            }
-        )
+        train_dict = train({"lr": config["lr"], "epochs": config["local_epochs"], "batch_size": config["batch_size"], "model": model,
+                           "train_data": self.args["client_data_train"], "device": self.args["device"], "dir": self.args["dir"], })
 
         parameters = get_parameters(model, peft=self.args["peft"])
 
@@ -40,18 +31,3 @@ class FlowerClient(fl.client.NumPyClient):
         log(INFO, "Client %s trained.", self.args["cid"])
         return parameters, nk_client_data_points, client_train_dict
 
-# def client_fn(context: Context):
-#     """Construct a Client that will be run in a ClientApp."""
-#     # Load model and data
-#     net = Net()
-#     partition_id = int(context.node_config["partition-id"])
-#     num_partitions = int(context.node_config["num-partitions"])
-#     trainloader, valloader = load_data(partition_id, num_partitions)
-#     local_epochs = context.run_config["local-epochs"]
-
-#     # Return Client instance
-#     return FlowerClient(net, trainloader, valloader, local_epochs).to_client()
-
-
-# # Flower ClientApp
-# app = ClientApp(client_fn)
