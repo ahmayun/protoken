@@ -43,13 +43,41 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         return model
 
 
+def select_n_per_class(dataset, n=2):
+    # Get all labels from the dataset
+    labels = dataset['labels']
+    unique_labels = set(labels)
+    
+    # Dictionary to store indices for each class
+    class_indices = {label: [] for label in unique_labels}
+    
+    # Group indices by class
+    for idx, label in enumerate(labels):
+        class_indices[label].append(idx)
+    
+    # Select n indices per class
+    selected_indices = []
+    for label in unique_labels:
+        # Take first n indices for each class (or all if less than n available)
+        indices = class_indices[label][:n]
+        selected_indices.extend(indices)
+    
+    # Select the examples using the collected indices
+    balanced_subset = dataset.select(selected_indices)
+    return balanced_subset
+
+
+
 def _run_provenance(gmodel, client2model, client2class, test_data):
     # Get correct predictions subset
     correct_ds_subset = get_correct_predictions_subset(
         {'model': gmodel, 'test_data': test_data, 'dir': 'temp'})
+    
+
+    correct_ds_subset = select_n_per_class(correct_ds_subset, n=2)
 
     count = 0
-    total_samples = 10
+    total_samples = len(correct_ds_subset)
     print(f"Total test data: {len(test_data)}")
     print(f"Correct subset size: {len(correct_ds_subset)}")
     print(f'Client2class: {client2class}')
@@ -67,6 +95,9 @@ def _run_provenance(gmodel, client2model, client2class, test_data):
         correct_subset = correct_ds_subset.select([i])
 
         label = correct_subset[0]['labels']
+
+        if label not in label2client:
+            continue
 
         true_responsible_clients = list(label2client[label].keys())
         res = provenance_of_fl_clients(
