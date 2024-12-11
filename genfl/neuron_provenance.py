@@ -1,83 +1,58 @@
 import logging
 import torch
 import torch.nn.functional as F
-from genfl.model import test
 
 
-def _check_anomlies(t):
-    inf_mask = torch.isinf(t)
-    nan_mask = torch.isnan(t)
-    if inf_mask.any() or nan_mask.any():
-        logging.error(f"Inf values: {torch.sum(inf_mask)}")
-        logging.error(f"NaN values: {torch.sum(nan_mask)}")
-        logging.error(f"Total values: {torch.numel(t)}")
-        # logging.error(f"Total values: {t}")
-        raise ValueError("Anomalies detected in tensor")
 
+class HookManager:
+    def __init__(self):
+        self.storage = []
+        self.all_hooks = []
 
-def _evaluate_layer(layer, input_tensor, device):
-    client_layer = layer.eval().to(device)
-    # Cast input tensor to match the layer's weight dtype
-    input_tensor = input_tensor.to(dtype=next(client_layer.parameters()).dtype)
-    activations = layer(input_tensor)
-    if isinstance(activations, tuple) or isinstance(activations, list):
-        activations = activations[0].cpu()
-    client_layer = client_layer.cpu()
-    return activations.cpu()
+    def insert_hook(self, layer, hook_type):
+        def _forward_hook(module, input_tensor, output_tensor):
+            input_tensor = input_tensor[0].detach()
+            output_tensor = output_tensor.detach()
+            self.storage.append((input_tensor, output_tensor))
 
+        def _backward_hook(module, grad_input, grad_output):
+            grad_input = grad_input[0].detach()
+            grad_output = grad_output[0].detach()
+            self.storage.append((grad_input, grad_output))
 
-def _calculate_layer_contribution(gm_layer_grads, client2layer_acts, alpha_imp=1):
-    client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
-    # _checkAnomlies(global_neurons_outputs)
-    _check_anomlies(gm_layer_grads)
-    gm_layer_grads = gm_layer_grads.flatten().cpu()
-    for cli in client2layer_acts.keys():
-        cli_acts = client2layer_acts[cli].flatten().cpu()
-        _check_anomlies(cli_acts)
-        cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
-        cli_part = torch.dot(cli_acts, gm_layer_grads)
-        client2part[cli] = cli_part.item() * alpha_imp
-        cli_acts = cli_acts.cpu()
-    return client2part
+        if hook_type == 'forward':
+            hook = layer.register_forward_hook(_forward_hook)
+        elif hook_type == 'backward':
+            hook = layer.register_full_backward_hook(_backward_hook)
+        else:
+            raise ValueError("Invalid hook type")
+        self.all_hooks.append(hook)
 
+    def _remove_hooks(self):
+        for hook in self.all_hooks:
+            hook.remove()
 
-def _aggregate_client_contributions(layers2prov):
-    client2totalpart = {}
-    for c2part in layers2prov:
-        for cid in c2part.keys():
-            client2totalpart[cid] = client2totalpart.get(cid, 0) + c2part[cid]
-    return client2totalpart
-
-
-def _get_layers_io(model, test_data, device):
-    hook_manager = HookManager()
-    glayers = getAllLayers(model)
-    hooks_forward = [hook_manager.insertForwardHook(
-        layer) for layer in glayers]
-    model = model.eval().to(device)
-    test({'model': model, 'test_data': test_data, 'dir': 'temp'})
-    hook_manager.removeHooks(hooks_forward)
-    global_neurons_inputs_outputs_batch = hook_manager.forward_hooks_storage
-    hook_manager.clearStorages()
-    return global_neurons_inputs_outputs_batch
-
-
-def _normalize_with_softmax(contributions):
-    conts = F.softmax(torch.tensor(list(contributions.values())), dim=0)
-    client2prov = {cid: v.item()
-                   for cid, v in zip(contributions.keys(), conts)}
-    return dict(sorted(client2prov.items(), key=lambda item: item[1], reverse=True))
+    def get_hooks_data(self, hook_type):
+        self._remove_hooks()
+        temp_storage = self.storage
+        if hook_type == 'backward':
+            temp_storage.reverse()
+            return temp_storage
+        elif hook_type == 'forward':
+            return temp_storage
+        else:
+            raise ValueError("Invalid hook type")
 
 
 class NeuronProvenance:
     def __init__(self, gmodel, c2model, test_data):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
-        self.test_data = test_data.select(range(1))
+        self.test_data = test_data
         self.gmodel = gmodel
         self.c2model = c2model
         self.client_ids = list(self.c2model.keys())
-        logging.info(f'client ids: {self.client_ids}')
+        # logging.info(f'client ids: {self.client_ids}')
 
     def _calculate_clients_contributions(self, gm_layers_ios, gm_layers_grads, client2layers):
         layers2prov = []
@@ -92,18 +67,22 @@ class NeuronProvenance:
             c2contribution = _calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=clinet2outputs)
             layers2prov.append(c2contribution)
-        client_conts = _aggregate_client_contributions(layers2prov)
-        clients_norm_conts = _normalize_with_softmax(client_conts)
-        return clients_norm_conts
+
+        client2totalpart = {}
+        for c2part in layers2prov:
+            for cid in c2part.keys():
+                client2totalpart[cid] = client2totalpart.get(
+                    cid, 0) + c2part[cid]
+
+        client2totalpart = _normalize_with_softmax(client2totalpart)
+        return client2totalpart
 
     def run(self):
-        gm_layers_ios = _get_layers_io(
-            self.gmodel, self.test_data, self.device)
-        data_loader = torch.utils.data.DataLoader(
-            self.test_data, batch_size=1)
+        data_loader = torch.utils.data.DataLoader(self.test_data, batch_size=1)
         batch_input = next(iter(data_loader))
-        gm_layers_grads = get_layers_gradients(
-            self.gmodel, batch_input, self.device)
+        self.gmodel.eval()
+        gm_layers_ios = _get_layers_io(self.gmodel, batch_input, self.device)
+        gm_layers_grads = get_layers_gradients(self.gmodel, batch_input, self.device)
         client2layers = {cid: getAllLayers(cm)
                          for cid, cm in self.c2model.items()}
 
@@ -113,67 +92,61 @@ class NeuronProvenance:
         return {"traced_client": traced_client, "client2part": client2part}
 
 
-class HookManager:
-    def __init__(self):
-        self.forward_hooks_storage = []
-        self.backward_hooks_storage = []
+def _evaluate_layer(layer, input_tensor, device):
+    layer.zero_grad()
+    with torch.no_grad():
+        layer = layer.eval().to(device)
+        input_tensor = input_tensor.to(device)
+        activations = layer(input_tensor).cpu()
+        _ = layer.cpu()
+        _ = input_tensor.cpu()
+    return activations
 
-    def insertForwardHook(self, layer):
-        def forward_hook(module, input_tensor, output_tensor):
-            # assert len(
-            #     input_tensor) == 1, f"Expected 1 input, got {len(input_tensor)}"
 
-            try:
-                # Handle the input as a tuple, get the first element
-                input_tensor = input_tensor[0]
-                input_tensor = input_tensor.detach()
-            except Exception as e:
-                # logging.debug(f"Error processing input in forward hook: {e}")
-                pass
+def _calculate_layer_contribution(gm_layer_grads, client2layer_acts, alpha_imp=1):
+    client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
+    # _checkAnomlies(global_neurons_outputs)
+    _check_anomlies(gm_layer_grads)
+    gm_layer_grads = gm_layer_grads.flatten().cpu()
+    for cli in client2layer_acts.keys():
+        cli_acts = client2layer_acts[cli].flatten().cpu()
+        _check_anomlies(cli_acts)
+        cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
+        cli_part = torch.dot(cli_acts, gm_layer_grads)
+        client2part[cli] = cli_part.item() * alpha_imp
+        _ = cli_acts.cpu()
+    return client2part
 
-            input_tensor = input_tensor.detach()
-            output_tensor = output_tensor
-            self.forward_hooks_storage.append((input_tensor, output_tensor))
 
-        hook = layer.register_forward_hook(forward_hook)
-        return hook
 
-    def insertBackwardHook(self, layer):
-        def backward_hook(module, input_tensor, output_tensor):
-            # assert len(
-            #     input_tensor) == 1, f"Expected 1 input, got {len(input_tensor)}"
-            try:
-                input_tensor = input_tensor[0]
-                output_tensor = output_tensor[0]
-                input_tensor = input_tensor.detach()
-                output_tensor = output_tensor.detach()
+def _normalize_with_softmax(contributions):
+    conts = F.softmax(torch.tensor(list(contributions.values())), dim=0)
+    client2prov = {cid: v.item()
+                   for cid, v in zip(contributions.keys(), conts)}
+    return dict(sorted(client2prov.items(), key=lambda item: item[1], reverse=True))
 
-            except Exception as e:
-                # logging.debug(f"Error processing input in backward hook: {e}")
-                pass
-            try:
-                input_tensor = input_tensor.detach()
-            except Exception as e:
-                pass
-            try:
-                output_tensor = output_tensor.detach()
-            except Exception as e:
-                pass
 
-            self.backward_hooks_storage.append((input_tensor, output_tensor))
 
-        hook = layer.register_full_backward_hook(backward_hook)
-        return hook
+def _forward(net, text_input_tuple, device):
+    net.to(device)
+    # Assume text_input_tuple is already on the correct device and prepared
+    text_input_tuple = {k: torch.tensor(v, device=device).unsqueeze(
+        0) for k, v in text_input_tuple.items() if k in ["input_ids", "token_type_ids", "attention_mask"]}
+    outs = net(**text_input_tuple)
+    return outs
 
-    def clearStorages(self):
-        self.forward_hooks_storage = []
-        self.backward_hooks_storage = []
+def _get_layers_io(model, test_data, device):
+    hook_manager = HookManager()
+    glayers = getAllLayers(model)
+    _ = [hook_manager.insert_hook(layer, hook_type='forward')
+         for layer in glayers]
 
-    def removeHooks(self, hooks):
-        for hook in hooks:
-            hook.remove()
 
-#   ==================================================== Helpers ==================================================================
+
+    with torch.no_grad():
+        _ =  _forward(model, test_data, device)
+    return hook_manager.get_hooks_data('forward')
+
 
 
 def get_layers_gradients(net, text_input_tuple, device):
@@ -181,27 +154,17 @@ def get_layers_gradients(net, text_input_tuple, device):
     hook_manager = HookManager()
     net.zero_grad()
     all_layers = getAllLayers(net)
-    all_hooks = [hook_manager.insertBackwardHook(
-        layer) for layer in all_layers]
+    _ = [hook_manager.insert_hook(layer, hook_type='backward')
+         for layer in all_layers]
 
-    net.to(device)
-
-    # Assume text_input_tuple is already on the correct device and prepared
-    text_input_tuple = {k: torch.tensor(v, device=device).unsqueeze(
-        0) for k, v in text_input_tuple.items() if k in ["input_ids", "token_type_ids", "attention_mask"]}
-
-    outs = net(**text_input_tuple)
-
+    outs = _forward(net, text_input_tuple, device)
     logits = outs.logits  # Access the logits from the output object
 
     prob, predicted = torch.max(logits, dim=1)
     predicted = predicted.cpu().detach().item()
     logits[0, predicted].backward()  # computing the gradients
-    hook_manager.removeHooks(all_hooks)
-    hook_manager.backward_hooks_storage.reverse()
 
-    gm_layers_grads = hook_manager.backward_hooks_storage
-    hook_manager.clearStorages()
+    gm_layers_grads = hook_manager.get_hooks_data('backward')
     return gm_layers_grads
 
 
@@ -213,15 +176,23 @@ def getAllLayers(net):
 def getAllLayersBert(net):
     layers = []
     for layer in net.children():
-
         if isinstance(layer, (torch.nn.Linear)):
-
             layers.append(layer)
-
         elif len(list(layer.children())) > 0:
             temp_layers = getAllLayersBert(layer)
             layers = layers + temp_layers
     return layers
+
+
+def _check_anomlies(t):
+    inf_mask = torch.isinf(t)
+    nan_mask = torch.isnan(t)
+    if inf_mask.any() or nan_mask.any():
+        logging.error(f"Inf values: {torch.sum(inf_mask)}")
+        logging.error(f"NaN values: {torch.sum(nan_mask)}")
+        logging.error(f"Total values: {torch.numel(t)}")
+        # logging.error(f"Total values: {t}")
+        raise ValueError("Anomalies detected in tensor")
 
 
 # provenance of fl clients funtion

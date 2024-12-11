@@ -8,6 +8,7 @@ from flwr.common.logger import log
 from genfl.model import train, get_parameters, set_parameters
 
 
+
 class FlowerClient(fl.client.NumPyClient):
     """Flower client for training a CNN model."""
 

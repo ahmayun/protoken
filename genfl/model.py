@@ -9,6 +9,8 @@ from collections import OrderedDict
 from peft import get_peft_model, LoraConfig, TaskType,  get_peft_model_state_dict, set_peft_model_state_dict
 
 
+
+
 # def data_collator(ds):
 #     # print(ds)
 #     labels = [f["labels"] for f in ds]
@@ -26,8 +28,7 @@ from peft import get_peft_model, LoraConfig, TaskType,  get_peft_model_state_dic
 def initialize_model(mname, num_classes, peft):
     """Initialize the model with the given name."""
     model = AutoModelForSequenceClassification.from_pretrained(
-        mname, num_labels=num_classes  # Ignore mismatched sizes
-    )
+        mname, num_labels=num_classes, ignore_mismatched_sizes=True)
     if peft:
         lora_config = LoraConfig(
             task_type=TaskType.SEQ_CLS,
@@ -123,3 +124,33 @@ def set_parameters(net, parameters, peft):
         set_peft_model_state_dict(net, state_dict)
     else:
         net.load_state_dict(state_dict, strict=True)
+
+
+
+def get_correct_predictions_subset(test_cfg, batch_size=32):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    test_data = test_cfg['test_data']
+    # eval batch size
+
+    args = TrainingArguments(
+        output_dir=test_cfg['dir'], do_train=False, do_eval=True, per_device_eval_batch_size=batch_size)
+    trainer = Trainer(
+        model=test_cfg['model'].to(device),
+        args=args,
+        eval_dataset=test_data,
+        compute_metrics=None  # Metrics are handled separately
+    )
+
+    # Use Trainer's predict method to get predictions
+    predictions_output = trainer.predict(test_data)
+
+    # Extract predictions and labels
+    preds = np.argmax(predictions_output.predictions, axis=-1)
+    labels = predictions_output.label_ids
+
+    # Create a boolean mask of correct predictions
+    correct_mask = preds == labels
+    correct_indices = np.where(correct_mask)[0].tolist()
+
+    correct_subset = test_data.select(correct_indices)
+    return correct_subset

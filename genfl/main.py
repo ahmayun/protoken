@@ -16,9 +16,9 @@ from logging import DEBUG, INFO
 from pathlib import Path
 import os
 
+
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-
 
 
 
@@ -110,6 +110,7 @@ def run_simulation(cfg):
         initial_net = _create_model()
         strategy = FedAvgWithGenFL(
             cfg=cfg,  # Add cfg
+            client2class = ds_dict["client2class"],
             test_data=server_testdata,  # Add test_data
             callback_create_model_fn=_create_model,
             accept_failures=False,
