@@ -9,7 +9,7 @@ from collections import Counter
 
 
 def get_labels_count(hf_dataset, target_label_col):
-    label2count = Counter(example[target_label_col] for example in hf_dataset)  
+    label2count = Counter(example[target_label_col] for example in hf_dataset)
     return dict(label2count)
 
 
@@ -75,16 +75,15 @@ class ClientsAndServerDatasets:
                 min_partition_size=0,
                 self_balancing=True,
             )
-        
+
         elif self.cfg.distribution == "shard":
             self.logger.debug("Using Shard partitioner.")
             return PathologicalPartitioner(
                 num_partitions=self.cfg.num_clients,
-                partition_by = self.cfg.dataset.label_column,
-                class_assignment_mode = 'random',
-                num_classes_per_partition = 2,
+                partition_by=self.cfg.dataset.label_column,
+                class_assignment_mode='deterministic',  # 'random',
+                num_classes_per_partition=3,
             )
-
 
         else:
             raise ValueError(
@@ -158,8 +157,8 @@ class ClientsAndServerDatasets:
             Dict[str, Optional[DataLoader]]: Contains 'client_loaders' and 'server_loader'.
         """
 
-        client2class = {c: get_labels_count(ds, 'labels') for c, ds in self.client2dataset.items()}
-
+        client2class = {c: get_labels_count(
+            ds, 'labels') for c, ds in self.client2dataset.items()}
 
         return {
             "client2dataset": self.client2dataset,

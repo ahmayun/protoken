@@ -53,24 +53,34 @@ def _run_provenance(gmodel, client2model, client2class, test_data):
     print(f"Total test data: {len(test_data)}")
     print(f"Correct subset size: {len(correct_ds_subset)}")
     print(f'Client2class: {client2class}')
+
+    all_labels = set([l for label2count in client2class.values()
+                     for l in label2count.keys()])
+
+    # [c for c in client2class.keys() if label in client2class[c]]
+
+    label2client = {label:  {c: client2class[c][label] for c in client2class.keys(
+    ) if label in client2class[c]} for label in all_labels}
+    print(f"Label2client: {label2client}")
+
     for i in range(total_samples):
         correct_subset = correct_ds_subset.select([i])
 
         label = correct_subset[0]['labels']
 
-        true_responsible_clients = [
-            c for c in client2class.keys() if label in client2class[c]]
+        true_responsible_clients = list(label2client[label].keys())
         res = provenance_of_fl_clients(
             gmodel=gmodel, c2model=client2model, test_data=correct_subset)
 
-        client2part = {c: round(v, 3)  for c, v in  res['client2part'].items() }
-        print(f"Label: {label} TClient: {res['traced_client']}, client2part: {client2part}")
-        
+        client2part = {c: round(v, 3) for c, v in res['client2part'].items()}
+        print(
+            f"Label: {label} TClient: {res['traced_client']}, client2part: {client2part}, Label2client: {label2client[label]}")
+
         if res['traced_client'] in true_responsible_clients:
             count += 1
-    
-    
+
     accuracy = (count/total_samples) * 100
-    print(f"Correctly traced clients: {count}/{total_samples}, Accuracy: {accuracy}%")           
+    print(
+        f"Correctly traced clients: {count}/{total_samples}, Accuracy: {accuracy}%")
     # _ = input("Press any key to continue...")
     return accuracy

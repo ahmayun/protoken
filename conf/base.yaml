@@ -10,13 +10,13 @@ load_server_data: true
 client:
   epochs: 1
   lr: 0.001
-  batch_size: 32
+  batch_size: 64
 
 peft: true
 model: openai-community/gpt2 #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
 
 # Dataset Configuration
-distribution: 'iid'  #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
+distribution: 'shard'  #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
 
 column_of_label:
   yahoo_answers_topics: "topic"

@@ -94,7 +94,7 @@ def test(test_cfg, device=None):
 
 def train(tconfig):
     """Train the neural network."""
-    # return _hf_train(tconfig)
+    return _hf_train(tconfig)
     return {'accuracy': -1, 'loss': -1}
 
 
