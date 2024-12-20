@@ -195,6 +195,26 @@ tests = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest (>=4
 tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
+name = "bitsandbytes"
+version = "0.45.0"
+description = "k-bit optimizers and matrix multiplication routines."
+optional = false
+python-versions = "*"
+files = [
+    {file = "bitsandbytes-0.45.0-py3-none-manylinux_2_24_x86_64.whl", hash = "sha256:0f0323de1ff1fdf8383e79bdad1283516a4c05a6fd2b44a363bf4e059422305b"},
+    {file = "bitsandbytes-0.45.0-py3-none-win_amd64.whl", hash = "sha256:ebbf96e0ecb466716a65ecdeaef3fa1983575447b9ab66b74e5211892507c6ff"},
+]
+
+[package.dependencies]
+numpy = "*"
+torch = "*"
+typing_extensions = ">=4.8.0"
+
+[package.extras]
+benchmark = ["matplotlib", "pandas"]
+test = ["lion_pytorch", "scipy"]
+
+[[package]]
 name = "certifi"
 version = "2024.8.30"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -621,6 +641,17 @@ files = [
 [package.extras]
 graph = ["objgraph (>=1.7.2)"]
 profile = ["gprof2dot (>=2022.7.29)"]
+
+[[package]]
+name = "diskcache"
+version = "5.6.3"
+description = "Disk Cache -- Disk and file backed persistent cache."
+optional = false
+python-versions = ">=3"
+files = [
+    {file = "diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19"},
+    {file = "diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc"},
+]
 
 [[package]]
 name = "evaluate"
@@ -3364,6 +3395,36 @@ tests = ["autopep8", "flake8", "isort", "llnl-hatchet", "numpy", "pytest", "scip
 tutorials = ["matplotlib", "pandas", "tabulate"]
 
 [[package]]
+name = "trl"
+version = "0.13.0"
+description = "Train transformer language models with reinforcement learning."
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "trl-0.13.0-py3-none-any.whl", hash = "sha256:792aa68a98821934a890182c842f9f8b43127eea510a7c2bd660a10bc59de7e8"},
+    {file = "trl-0.13.0.tar.gz", hash = "sha256:ad3259098457b92a94f95de6da4138807c846919beacccf22d26ac238987b50b"},
+]
+
+[package.dependencies]
+accelerate = ">=0.34.0"
+datasets = ">=2.21.0"
+rich = "*"
+transformers = ">=4.46.0"
+
+[package.extras]
+deepspeed = ["deepspeed (>=0.14.4)"]
+dev = ["Pillow", "Pillow", "bitsandbytes", "bitsandbytes", "deepspeed (>=0.14.4)", "deepspeed (>=0.14.4)", "diffusers (>=0.18.0)", "diffusers (>=0.18.0)", "liger-kernel (>=0.4.0)", "liger-kernel (>=0.4.0)", "llm-blender (>=0.0.2)", "llm-blender (>=0.0.2)", "mergekit (>=0.0.5.1)", "mergekit (>=0.0.5.1)", "openai (>=1.23.2)", "openai (>=1.23.2)", "parameterized", "parameterized", "peft (>=0.8.0)", "peft (>=0.8.0)", "pytest", "pytest", "pytest-cov", "pytest-cov", "pytest-rerunfailures", "pytest-rerunfailures", "pytest-xdist", "pytest-xdist", "scikit-learn", "scikit-learn"]
+diffusers = ["diffusers (>=0.18.0)"]
+judges = ["llm-blender (>=0.0.2)", "openai (>=1.23.2)"]
+liger = ["liger-kernel (>=0.4.0)"]
+mergekit = ["mergekit (>=0.0.5.1)"]
+peft = ["peft (>=0.8.0)"]
+quantization = ["bitsandbytes"]
+scikit = ["scikit-learn"]
+test = ["parameterized", "pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist"]
+vlm = ["Pillow"]
+
+[[package]]
 name = "typer"
 version = "0.12.5"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
@@ -3650,4 +3711,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ca5fad74067211f969c5ec91a5511254a900c8cb7251d49e8d1c57c096ff8e11"
+content-hash = "1aa9e7a997b40e970029ca44563cae979d055298b3b9ebd9f7995acfe441f136"
