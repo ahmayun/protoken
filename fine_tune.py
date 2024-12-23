@@ -74,15 +74,16 @@ def get_model_and_tokenizer(mname):
     
     # model = prepare_model_for_kbit_training(model)
     peft_config = LoraConfig(
-        r=4,  # the rank of the LoRA matrices
+        r=6,  # the rank of the LoRA matrices
         lora_alpha=8,  # the weight
         lora_dropout=0.1,  # dropout to add to the LoRA layers
         task_type="CAUSAL_LM",
         # the name of the layers to add LoRA
         # target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        # target_modules='all-linear',
+        target_modules='all-linear',
     )
-    model, tokenizer =  setup_chat_format(model=model, tokenizer=tokenizer)
+    if 'microsoft/Phi-3-mini-4k-instruct' not in mname:
+        model, tokenizer =  setup_chat_format(model=model, tokenizer=tokenizer)
 
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
@@ -165,8 +166,8 @@ def generate_self(model, tokenizer, terminators, prompt, max_new_tokens=256, con
 def main():
     cache_dir = "save_model_tokenizer/cache"
     # mname = 'Meta-Llama/Meta-Llama-3.1-8B'
-    mname = 'microsoft/phi-2'
-    # mname = 'microsoft/Phi-3-mini-128k-instruct'
+    # mname = 'microsoft/phi-2'
+    mname = 'microsoft/Phi-3-mini-4k-instruct'
 
     train, val, test, whole_ds = load_datasets(dname='yahma/alpaca-cleaned')
 
@@ -199,13 +200,13 @@ def main():
     )
     cache = Index(cache_dir)
 
-    trainer.train()
+    # trainer.train()
 
-    cache['model'] = model.cpu()
-    cache['tokenizer'] = tokenizer
+    # cache['model'] = model.cpu()
+    # cache['tokenizer'] = tokenizer
 
-    model = cache['model'].eval().cuda()
-    tokenizer = cache['tokenizer']
+    # model = cache['model'].eval().cuda()
+    # tokenizer = cache['tokenizer']
 
     terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
     

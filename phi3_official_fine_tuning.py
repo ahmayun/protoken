@@ -6,7 +6,7 @@ from datasets import load_dataset
 from peft import LoraConfig
 import torch
 import transformers
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 
 """
@@ -84,6 +84,8 @@ training_config = {
     "gradient_checkpointing_kwargs":{"use_reentrant": False},
     "gradient_accumulation_steps": 1,
     "warmup_ratio": 0.2,
+    "packing":True, 
+    "max_seq_length":1024,
     }
 
 peft_config = {
@@ -95,7 +97,7 @@ peft_config = {
     "target_modules": "all-linear",
     "modules_to_save": None,
 }
-train_conf = TrainingArguments(**training_config)
+train_conf = SFTConfig(**training_config)
 peft_conf = LoraConfig(**peft_config)
 
 
@@ -126,8 +128,8 @@ logger.info(f"PEFT parameters {peft_conf}")
 ################
 # Model Loading
 ################
-
-checkpoint_path = "microsoft/Phi-3.5-mini-instruct"
+checkpoint_path = "microsoft/Phi-3-mini-4k-instruct"
+# checkpoint_path = "microsoft/Phi-3-mini-128k-instruct"
 model_kwargs = dict(
     use_cache=False,
     trust_remote_code=True,
@@ -186,10 +188,7 @@ trainer = SFTTrainer(
     peft_config=peft_conf,
     train_dataset=processed_train_dataset,
     eval_dataset=processed_test_dataset,
-    max_seq_length=2048,
-    dataset_text_field="text",
     tokenizer=tokenizer,
-    packing=True
 )
 train_result = trainer.train()
 metrics = train_result.metrics
