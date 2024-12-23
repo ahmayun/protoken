@@ -1,6 +1,6 @@
 # General Configuration
-num_rounds: 10
-num_clients: 5
+num_rounds: 1
+num_clients: 2
 clients_per_round: ${num_clients}
 
 server_batch_size: 128
