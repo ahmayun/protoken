@@ -62,5 +62,5 @@ model_config:
     use_fast: true
 
 dataset_config:
-  name: "HuggingFaceH4/ultrachat_200k"
+  name: "yahma/alpaca-cleaned"
   kwargs:
