@@ -63,16 +63,18 @@ def load_datasets(dname="lucasmccabe-lmi/CodeAlpaca-20k"):
 
 
 def get_model_and_tokenizer(mname):
-    # quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+    quantization_config = BitsAndBytesConfig(load_in_4bit=True)
     tokenizer = AutoTokenizer.from_pretrained(
         mname, use_fast=True)
     model = AutoModelForCausalLM.from_pretrained(
-        mname, torch_dtype=torch.bfloat16)
+        mname, torch_dtype=torch.bfloat16, attn_implementation='flash_attention_2', config=quantization_config)
+    
+    
 
     
     # model = prepare_model_for_kbit_training(model)
     peft_config = LoraConfig(
-        r=8,  # the rank of the LoRA matrices
+        r=4,  # the rank of the LoRA matrices
         lora_alpha=8,  # the weight
         lora_dropout=0.1,  # dropout to add to the LoRA layers
         task_type="CAUSAL_LM",
@@ -162,7 +164,9 @@ def generate_self(model, tokenizer, terminators, prompt, max_new_tokens=256, con
 
 def main():
     cache_dir = "save_model_tokenizer/cache"
-    mname = 'gpt2'
+    # mname = 'Meta-Llama/Meta-Llama-3.1-8B'
+    mname = 'microsoft/phi-2'
+    # mname = 'microsoft/Phi-3-mini-128k-instruct'
 
     train, val, test, whole_ds = load_datasets(dname='yahma/alpaca-cleaned')
 
@@ -177,7 +181,7 @@ def main():
     # collator = DataCollatorForCompletionOnlyLM(
     #     instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False)
 
-    training_args = SFTConfig(output_dir="./temp",  learning_rate=0.001, num_train_epochs=10, per_device_train_batch_size=16,
+    training_args = SFTConfig(output_dir="./temp",  learning_rate=5e-4, num_train_epochs=0.05, per_device_train_batch_size=1,
                               do_eval=False, logging_steps=10, max_steps=-1, lr_scheduler_type='linear', packing=True, max_seq_length=1024,
                               )
 
@@ -195,13 +199,13 @@ def main():
     )
     cache = Index(cache_dir)
 
-    # trainer.train()
+    trainer.train()
 
-    # cache['model'] = model.cpu()
-    # cache['tokenizer'] = tokenizer
+    cache['model'] = model.cpu()
+    cache['tokenizer'] = tokenizer
 
-    # model = cache['model'].eval().cuda()
-    # tokenizer = cache['tokenizer']
+    model = cache['model'].eval().cuda()
+    tokenizer = cache['tokenizer']
 
     terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
     

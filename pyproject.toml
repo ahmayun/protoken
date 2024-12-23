@@ -21,6 +21,9 @@ evaluate = "^0.4.3"
 trl = "^0.13.0"
 bitsandbytes = "^0.45.0"
 diskcache = "^5.6.3"
+torchvision = "^0.20.1"
+torchaudio = "^2.5.1"
+flash-attn = "^2.7.2.post1"
 
 
 
