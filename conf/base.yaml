@@ -107,8 +107,9 @@ hf_trainer_config:
   save_total_limit: 0 # 1
   save_strategy: "no"
 
-  logging_strategy: steps
-  logging_steps: 20
-  log_level: info
+  # logging_strategy: steps
+  # logging_steps: 20
+  # # log_level: info
   # remove_unused_columns: true
+  fp16: true
   
