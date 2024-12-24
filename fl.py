@@ -44,8 +44,34 @@ import evaluate
 
 
 ################
-# Central ML
+# Fixed Helper Functions
 ################
+
+def set_exp_key(cfg):
+    """Set the experiment key."""
+    key = f"hello fl world"
+    return key
+
+
+def config_sim_resources(cfg):
+    """Configure the resources for the simulation."""
+    client_resources = {"num_cpus": cfg.client_resources.num_cpus}
+    if cfg.device == "cuda":
+        client_resources["num_gpus"] = cfg.client_resources.num_gpus
+
+    init_args = {"num_cpus": cfg.total_cpus, "num_gpus": cfg.total_gpus}
+    backend_config = {
+        "client_resources": client_resources,
+        "init_args": init_args,
+    }
+    return backend_config
+
+
+def seed_everything(seed=786):
+    """Seed everything."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
 def _prompt(instruction, input_of_instruction):
@@ -62,26 +88,32 @@ def create_alpaca_prompt_with_response(example, eos_token):
     return prompt
 
 
-# Data Processing
+def _get_state_dict(net, peft):
+    if peft:
+        state_dict = get_peft_model_state_dict(net)
+    else:
+        state_dict = net.state_dict()
+    return state_dict
 
 
-def load_datasets(dname):
-    ds = load_dataset(dname, split="train")
-    train_val, test = ds.train_test_split(test_size=0.10).values()
-    train, val = train_val.train_test_split(test_size=0.2).values()
-
-    # ratios of datasets pritn
-    print(f"Train: {len(train)}")
-    print(f"Val: {len(val)}")
-    print(f"Test: {len(test)}")
-    print(f"Columns: {list(train.features)}")
-
-    columns = list(train.features)
-
-    return {"train": train, "val": val, "test": test, "columns": columns, 'ds': ds}
+def get_parameters(model, peft):
+    """Return model parameters as a list of NumPy ndarrays."""
+    model = model.cpu()
+    state_dict = _get_state_dict(model, peft)
+    return [val.cpu().numpy() for _, val in state_dict.items()]
 
 
-# Model Loading
+def set_parameters(net, parameters, peft):
+    """Set model parameters from a list of NumPy ndarrays."""
+    net = net.cpu()
+    state_dict = _get_state_dict(net, peft)
+    params_dict = zip(state_dict.keys(), parameters)
+    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+
+    if peft:
+        set_peft_model_state_dict(net, state_dict)
+    else:
+        net.load_state_dict(state_dict, strict=True)
 
 
 def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
@@ -104,9 +136,6 @@ def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
         model.print_trainable_parameters()
 
     return model, tokenizer
-
-
-# Text Generation
 
 
 def _manual_generate(model, idx, max_new_tokens, context_size, temperature=0.0, top_k=None, terminators=None, tokenizer=None):
@@ -159,67 +188,173 @@ def generate_self(model, tokenizer, terminators, prompt, max_new_tokens=256, con
     print(f'Response (Manual):\n ***|||{text}|||***\n\n')
     return text
 
+
+def compute_metrics(metric, eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return metric.compute(predictions=predictions, references=labels)
+
+
+def _cls_hf_train_or_eval(model, hf_ds, train_cfg, do_train, do_eval):
+    metric = evaluate.load("accuracy")
+    training_args = TrainingArguments(
+        do_train=do_train, do_eval=do_eval, **train_cfg)
+    trainer = Trainer(model, training_args, train_dataset=hf_ds,
+                      eval_dataset=hf_ds, compute_metrics=partial(compute_metrics, metric))
+
+    if do_train:
+        trainer.train()
+
+    eval_result = trainer.evaluate()
+
+    model = model.cpu()
+    return {'accuracy': eval_result['eval_accuracy'], 'loss': eval_result['eval_loss']}
+
+
+def load_datasets(dname):
+    ds = load_dataset(dname, split="train")
+    train_val, test = ds.train_test_split(test_size=0.10).values()
+    train, val = train_val.train_test_split(test_size=0.2).values()
+
+    # ratios of datasets pritn
+    print(f"Train: {len(train)}")
+    print(f"Val: {len(val)}")
+    print(f"Test: {len(test)}")
+    print(f"Columns: {list(train.features)}")
+
+    columns = list(train.features)
+
+    return {"train": train, "val": val, "test": test, "columns": columns, 'ds': ds}
+
+
 ################
 # Federated Learning
 ################
 
 
 # fl utils
-
-
-def seed_everything(seed=786):
-    """Seed everything."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-
-def calculate_localization_accuracy(true_faulty_clients, predicted_faulty_clients):
-    """Calculate the fault localization accuracy."""
-    true_preds = 0
-    total = 0
-    for client, predicted_faulty_count in predicted_faulty_clients.items():
-        if client in true_faulty_clients:
-            true_preds += predicted_faulty_count
-
-        total += predicted_faulty_count
-
-    accuracy = (true_preds / total) * 100
-    return accuracy
-
-
-def set_exp_key(cfg):
-    """Set the experiment key."""
-    key = f"hello fl world"
-    return key
-
-
-def config_sim_resources(cfg):
-    """Configure the resources for the simulation."""
-    client_resources = {"num_cpus": cfg.client_resources.num_cpus}
-    if cfg.device == "cuda":
-        client_resources["num_gpus"] = cfg.client_resources.num_gpus
-
-    init_args = {"num_cpus": cfg.total_cpus, "num_gpus": cfg.total_gpus}
-    backend_config = {
-        "client_resources": client_resources,
-        "init_args": init_args,
-    }
-    return backend_config
-
-
-# fl datasets
-
-
 def get_labels_count(hf_dataset, target_label_col):
     label2count = Counter(example[target_label_col] for example in hf_dataset)
     return dict(label2count)
 
 
+def get_correct_predictions_subset(model, test_data, hf_trainer_config):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model =  model.to(device)
+    args = TrainingArguments(do_eval=True, do_train=False, **hf_trainer_config)
+    trainer = Trainer(model=model, args=args,
+                      eval_dataset=test_data, compute_metrics=None)
+
+    # Use Trainer's predict method to get predictions
+    predictions_output = trainer.predict(test_data)
+
+    # Extract predictions and labels
+    preds = np.argmax(predictions_output.predictions, axis=-1)
+    labels = predictions_output.label_ids
+
+    # Create a boolean mask of correct predictions
+    correct_mask = preds == labels
+    correct_indices = np.where(correct_mask)[0].tolist()
+
+    correct_subset = test_data.select(correct_indices)
+    return correct_subset
+
+
+def _fit_metrics_aggregation_fn(metrics):
+    """Aggregate metrics recieved from client."""
+    log(INFO, ">>   ------------------- Clients Metrics ------------- ")
+    all_logs = {}
+    for nk_points, metric_d in metrics:
+        cid = int(metric_d["cid"])
+        temp_s = (
+            f' Client {metric_d["cid"]}, Loss Train {metric_d["loss"]}, '
+            f'Accuracy Train {metric_d["accuracy"]}, data_points = {nk_points}'
+        )
+        all_logs[cid] = temp_s
+
+    # sorted by client id from lowest to highest
+    for k in sorted(all_logs.keys()):
+        log(INFO, all_logs[k])
+    return {"loss": 0.0, "accuracy": 0.0}
+
+
+def select_n_per_class(dataset, n=2):
+    # Get all labels from the dataset
+    labels = dataset['labels']
+    unique_labels = set(labels)
+
+    # Dictionary to store indices for each class
+    class_indices = {label: [] for label in unique_labels}
+
+    # Group indices by class
+    for idx, label in enumerate(labels):
+        class_indices[label].append(idx)
+
+    # Select n indices per class
+    selected_indices = []
+    for label in unique_labels:
+        # Take first n indices for each class (or all if less than n available)
+        indices = class_indices[label][:n]
+        selected_indices.extend(indices)
+
+    # Select the examples using the collected indices
+    balanced_subset = dataset.select(selected_indices)
+    return balanced_subset
+
+
+def _run_provenance(gmodel, client2model, client2class, test_data, hf_trainer_config):
+    # Get correct predictions subset
+
+    correct_ds_subset = get_correct_predictions_subset(
+        gmodel, test_data, hf_trainer_config)
+
+    correct_ds_subset = select_n_per_class(correct_ds_subset, n=2)
+
+    count = 0
+    total_samples = len(correct_ds_subset)
+    print(f"Total test data: {len(test_data)}")
+    print(f"Correct subset size: {len(correct_ds_subset)}")
+    print(f'Client2class: {client2class}')
+
+    all_labels = set([l for label2count in client2class.values()
+                     for l in label2count.keys()])
+
+    # [c for c in client2class.keys() if label in client2class[c]]
+
+    label2client = {label:  {c: client2class[c][label] for c in client2class.keys(
+    ) if label in client2class[c]} for label in all_labels}
+    print(f"Label2client: {label2client}")
+
+    for i in range(total_samples):
+        correct_subset = correct_ds_subset.select([i])
+
+        label = correct_subset[0]['labels']
+
+        if label not in label2client:
+            continue
+
+        true_responsible_clients = list(label2client[label].keys())
+        res = provenance_of_fl_clients(
+            gmodel=gmodel, c2model=client2model, test_data=correct_subset)
+
+        client2part = {c: round(v, 3) for c, v in res['client2part'].items()}
+        print(
+            f"Label: {label} TClient: {res['traced_client']}, client2part: {client2part}, Label2client: {label2client[label]}")
+
+        if res['traced_client'] in true_responsible_clients:
+            count += 1
+
+    accuracy = (count/total_samples) * 100
+    print(
+        f"Correctly traced clients: {count}/{total_samples}, Accuracy: {accuracy}%")
+    # _ = input("Press any key to continue...")
+    return accuracy
+
+
 class ClientsAndServerDatasets:
 
     def __init__(self, cfg, tokenizer):
-        self.cfg = cfg        
+        self.cfg = cfg
         self.tokenizer = tokenizer
         self.client2dataset = {}
         self.server_dataset = None
@@ -278,13 +413,11 @@ class ClientsAndServerDatasets:
             partition = self.federated_dataset.load_partition(cid, 'train')
             tokenized_partition = self._tokenize_partition(partition)
             self.client2dataset[client_id] = tokenized_partition
-            
 
     def _load_server_data(self):
         server_data = self.federated_dataset.load_split('test')
         tokenized_server = self._tokenize_partition(server_data)
         self.server_dataset = tokenized_server
-        
 
     def _tokenize_partition(self, partition: Dataset) -> Dataset:
         self.logger.debug(
@@ -329,86 +462,6 @@ class ClientsAndServerDatasets:
         }
 
 
-def compute_metrics(metric, eval_pred):
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    return metric.compute(predictions=predictions, references=labels)
-
-
-def _hf_train_or_eval(model, hf_ds, train_cfg, do_train, do_eval):
-    metric = evaluate.load("accuracy")
-    training_args = TrainingArguments(
-        do_train=do_train, do_eval=do_eval, **train_cfg)
-    trainer = Trainer(model, training_args, train_dataset=hf_ds,
-                      eval_dataset=hf_ds, compute_metrics=partial(compute_metrics, metric))
-
-    if do_train:
-        trainer.train()
-
-    eval_result = trainer.evaluate()
-
-    model = model.cpu()
-    return {'accuracy': eval_result['eval_accuracy'], 'loss': eval_result['eval_loss']}
-
-
-def _get_state_dict(net, peft):
-    if peft:
-        state_dict = get_peft_model_state_dict(net)
-    else:
-        state_dict = net.state_dict()
-    return state_dict
-
-
-def get_parameters(model, peft):
-    """Return model parameters as a list of NumPy ndarrays."""
-    model = model.cpu()
-    state_dict = _get_state_dict(model, peft)
-    return [val.cpu().numpy() for _, val in state_dict.items()]
-
-
-def set_parameters(net, parameters, peft):
-    """Set model parameters from a list of NumPy ndarrays."""
-    net = net.cpu()
-    state_dict = _get_state_dict(net, peft)
-    params_dict = zip(state_dict.keys(), parameters)
-    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-
-    if peft:
-        set_peft_model_state_dict(net, state_dict)
-    else:
-        net.load_state_dict(state_dict, strict=True)
-
-
-def get_correct_predictions_subset(test_cfg, batch_size=32):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_data = test_cfg['test_data']
-    # eval batch size
-
-    args = TrainingArguments(
-        output_dir=test_cfg['dir'], do_train=False, do_eval=True, per_device_eval_batch_size=batch_size)
-    trainer = Trainer(
-        model=test_cfg['model'].to(device),
-        args=args,
-        eval_dataset=test_data,
-        compute_metrics=None  # Metrics are handled separately
-    )
-
-    # Use Trainer's predict method to get predictions
-    predictions_output = trainer.predict(test_data)
-
-    # Extract predictions and labels
-    preds = np.argmax(predictions_output.predictions, axis=-1)
-    labels = predictions_output.label_ids
-
-    # Create a boolean mask of correct predictions
-    correct_mask = preds == labels
-    correct_indices = np.where(correct_mask)[0].tolist()
-
-    correct_subset = test_data.select(correct_indices)
-    return correct_subset
-
-
-# fl client
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.args = args
@@ -417,8 +470,9 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
 
         set_parameters(model, parameters=parameters, peft=self.args["peft"])
-        train_dict = _hf_train_or_eval(
+        train_dict = _cls_hf_train_or_eval(
             model, self.args["client_data_train"], config, do_train=True, do_eval=True)
+
         parameters = get_parameters(model, peft=self.args["peft"])
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
@@ -427,125 +481,6 @@ class FlowerClient(fl.client.NumPyClient):
         nk_client_data_points = len(self.args["client_data_train"])
         return parameters, nk_client_data_points, client_train_dict
 
-
-# fl server
-def _fit_metrics_aggregation_fn(metrics):
-    """Aggregate metrics recieved from client."""
-    log(INFO, ">>   ------------------- Clients Metrics ------------- ")
-    all_logs = {}
-    for nk_points, metric_d in metrics:
-        cid = int(metric_d["cid"])
-        temp_s = (
-            f' Client {metric_d["cid"]}, Loss Train {metric_d["loss"]}, '
-            f'Accuracy Train {metric_d["accuracy"]}, data_points = {nk_points}'
-        )
-        all_logs[cid] = temp_s
-
-    # sorted by client id from lowest to highest
-    for k in sorted(all_logs.keys()):
-        log(INFO, all_logs[k])
-    return {"loss": 0.0, "accuracy": 0.0}
-
-
-def run_simulation(cfg):
-    """Run the simulation."""
-
-    save_path = Path(HydraConfig.get().runtime.output_dir)
-
-    exp_key = set_exp_key(cfg)
-
-    log(INFO, " ***********  Starting Experiment: %s ***************", exp_key)
-
-    log(DEBUG, "Simulation Configuration: %s", cfg)
-
-    _ , tokenizer = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
-
-    ds_prep = ClientsAndServerDatasets(cfg, tokenizer)
-    ds_dict = ds_prep.get_datasets()
-    server_testdata = ds_dict["server_dataset"]
-
-    round2gm_accs = []
-
-    def _create_model():
-        temp_model, _ = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
-        return temp_model
-
-    def _get_fit_config(server_round):
-        return cfg.hf_trainer_config
-
-    def _eval_gm(server_round, parameters, config):
-        gm_model = _create_model()
-        set_parameters(gm_model, parameters, peft=cfg.peft)
-
-        d_res = _hf_train_or_eval(
-            gm_model, server_testdata, cfg.hf_trainer_config, do_train=False, do_eval=True)
-
-        round2gm_accs.append(d_res["accuracy"])
-        log(DEBUG, "config: %s", config)
-        return d_res["loss"], {
-            "accuracy": d_res["accuracy"],
-            "loss": d_res["loss"],
-            "round": server_round,
-        }
-
-    def _client_fn(context: Context):
-        """Give the new client."""
-        # print("context", context)
-        partition_id = context.node_config["partition-id"]
-        cid = f"{partition_id}"
-
-        args = {
-            "cid": cid,
-            "model": _create_model(),
-            "client_data_train": ds_dict["client2dataset"][cid],
-            "device": torch.device(cfg.device),
-            'dir': save_path,
-            'peft': cfg.peft
-        }
-        client = FlowerClient(args).to_client()
-        return client
-
-    def _server_fn(context: Context):
-        initial_net = _create_model()
-        strategy = FedAvgWithGenFL(
-            cfg=cfg,  # Add cfg
-            client2class=ds_dict["client2class"],
-            test_data=server_testdata,  # Add test_data
-            callback_create_model_fn=_create_model,
-            accept_failures=False,
-            fraction_fit=0,
-            fraction_evaluate=0.0,
-            min_fit_clients=cfg.clients_per_round,
-            min_evaluate_clients=0,
-            min_available_clients=cfg.num_clients,
-            initial_parameters=ndarrays_to_parameters(
-                ndarrays=get_parameters(initial_net, peft=cfg.peft)),  # Remove initial_parameters
-            evaluate_fn=_eval_gm,
-            on_fit_config_fn=_get_fit_config,
-            fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,
-        )
-        server_config = fl.server.ServerConfig(num_rounds=cfg.num_rounds)
-
-        return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
-
-    client_app = fl.client.ClientApp(client_fn=_client_fn)
-    server_app = fl.server.ServerApp(server_fn=_server_fn)
-
-    fl.simulation.run_simulation(
-        server_app=server_app,
-        client_app=client_app,
-        num_supernodes=cfg.num_clients,
-        backend_config=config_sim_resources(cfg),
-    )
-
-    # utils.plot_metrics(round2gm_accs, round2feddebug_accs, cfg, save_path)
-
-    log(INFO, "Training Complete for Experiment: %s", exp_key)
-
-
-################
-# Strategy for Provenance in FL
-################
 
 class FedAvgWithGenFL(fl.server.strategy.FedAvg):
     """FedAvg with Differential Testing."""
@@ -572,7 +507,7 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
 
         global_model = self._to_pt_model(aggregated_parameters)
         res = _run_provenance(global_model, client2model,
-                              self.client2class, self.test_data)
+                              self.client2class, self.test_data, self.cfg.hf_trainer_config)
         aggregated_metrics['provenance'] = res  # Add to metrics
         return aggregated_parameters, aggregated_metrics
 
@@ -582,78 +517,6 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         model = self.create_model_fn()
         set_parameters(model, ndarr, peft=self.cfg.peft)
         return model
-
-
-def select_n_per_class(dataset, n=2):
-    # Get all labels from the dataset
-    labels = dataset['labels']
-    unique_labels = set(labels)
-
-    # Dictionary to store indices for each class
-    class_indices = {label: [] for label in unique_labels}
-
-    # Group indices by class
-    for idx, label in enumerate(labels):
-        class_indices[label].append(idx)
-
-    # Select n indices per class
-    selected_indices = []
-    for label in unique_labels:
-        # Take first n indices for each class (or all if less than n available)
-        indices = class_indices[label][:n]
-        selected_indices.extend(indices)
-
-    # Select the examples using the collected indices
-    balanced_subset = dataset.select(selected_indices)
-    return balanced_subset
-
-
-def _run_provenance(gmodel, client2model, client2class, test_data):
-    # Get correct predictions subset
-    correct_ds_subset = get_correct_predictions_subset(
-        {'model': gmodel, 'test_data': test_data, 'dir': 'temp'})
-
-    correct_ds_subset = select_n_per_class(correct_ds_subset, n=2)
-
-    count = 0
-    total_samples = len(correct_ds_subset)
-    print(f"Total test data: {len(test_data)}")
-    print(f"Correct subset size: {len(correct_ds_subset)}")
-    print(f'Client2class: {client2class}')
-
-    all_labels = set([l for label2count in client2class.values()
-                     for l in label2count.keys()])
-
-    # [c for c in client2class.keys() if label in client2class[c]]
-
-    label2client = {label:  {c: client2class[c][label] for c in client2class.keys(
-    ) if label in client2class[c]} for label in all_labels}
-    print(f"Label2client: {label2client}")
-
-    for i in range(total_samples):
-        correct_subset = correct_ds_subset.select([i])
-
-        label = correct_subset[0]['labels']
-
-        if label not in label2client:
-            continue
-
-        true_responsible_clients = list(label2client[label].keys())
-        res = provenance_of_fl_clients(
-            gmodel=gmodel, c2model=client2model, test_data=correct_subset)
-
-        client2part = {c: round(v, 3) for c, v in res['client2part'].items()}
-        print(
-            f"Label: {label} TClient: {res['traced_client']}, client2part: {client2part}, Label2client: {label2client[label]}")
-
-        if res['traced_client'] in true_responsible_clients:
-            count += 1
-
-    accuracy = (count/total_samples) * 100
-    print(
-        f"Correctly traced clients: {count}/{total_samples}, Accuracy: {accuracy}%")
-    # _ = input("Press any key to continue...")
-    return accuracy
 
 
 ################
@@ -848,14 +711,111 @@ def _check_anomlies(t):
         # logging.error(f"Total values: {t}")
         raise ValueError("Anomalies detected in tensor")
 
-
 # provenance of fl clients funtion
+
+
 def provenance_of_fl_clients(gmodel, c2model, test_data):
     neuron_prov = NeuronProvenance(gmodel, c2model, test_data)
     return neuron_prov.run()
 
 
-# fl main
+def run_simulation(cfg):
+    """Run the simulation."""
+
+    save_path = Path(HydraConfig.get().runtime.output_dir)
+
+    exp_key = set_exp_key(cfg)
+
+    log(INFO, " ***********  Starting Experiment: %s ***************", exp_key)
+
+    log(DEBUG, "Simulation Configuration: %s", cfg)
+
+    _, tokenizer = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
+
+    ds_prep = ClientsAndServerDatasets(cfg, tokenizer)
+    ds_dict = ds_prep.get_datasets()
+    server_testdata = ds_dict["server_dataset"]
+
+    round2gm_accs = []
+
+    def _create_model():
+        temp_model, _ = get_model_and_tokenizer(
+            cfg.model_config, cfg.peft_config)
+        return temp_model
+
+    def _get_fit_config(server_round):
+        return cfg.hf_trainer_config
+
+    def _eval_gm(server_round, parameters, config):
+        gm_model = _create_model()
+        set_parameters(gm_model, parameters, peft=cfg.peft)
+
+        d_res = _cls_hf_train_or_eval(
+            gm_model, server_testdata, cfg.hf_trainer_config, do_train=False, do_eval=True)
+
+        round2gm_accs.append(d_res["accuracy"])
+        log(DEBUG, "config: %s", config)
+        return d_res["loss"], {
+            "accuracy": d_res["accuracy"],
+            "loss": d_res["loss"],
+            "round": server_round,
+        }
+
+    def _client_fn(context: Context):
+        """Give the new client."""
+        # print("context", context)
+        partition_id = context.node_config["partition-id"]
+        cid = f"{partition_id}"
+
+        args = {
+            "cid": cid,
+            "model": _create_model(),
+            "client_data_train": ds_dict["client2dataset"][cid],
+            "device": torch.device(cfg.device),
+            'dir': save_path,
+            'peft': cfg.peft
+        }
+        client = FlowerClient(args).to_client()
+        return client
+
+    def _server_fn(context: Context):
+        initial_net = _create_model()
+        strategy = FedAvgWithGenFL(
+            cfg=cfg,  # Add cfg
+            client2class=ds_dict["client2class"],
+            test_data=server_testdata,  # Add test_data
+            callback_create_model_fn=_create_model,
+            accept_failures=False,
+            fraction_fit=0,
+            fraction_evaluate=0.0,
+            min_fit_clients=cfg.clients_per_round,
+            min_evaluate_clients=0,
+            min_available_clients=cfg.num_clients,
+            initial_parameters=ndarrays_to_parameters(
+                ndarrays=get_parameters(initial_net, peft=cfg.peft)),  # Remove initial_parameters
+            evaluate_fn=_eval_gm,
+            on_fit_config_fn=_get_fit_config,
+            fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,
+        )
+        server_config = fl.server.ServerConfig(num_rounds=cfg.num_rounds)
+
+        return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
+
+    client_app = fl.client.ClientApp(client_fn=_client_fn)
+    server_app = fl.server.ServerApp(server_fn=_server_fn)
+
+    fl.simulation.run_simulation(
+        server_app=server_app,
+        client_app=client_app,
+        num_supernodes=cfg.num_clients,
+        backend_config=config_sim_resources(cfg),
+    )
+
+    # utils.plot_metrics(round2gm_accs, round2feddebug_accs, cfg, save_path)
+
+    log(INFO, "Training Complete for Experiment: %s", exp_key)
+
+
 @hydra.main(config_path="./conf", config_name="base", version_base=None)
 def main_fl(cfg) -> None:
     """Run the baseline."""
@@ -864,7 +824,6 @@ def main_fl(cfg) -> None:
     log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
 
 
-# central ml
 @hydra.main(config_path="./conf", config_name="train", version_base=None)
 def main_central_ml(cfg) -> None:
     ################
