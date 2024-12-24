@@ -3,14 +3,10 @@ num_rounds: 1
 num_clients: 2
 clients_per_round: ${num_clients}
 
-server_batch_size: 128
+# server_batch_size: 128
 load_server_data: true
 
-# Client Configuration
-client:
-  epochs: 1
-  lr: 0.001
-  batch_size: 64
+
 
 
 # Dataset Configuration
@@ -79,7 +75,7 @@ dir: "./checkpoint_dir"
 
 
 peft: true
-model: openai-community/gpt2 #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
+# model: openai-community/gpt2 #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
 
 
 
@@ -112,4 +108,5 @@ hf_trainer_config:
   # # log_level: info
   # remove_unused_columns: true
   fp16: true
+  disable_tqdm: True  # Disable the progress bar
   

@@ -190,16 +190,7 @@ def calculate_localization_accuracy(true_faulty_clients, predicted_faulty_client
 
 def set_exp_key(cfg):
     """Set the experiment key."""
-    key = (
-        f"{cfg.model}-{cfg.dataset.name}-"
-        # f"faulty_clients[{cfg.malicious_clients_ids}]-"
-        # f"noise_rate{cfg.noise_rate}-"
-        f"TClients{cfg.num_clients}-"
-        f"-clientsPerR{cfg.clients_per_round})"
-        f"-{cfg.distribution}"
-        f"-batch{cfg.client.batch_size}-epochs{cfg.client.epochs}-"
-        f"lr{cfg.client.lr}"
-    )
+    key = f"hello fl world"
     return key
 
 
@@ -227,15 +218,8 @@ def get_labels_count(hf_dataset, target_label_col):
 
 class ClientsAndServerDatasets:
 
-    def __init__(self, cfg):
-        self.cfg = cfg
-        tokenizer = AutoTokenizer.from_pretrained(cfg.model)
-
-        if tokenizer.pad_token is None:
-            if tokenizer.eos_token is None:
-                tokenizer.add_special_tokens({'eos_token':  '<|endoftext|>'})
-            tokenizer.pad_token = tokenizer.eos_token
-
+    def __init__(self, cfg, tokenizer):
+        self.cfg = cfg        
         self.tokenizer = tokenizer
         self.client2dataset = {}
         self.server_dataset = None
@@ -294,15 +278,13 @@ class ClientsAndServerDatasets:
             partition = self.federated_dataset.load_partition(cid, 'train')
             tokenized_partition = self._tokenize_partition(partition)
             self.client2dataset[client_id] = tokenized_partition
-            self.logger.debug(
-                f"DataLoader created for {client_id} with batch size {self.cfg.client.batch_size}.")
+            
 
     def _load_server_data(self):
         server_data = self.federated_dataset.load_split('test')
         tokenized_server = self._tokenize_partition(server_data)
         self.server_dataset = tokenized_server
-        self.logger.debug(
-            f"Server DataLoader created with batch size {self.cfg.server_batch_size}.")
+        
 
     def _tokenize_partition(self, partition: Dataset) -> Dataset:
         self.logger.debug(
@@ -347,64 +329,26 @@ class ClientsAndServerDatasets:
         }
 
 
-def get_training_arguments(cfg, do_train=True, do_eval=False):
-    return TrainingArguments(
-        output_dir=cfg['dir'],
-        learning_rate=cfg['lr'] if do_train else None,
-        num_train_epochs=cfg['epochs'] if do_train else 0,
-        eval_strategy='no' if not do_eval else 'epoch',
-        do_train=do_train,
-        do_eval=do_eval,
-        fp16=True,
-        disable_tqdm=True,  # Disable the progress bar
-        # logging_dir='./logs',
-        # logging_steps=10,
-    )
-
-
 def compute_metrics(metric, eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
     return metric.compute(predictions=predictions, references=labels)
 
 
-def _hf_train(model, train_data, train_cfg):
+def _hf_train_or_eval(model, hf_ds, train_cfg, do_train, do_eval):
     metric = evaluate.load("accuracy")
-    # training_args = get_training_arguments(
-    #     train_cfg, do_train=True, do_eval=False)
+    training_args = TrainingArguments(
+        do_train=do_train, do_eval=do_eval, **train_cfg)
+    trainer = Trainer(model, training_args, train_dataset=hf_ds,
+                      eval_dataset=hf_ds, compute_metrics=partial(compute_metrics, metric))
 
-    print(train_cfg)
+    if do_train:
+        trainer.train()
 
-    training_args = TrainingArguments(**train_cfg) 
-    
-    trainer = Trainer(model, training_args, train_dataset=train_data,
-                      eval_dataset=train_data, compute_metrics=partial(compute_metrics, metric))
-    trainer.train()
     eval_result = trainer.evaluate()
+
     model = model.cpu()
     return {'accuracy': eval_result['eval_accuracy'], 'loss': eval_result['eval_loss']}
-
-
-def _hf_test(model, test_data, test_cfg):
-    metric = evaluate.load("accuracy")
-    training_args = get_training_arguments(
-        test_cfg, do_train=False, do_eval=True)
-    trainer = Trainer(model=model, args=training_args, eval_dataset=test_data,
-                      compute_metrics=partial(compute_metrics, metric))
-    eval_result = trainer.evaluate()
-    model = model.cpu()
-    return {'accuracy': eval_result['eval_accuracy'], 'loss': eval_result['eval_loss']}
-
-
-def test(test_cfg, device=None):
-    model, test_data = test_cfg['model'], test_cfg['test_data']
-    return _hf_test(model, test_data, test_cfg)
-
-
-# def train(tconfig):
-#     """Train the neural network."""
-#     return _hf_train(tconfig)
-#     return {'accuracy': -1, 'loss': -1}
 
 
 def _get_state_dict(net, peft):
@@ -473,13 +417,8 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
 
         set_parameters(model, parameters=parameters, peft=self.args["peft"])
-
-        # {"lr": config["lr"], "epochs": config["local_epochs"], "batch_size": config["batch_size"], "model": model,
-        #                    "train_data": self.args["client_data_train"], "device": self.args["device"], "dir": self.args["dir"], }
-
-        print(f'config {config}')    
-        train_dict = _hf_train(model, self.args["client_data_train"], config)
-
+        train_dict = _hf_train_or_eval(
+            model, self.args["client_data_train"], config, do_train=True, do_eval=True)
         parameters = get_parameters(model, peft=self.args["peft"])
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
@@ -519,36 +458,28 @@ def run_simulation(cfg):
 
     log(DEBUG, "Simulation Configuration: %s", cfg)
 
-    ds_prep = ClientsAndServerDatasets(cfg)
+    _ , tokenizer = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
+
+    ds_prep = ClientsAndServerDatasets(cfg, tokenizer)
     ds_dict = ds_prep.get_datasets()
     server_testdata = ds_dict["server_dataset"]
 
     round2gm_accs = []
 
     def _create_model():
-        # initialize_model(cfg.model, cfg.dataset.num_classes, cfg.peft, cfg.peft_config)
-        temp_model, _ = get_model_and_tokenizer(
-            cfg.model_config, cfg.peft_config)
-
-        temp_model.resize_token_embeddings(len(ds_dict["tokenizer"]))
-        temp_model.config.pad_token_id = ds_dict["tokenizer"].pad_token_id
+        temp_model, _ = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
         return temp_model
 
     def _get_fit_config(server_round):
-        # return {
-        #     "server_round": server_round,
-        #     "local_epochs": cfg.client.epochs,
-        #     "batch_size": cfg.client.batch_size,
-        #     "lr": cfg.client.lr,
-        # }
         return cfg.hf_trainer_config
 
     def _eval_gm(server_round, parameters, config):
         gm_model = _create_model()
         set_parameters(gm_model, parameters, peft=cfg.peft)
-        test_cfg = {'model': gm_model,
-                    'test_data': server_testdata, 'dir': save_path}
-        d_res = test(test_cfg)
+
+        d_res = _hf_train_or_eval(
+            gm_model, server_testdata, cfg.hf_trainer_config, do_train=False, do_eval=True)
+
         round2gm_accs.append(d_res["accuracy"])
         log(DEBUG, "config: %s", config)
         return d_res["loss"], {
@@ -977,12 +908,3 @@ def main_central_ml(cfg) -> None:
 if __name__ == "__main__":
     main_fl()
     # main_central_ml()
-
-
-# K-L Divergence
-# Probalistic Explaination to attribution of the model
-# Compare clients behaviour over time on the same prompt and see how they change over time
-# it can help to identify the unqiue clients/agents in the system  (anomaly detection,)
-# increase the weights of good clients and decrease the weights of bad clients based on the attribution
-
-# A[0:0.1, 2: 0.4, ,,,]   quick [9: 0.2,  ] fox [2:0.3] jumps [2:0.1].
