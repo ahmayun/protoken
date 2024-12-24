@@ -85,9 +85,9 @@ def load_datasets(dname):
 
 
 def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
-    
+
     tokenizer = AutoTokenizer.from_pretrained(model_cfg.name, use_fast=True)
-    
+
     if peft_cfg.task_type == 'CAUSAL_LM':
         model = AutoModelForCausalLM.from_pretrained(
             model_cfg.name, **model_cfg.kwargs)
@@ -95,7 +95,6 @@ def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
         model = AutoModelForSequenceClassification.from_pretrained(
             model_cfg.name, **model_cfg.kwargs)
 
-    
     if 'microsoft/Phi-3-mini-4k-instruct' not in model_cfg.name:
         model, tokenizer = setup_chat_format(model=model, tokenizer=tokenizer)
 
@@ -103,21 +102,8 @@ def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
         peft_conf = LoraConfig(**peft_cfg)
         model = get_peft_model(model, peft_conf)
         model.print_trainable_parameters()
-    
+
     return model, tokenizer
-
-
-# def initialize_model(mname, num_classes, peft, peft_config):
-#     """Initialize the model with the given name."""
-#     model = AutoModelForSequenceClassification.from_pretrained(
-#         mname, num_labels=num_classes, ignore_mismatched_sizes=True)
-#     if peft:
-#         lora_config = LoraConfig(**peft_config)
-#         model = get_peft_model(model, lora_config)
-#         model.print_trainable_parameters()
-#     return model
-
-
 
 
 # Text Generation
@@ -361,12 +347,6 @@ class ClientsAndServerDatasets:
         }
 
 
-
-
-
-
-
-
 def get_training_arguments(cfg, do_train=True, do_eval=False):
     return TrainingArguments(
         output_dir=cfg['dir'],
@@ -388,13 +368,17 @@ def compute_metrics(metric, eval_pred):
     return metric.compute(predictions=predictions, references=labels)
 
 
-def _hf_train(train_cfg):
+def _hf_train(model, train_data, train_cfg):
     metric = evaluate.load("accuracy")
-    model = train_cfg["model"]
-    training_args = get_training_arguments(
-        train_cfg, do_train=True, do_eval=False)
-    trainer = Trainer(model, training_args, train_dataset=train_cfg["train_data"],
-                      eval_dataset=train_cfg["train_data"], compute_metrics=partial(compute_metrics, metric))
+    # training_args = get_training_arguments(
+    #     train_cfg, do_train=True, do_eval=False)
+
+    print(train_cfg)
+
+    training_args = TrainingArguments(**train_cfg) 
+    
+    trainer = Trainer(model, training_args, train_dataset=train_data,
+                      eval_dataset=train_data, compute_metrics=partial(compute_metrics, metric))
     trainer.train()
     eval_result = trainer.evaluate()
     model = model.cpu()
@@ -417,10 +401,10 @@ def test(test_cfg, device=None):
     return _hf_test(model, test_data, test_cfg)
 
 
-def train(tconfig):
-    """Train the neural network."""
-    return _hf_train(tconfig)
-    return {'accuracy': -1, 'loss': -1}
+# def train(tconfig):
+#     """Train the neural network."""
+#     return _hf_train(tconfig)
+#     return {'accuracy': -1, 'loss': -1}
 
 
 def _get_state_dict(net, peft):
@@ -486,18 +470,22 @@ class FlowerClient(fl.client.NumPyClient):
         self.args = args
 
     def fit(self, parameters, config):
-        nk_client_data_points = len(self.args["client_data_train"])
         model = self.args["model"]
 
         set_parameters(model, parameters=parameters, peft=self.args["peft"])
-        train_dict = train({"lr": config["lr"], "epochs": config["local_epochs"], "batch_size": config["batch_size"], "model": model,
-                           "train_data": self.args["client_data_train"], "device": self.args["device"], "dir": self.args["dir"], })
+
+        # {"lr": config["lr"], "epochs": config["local_epochs"], "batch_size": config["batch_size"], "model": model,
+        #                    "train_data": self.args["client_data_train"], "device": self.args["device"], "dir": self.args["dir"], }
+
+        print(f'config {config}')    
+        train_dict = _hf_train(model, self.args["client_data_train"], config)
 
         parameters = get_parameters(model, peft=self.args["peft"])
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
 
         log(INFO, "Client %s trained.", self.args["cid"])
+        nk_client_data_points = len(self.args["client_data_train"])
         return parameters, nk_client_data_points, client_train_dict
 
 
@@ -538,19 +526,22 @@ def run_simulation(cfg):
     round2gm_accs = []
 
     def _create_model():
-        temp_model, _  = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)  #initialize_model(cfg.model, cfg.dataset.num_classes, cfg.peft, cfg.peft_config)
-        
+        # initialize_model(cfg.model, cfg.dataset.num_classes, cfg.peft, cfg.peft_config)
+        temp_model, _ = get_model_and_tokenizer(
+            cfg.model_config, cfg.peft_config)
+
         temp_model.resize_token_embeddings(len(ds_dict["tokenizer"]))
         temp_model.config.pad_token_id = ds_dict["tokenizer"].pad_token_id
         return temp_model
 
     def _get_fit_config(server_round):
-        return {
-            "server_round": server_round,
-            "local_epochs": cfg.client.epochs,
-            "batch_size": cfg.client.batch_size,
-            "lr": cfg.client.lr,
-        }
+        # return {
+        #     "server_round": server_round,
+        #     "local_epochs": cfg.client.epochs,
+        #     "batch_size": cfg.client.batch_size,
+        #     "lr": cfg.client.lr,
+        # }
+        return cfg.hf_trainer_config
 
     def _eval_gm(server_round, parameters, config):
         gm_model = _create_model()
@@ -995,5 +986,3 @@ if __name__ == "__main__":
 # increase the weights of good clients and decrease the weights of bad clients based on the attribution
 
 # A[0:0.1, 2: 0.4, ,,,]   quick [9: 0.2,  ] fox [2:0.3] jumps [2:0.1].
-
-
