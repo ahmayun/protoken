@@ -13,10 +13,13 @@ client:
   batch_size: 64
 
 peft: true
+
+
+
 model: openai-community/gpt2 #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
 
 # Dataset Configuration
-distribution: 'shard'  #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
+distribution: 'iid'  #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
 
 column_of_label:
   yahoo_answers_topics: "topic"
@@ -53,3 +56,29 @@ hydra:
         level: INFO
       accelerate.utils.other:
         level: ERROR
+
+
+
+
+##### New Edition #####
+peft_config:
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.1
+  task_type: "SEQ_CLS"
+  fan_in_fan_out: true
+
+# Model Loading Configuration
+model_config:
+  name: openai-community/gpt2
+  kwargs:
+    use_cache: false
+    trust_remote_code: true
+    attn_implementation: "flash_attention_2"
+    # torch_dtype: "bfloat16"
+    device_map: null
+    num_labels: ${dataset_classes.${dataset.name}}
+
+  tokenizer:
+    max_length: 2048
+    use_fast: true

@@ -84,26 +84,40 @@ def load_datasets(dname):
 # Model Loading
 
 
-def get_model_and_tokenizer(model_cfg, peft_cfg):
-    model = AutoModelForCausalLM.from_pretrained(
-        model_cfg.name, **model_cfg.kwargs)
+def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
+    
     tokenizer = AutoTokenizer.from_pretrained(model_cfg.name, use_fast=True)
+    
+    if peft_cfg.task_type == 'CAUSAL_LM':
+        model = AutoModelForCausalLM.from_pretrained(
+            model_cfg.name, **model_cfg.kwargs)
+    elif peft_cfg.task_type == 'SEQ_CLS':
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_cfg.name, **model_cfg.kwargs)
 
+    
     if 'microsoft/Phi-3-mini-4k-instruct' not in model_cfg.name:
         model, tokenizer = setup_chat_format(model=model, tokenizer=tokenizer)
 
-    # if model_cfg.name == 'microsoft/Phi-3-mini-4k-instruct':
-    #     tokenizer.model_max_length = 2048
-    #     # use unk rather than eos token to prevent endless generation
-    #     tokenizer.pad_token = tokenizer.unk_token
-    #     tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(
-    #         tokenizer.pad_token)
-    #     tokenizer.padding_side = 'right'
-
-    peft_conf = LoraConfig(**peft_cfg)
-    model = get_peft_model(model, peft_conf)
-    model.print_trainable_parameters()
+    if use_peft:
+        peft_conf = LoraConfig(**peft_cfg)
+        model = get_peft_model(model, peft_conf)
+        model.print_trainable_parameters()
+    
     return model, tokenizer
+
+
+# def initialize_model(mname, num_classes, peft, peft_config):
+#     """Initialize the model with the given name."""
+#     model = AutoModelForSequenceClassification.from_pretrained(
+#         mname, num_labels=num_classes, ignore_mismatched_sizes=True)
+#     if peft:
+#         lora_config = LoraConfig(**peft_config)
+#         model = get_peft_model(model, lora_config)
+#         model.print_trainable_parameters()
+#     return model
+
+
 
 
 # Text Generation
@@ -347,25 +361,10 @@ class ClientsAndServerDatasets:
         }
 
 
-# fl model
 
 
-def initialize_model(mname, num_classes, peft):
-    """Initialize the model with the given name."""
-    model = AutoModelForSequenceClassification.from_pretrained(
-        mname, num_labels=num_classes, ignore_mismatched_sizes=True)
-    if peft:
-        lora_config = LoraConfig(
-            task_type=TaskType.SEQ_CLS,
-            inference_mode=False,
-            r=8,
-            lora_alpha=16,
-            lora_dropout=0.1,
-            fan_in_fan_out=True,
-        )
-        model = get_peft_model(model, lora_config)
-        model.print_trainable_parameters()
-    return model
+
+
 
 
 def get_training_arguments(cfg, do_train=True, do_eval=False):
@@ -539,8 +538,8 @@ def run_simulation(cfg):
     round2gm_accs = []
 
     def _create_model():
-        temp_model = initialize_model(
-            cfg.model, cfg.dataset.num_classes, cfg.peft)
+        temp_model, _  = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)  #initialize_model(cfg.model, cfg.dataset.num_classes, cfg.peft, cfg.peft_config)
+        
         temp_model.resize_token_embeddings(len(ds_dict["tokenizer"]))
         temp_model.config.pad_token_id = ds_dict["tokenizer"].pad_token_id
         return temp_model
@@ -986,4 +985,15 @@ def main_central_ml(cfg) -> None:
 
 if __name__ == "__main__":
     main_fl()
-    # central_ml()
+    # main_central_ml()
+
+
+# K-L Divergence
+# Probalistic Explaination to attribution of the model
+# Compare clients behaviour over time on the same prompt and see how they change over time
+# it can help to identify the unqiue clients/agents in the system  (anomaly detection,)
+# increase the weights of good clients and decrease the weights of bad clients based on the attribution
+
+# A[0:0.1, 2: 0.4, ,,,]   quick [9: 0.2,  ] fox [2:0.3] jumps [2:0.1].
+
+
