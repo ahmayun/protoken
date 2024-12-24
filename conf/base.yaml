@@ -1,17 +1,4 @@
-# General Configuration
-num_rounds: 1
-num_clients: 2
-clients_per_round: ${num_clients}
-
-# server_batch_size: 128
-load_server_data: true
-
-
-
-
-# Dataset Configuration
-distribution: "iid" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
-
+# CLS specific fixed
 column_of_label:
   yahoo_answers_topics: "topic"
 
@@ -21,32 +8,25 @@ column_of_text:
 dataset_classes:
   yahoo_answers_topics: 10 # Text
 
+peft: true
+
+dir: "fl_hf_checkpoints"
+
+
+# FL Configuration
+num_rounds: 1
+num_clients: 2
+clients_per_round: ${num_clients}
+load_server_data: true
+
+# Dataset Configuration
 dataset:
+  distribution: "iid" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
   name: yahoo_answers_topics
   num_classes: ${dataset_classes.${dataset.name}}
   label_column: ${column_of_label.${dataset.name}}
   text_column: ${column_of_text.${dataset.name}}
   max_length: 128
-
-# Device and Resource Configuration
-device: cuda
-total_gpus: 1
-total_cpus: 8
-
-client_resources:
-  num_cpus: 8
-  num_gpus: 1 # Note that `num_gpus` is only used when the device is set to `cuda` (i.e., `device = cuda`)
-
-# Logging Configuration (Hydra)
-hydra:
-  job_logging:
-    root:
-      level: INFO # Set the job logging level to INFO
-    loggers:
-      flwr:
-        level: INFO
-      accelerate.utils.other:
-        level: ERROR
 
 ##### New Edition #####
 peft_config:
@@ -70,14 +50,6 @@ model_config:
   tokenizer:
     max_length: 2048
     use_fast: true
-
-dir: "./checkpoint_dir"
-
-
-peft: true
-# model: openai-community/gpt2 #openai-community/openai-gpt # Options: lenet, resnet18, resnet34, resnet50, resnet101, resnet152, densenet121, vgg16
-
-
 
 # HF Trainer Configuration. This will be used by each client to train the model
 hf_trainer_config:
@@ -108,5 +80,24 @@ hf_trainer_config:
   # # log_level: info
   # remove_unused_columns: true
   fp16: true
-  disable_tqdm: True  # Disable the progress bar
-  
+  disable_tqdm: True # Disable the progress bar
+
+# Device and Resource Configuration
+device: cuda
+total_gpus: 1
+total_cpus: 8
+
+client_resources:
+  num_cpus: 8
+  num_gpus: 1 # Note that `num_gpus` is only used when the device is set to `cuda` (i.e., `device = cuda`)
+
+# Logging Configuration (Hydra)
+hydra:
+  job_logging:
+    root:
+      level: INFO # Set the job logging level to INFO
+    loggers:
+      flwr:
+        level: INFO
+      accelerate.utils.other:
+        level: ERROR

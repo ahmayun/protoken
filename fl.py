@@ -20,7 +20,6 @@ from flwr_datasets.partitioner import (
 )
 from peft import (
     LoraConfig,
-    TaskType,
     get_peft_model,
     get_peft_model_state_dict,
     set_peft_model_state_dict,
@@ -189,7 +188,7 @@ def generate_self(model, tokenizer, terminators, prompt, max_new_tokens=256, con
     return text
 
 
-def compute_metrics(metric, eval_pred):
+def _cls_compute_metrics(metric, eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
     return metric.compute(predictions=predictions, references=labels)
@@ -200,7 +199,7 @@ def _cls_hf_train_or_eval(model, hf_ds, train_cfg, do_train, do_eval):
     training_args = TrainingArguments(
         do_train=do_train, do_eval=do_eval, **train_cfg)
     trainer = Trainer(model, training_args, train_dataset=hf_ds,
-                      eval_dataset=hf_ds, compute_metrics=partial(compute_metrics, metric))
+                      eval_dataset=hf_ds, compute_metrics=partial(_cls_compute_metrics, metric))
 
     if do_train:
         trainer.train()
@@ -240,7 +239,7 @@ def get_labels_count(hf_dataset, target_label_col):
 
 def get_correct_predictions_subset(model, test_data, hf_trainer_config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model =  model.to(device)
+    model = model.to(device)
     args = TrainingArguments(do_eval=True, do_train=False, **hf_trainer_config)
     trainer = Trainer(model=model, args=args,
                       eval_dataset=test_data, compute_metrics=None)
@@ -381,10 +380,10 @@ class ClientsAndServerDatasets:
         self.logger.info("DataLoaders prepared successfully.")
 
     def _initialize_partitioner(self):
-        if self.cfg.distribution == "iid":
+        if self.cfg.dataset.distribution == "iid":
             self.logger.debug("Using IID partitioner.")
             return IidPartitioner(num_partitions=self.cfg.num_clients)
-        elif self.cfg.distribution == "non_iid":
+        elif self.cfg.dataset.distribution == "non_iid":
             self.logger.debug("Using Dirichlet partitioner.")
             return DirichletPartitioner(
                 num_partitions=self.cfg.num_clients,
@@ -393,7 +392,7 @@ class ClientsAndServerDatasets:
                 self_balancing=True,
             )
 
-        elif self.cfg.distribution == "shard":
+        elif self.cfg.dataset.distribution == "shard":
             self.logger.debug("Using Shard partitioner.")
             return PathologicalPartitioner(
                 num_partitions=self.cfg.num_clients,
@@ -457,7 +456,6 @@ class ClientsAndServerDatasets:
         return {
             "client2dataset": self.client2dataset,
             "server_dataset": self.server_dataset,
-            'tokenizer': self.tokenizer,
             'client2class': client2class
         }
 
