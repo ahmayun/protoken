@@ -1,10 +1,13 @@
+# Standard Library Imports
 import logging
 import random
+import time
 from collections import Counter, OrderedDict
 from functools import partial
+from pathlib import Path
 from typing import Dict, Optional
 
-# Third-party imports
+# Third-Party Imports
 import flwr as fl
 import hydra
 import numpy as np
@@ -33,13 +36,11 @@ from transformers import (
     TrainingArguments,
 )
 from trl import SFTConfig, SFTTrainer, setup_chat_format
-import time
-
 from hydra.core.hydra_config import HydraConfig
 from flwr.common import ndarrays_to_parameters, Context
 from logging import DEBUG, INFO
-from pathlib import Path
 import evaluate
+
 
 
 ################
@@ -87,32 +88,37 @@ def create_alpaca_prompt_with_response(example, eos_token):
     return prompt
 
 
-def _get_state_dict(net, peft):
-    if peft:
-        state_dict = get_peft_model_state_dict(net)
-    else:
-        state_dict = net.state_dict()
-    return state_dict
 
+class ModelUtils:
+    """Utility class for model parameter handling."""
 
-def get_parameters(model, peft):
-    """Return model parameters as a list of NumPy ndarrays."""
-    model = model.cpu()
-    state_dict = _get_state_dict(model, peft)
-    return [val.cpu().numpy() for _, val in state_dict.items()]
+    @staticmethod
+    def _get_state_dict(net: torch.nn.Module, peft: bool) -> Dict:
+        if peft:
+            return get_peft_model_state_dict(net)
+        else:
+            return net.state_dict()
 
+    @staticmethod
+    def get_parameters(model: torch.nn.Module, peft: bool) -> list:
+        """Return model parameters as a list of NumPy ndarrays."""
+        model = model.cpu()
+        state_dict = ModelUtils._get_state_dict(model, peft)
+        return [val.cpu().numpy() for _, val in state_dict.items()]
 
-def set_parameters(net, parameters, peft):
-    """Set model parameters from a list of NumPy ndarrays."""
-    net = net.cpu()
-    state_dict = _get_state_dict(net, peft)
-    params_dict = zip(state_dict.keys(), parameters)
-    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+    @staticmethod
+    def set_parameters(net: torch.nn.Module, parameters: list, peft: bool) -> None:
+        """Set model parameters from a list of NumPy ndarrays."""
+        net = net.cpu()
+        state_dict = ModelUtils._get_state_dict(net, peft)
+        params_dict = zip(state_dict.keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
 
-    if peft:
-        set_peft_model_state_dict(net, state_dict)
-    else:
-        net.load_state_dict(state_dict, strict=True)
+        if peft:
+            set_peft_model_state_dict(net, state_dict)
+        else:
+            net.load_state_dict(state_dict, strict=True)
+
 
 
 def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
@@ -467,11 +473,11 @@ class FlowerClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         model = self.args["model"]
 
-        set_parameters(model, parameters=parameters, peft=self.args["peft"])
+        ModelUtils.set_parameters(model, parameters=parameters, peft=self.args["peft"])
         train_dict = _cls_hf_train_or_eval(
             model, self.args["client_data_train"], config, do_train=True, do_eval=True)
 
-        parameters = get_parameters(model, peft=self.args["peft"])
+        parameters = ModelUtils.get_parameters(model, peft=self.args["peft"])
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
 
@@ -513,7 +519,7 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         """Convert parameters to state_dict."""
         ndarr = fl.common.parameters_to_ndarrays(parameters)
         model = self.create_model_fn()
-        set_parameters(model, ndarr, peft=self.cfg.peft)
+        ModelUtils.set_parameters(model, ndarr, peft=self.cfg.peft)
         return model
 
 
@@ -746,7 +752,7 @@ def run_simulation(cfg):
 
     def _eval_gm(server_round, parameters, config):
         gm_model = _create_model()
-        set_parameters(gm_model, parameters, peft=cfg.peft)
+        ModelUtils.set_parameters(gm_model, parameters, peft=cfg.peft)
 
         d_res = _cls_hf_train_or_eval(
             gm_model, server_testdata, cfg.hf_trainer_config, do_train=False, do_eval=True)
@@ -790,7 +796,7 @@ def run_simulation(cfg):
             min_evaluate_clients=0,
             min_available_clients=cfg.num_clients,
             initial_parameters=ndarrays_to_parameters(
-                ndarrays=get_parameters(initial_net, peft=cfg.peft)),  # Remove initial_parameters
+                ndarrays=ModelUtils.get_parameters(initial_net, peft=cfg.peft)),  # Remove initial_parameters
             evaluate_fn=_eval_gm,
             on_fit_config_fn=_get_fit_config,
             fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,
