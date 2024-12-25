@@ -822,7 +822,7 @@ def main_fl(cfg) -> None:
     log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
 
 
-@hydra.main(config_path="./conf", config_name="train", version_base=None)
+@hydra.main(config_path="./conf", config_name="central_ml", version_base=None)
 def main_central_ml(cfg) -> None:
     ################
     # Model Loading
