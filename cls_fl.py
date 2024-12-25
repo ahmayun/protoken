@@ -49,10 +49,39 @@ os.environ["RAY_DISABLE_DOCKER_CPU_WARNING"] = "1"
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-
 ################
 # Fixed Helper Functions
 ################
+class ModelUtils:
+    """Utility class for model parameter handling."""
+
+    @staticmethod
+    def _get_state_dict(net: torch.nn.Module, peft: bool) -> Dict:
+        if peft:
+            return get_peft_model_state_dict(net)
+        else:
+            return net.state_dict()
+
+    @staticmethod
+    def get_parameters(model: torch.nn.Module, peft: bool) -> list:
+        """Return model parameters as a list of NumPy ndarrays."""
+        model = model.cpu()
+        state_dict = ModelUtils._get_state_dict(model, peft)
+        return [val.cpu().numpy() for _, val in state_dict.items()]
+
+    @staticmethod
+    def set_parameters(net: torch.nn.Module, parameters: list, peft: bool) -> None:
+        """Set model parameters from a list of NumPy ndarrays."""
+        net = net.cpu()
+        state_dict = ModelUtils._get_state_dict(net, peft)
+        params_dict = zip(state_dict.keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+
+        if peft:
+            set_peft_model_state_dict(net, state_dict)
+        else:
+            net.load_state_dict(state_dict, strict=True)
+
 
 def set_exp_key(cfg):
     """Set the experiment key."""
@@ -93,39 +122,6 @@ def create_alpaca_prompt_with_response(example, eos_token):
     instruct = _prompt(example['instruction'], example['input'])
     prompt = instruct + example["output"] + " " + eos_token + " "
     return prompt
-
-
-
-class ModelUtils:
-    """Utility class for model parameter handling."""
-
-    @staticmethod
-    def _get_state_dict(net: torch.nn.Module, peft: bool) -> Dict:
-        if peft:
-            return get_peft_model_state_dict(net)
-        else:
-            return net.state_dict()
-
-    @staticmethod
-    def get_parameters(model: torch.nn.Module, peft: bool) -> list:
-        """Return model parameters as a list of NumPy ndarrays."""
-        model = model.cpu()
-        state_dict = ModelUtils._get_state_dict(model, peft)
-        return [val.cpu().numpy() for _, val in state_dict.items()]
-
-    @staticmethod
-    def set_parameters(net: torch.nn.Module, parameters: list, peft: bool) -> None:
-        """Set model parameters from a list of NumPy ndarrays."""
-        net = net.cpu()
-        state_dict = ModelUtils._get_state_dict(net, peft)
-        params_dict = zip(state_dict.keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-
-        if peft:
-            set_peft_model_state_dict(net, state_dict)
-        else:
-            net.load_state_dict(state_dict, strict=True)
-
 
 
 def get_model_and_tokenizer(model_cfg, peft):
@@ -480,7 +476,8 @@ class FlowerClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         model = self.args["model"]
 
-        ModelUtils.set_parameters(model, parameters=parameters, peft=self.args["peft"])
+        ModelUtils.set_parameters(
+            model, parameters=parameters, peft=self.args["peft"])
         train_dict = _cls_hf_train_or_eval(
             model, self.args["client_data_train"], config, do_train=True, do_eval=True)
 
@@ -722,8 +719,6 @@ def _check_anomlies(t):
         # logging.error(f"Total values: {t}")
         raise ValueError("Anomalies detected in tensor")
 
-# provenance of fl clients funtion
-
 
 def provenance_of_fl_clients(gmodel, c2model, test_data):
     neuron_prov = NeuronProvenance(gmodel, c2model, test_data)
@@ -839,7 +834,8 @@ def main_central_ml(cfg) -> None:
     ################
     # Model Loading
     ################
-    model, tokenizer = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
+    model, tokenizer = get_model_and_tokenizer(
+        cfg.model_config, cfg.peft_config)
 
     ds_dict = load_datasets(cfg.dataset_config.name)
 
