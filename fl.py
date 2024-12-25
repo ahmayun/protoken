@@ -814,7 +814,7 @@ def run_simulation(cfg):
     log(INFO, "Training Complete for Experiment: %s", exp_key)
 
 
-@hydra.main(config_path="./conf", config_name="base", version_base=None)
+@hydra.main(config_path="./conf", config_name="cls_fl", version_base=None)
 def main_fl(cfg) -> None:
     """Run the baseline."""
     start_time = time.time()
