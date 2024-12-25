@@ -357,65 +357,117 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
 
 class HookManager:
     def __init__(self):
-        self.storage = []
+        self.storage_forward = []
+        self.storage_backward = []
         self.all_hooks = []
 
-    def insert_hook(self, layer, hook_type):
+    def insert_hook(self, layer):
         def _forward_hook(module, input_tensor, output_tensor):
             input_tensor = input_tensor[0].detach()
             output_tensor = output_tensor.detach()
-            self.storage.append((input_tensor, output_tensor))
+            self.storage_forward.append((input_tensor, output_tensor))
 
         def _backward_hook(module, grad_input, grad_output):
             grad_input = grad_input[0].detach()
             grad_output = grad_output[0].detach()
-            self.storage.append((grad_input, grad_output))
+            self.storage_backward.append((grad_input, grad_output))
 
-        if hook_type == 'forward':
-            hook = layer.register_forward_hook(_forward_hook)
-        elif hook_type == 'backward':
-            hook = layer.register_full_backward_hook(_backward_hook)
-        else:
-            raise ValueError("Invalid hook type")
-        self.all_hooks.append(hook)
+        hook_forward = layer.register_forward_hook(_forward_hook)
+        hook_backward = layer.register_full_backward_hook(_backward_hook)
+        self.all_hooks.append(hook_forward)
+        self.all_hooks.append(hook_backward)
 
     def _remove_hooks(self):
         for hook in self.all_hooks:
             hook.remove()
 
-    def get_hooks_data(self, hook_type):
+    def get_hooks_data(self):
         self._remove_hooks()
-        temp_storage = self.storage
-        if hook_type == 'backward':
-            temp_storage.reverse()
-            return temp_storage
-        elif hook_type == 'forward':
-            return temp_storage
-        else:
-            raise ValueError("Invalid hook type")
+        self.storage_backward.reverse()
+        return {'activations': self.storage_forward, 'gradients': self.storage_backward}
 
 
 class NeuronProvenance:
-    def __init__(self, gmodel, c2model, test_data):
+    def __init__(self,gm_acts_grads_dict, c2model):
+        self.gm_acts_grads_dict = gm_acts_grads_dict
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
-        self.test_data = test_data
-        self.gmodel = gmodel
         self.c2model = c2model
         self.client_ids = list(self.c2model.keys())
-        # logging.info(f'client ids: {self.client_ids}')
 
-    def _calculate_clients_contributions(self, gm_layers_ios, gm_layers_grads, client2layers):
+    @staticmethod
+    def getAllLayers(net):
+        layers = NeuronProvenance.getAllLayersBert(net)
+        return [layers[-1]]  # [len(layers)-1:len(layers)]
+
+    @staticmethod
+    def getAllLayersBert(net):
+        layers = []
+        for layer in net.children():
+            if isinstance(layer, (torch.nn.Linear)):
+                layers.append(layer)
+            elif len(list(layer.children())) > 0:
+                temp_layers = NeuronProvenance.getAllLayersBert(layer)
+                layers = layers + temp_layers
+        return layers
+
+    @staticmethod
+    def _evaluate_layer(layer, input_tensor, device):
+        layer.zero_grad()
+        with torch.no_grad():
+            layer = layer.eval().to(device)
+            input_tensor = input_tensor.to(device)
+            activations = layer(input_tensor).cpu()
+            _ = layer.cpu()
+            _ = input_tensor.cpu()
+        return activations
+
+    @staticmethod
+    def _calculate_layer_contribution(gm_layer_grads, client2layer_acts, alpha_imp=1):
+        client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
+        # _checkAnomlies(global_neurons_outputs)
+        NeuronProvenance._check_anomlies(gm_layer_grads)
+        gm_layer_grads = gm_layer_grads.flatten().cpu()
+        for cli in client2layer_acts.keys():
+            cli_acts = client2layer_acts[cli].flatten().cpu()
+            NeuronProvenance._check_anomlies(cli_acts)
+            cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
+            cli_part = torch.dot(cli_acts, gm_layer_grads)
+            client2part[cli] = cli_part.item() * alpha_imp
+            _ = cli_acts.cpu()
+        return client2part
+
+    @staticmethod
+    def _normalize_with_softmax(contributions):
+        conts = F.softmax(torch.tensor(list(contributions.values())), dim=0)
+        client2prov = {cid: v.item()
+                       for cid, v in zip(contributions.keys(), conts)}
+        return dict(sorted(client2prov.items(), key=lambda item: item[1], reverse=True))
+
+    @staticmethod
+    def _check_anomlies(t):
+        inf_mask = torch.isinf(t)
+        nan_mask = torch.isnan(t)
+        if inf_mask.any() or nan_mask.any():
+            logging.error(f"Inf values: {torch.sum(inf_mask)}")
+            logging.error(f"NaN values: {torch.sum(nan_mask)}")
+            logging.error(f"Total values: {torch.numel(t)}")
+            # logging.error(f"Total values: {t}")
+            raise ValueError("Anomalies detected in tensor")
+
+
+    @staticmethod
+    def _calculate_clients_contributions(gm_acts_grads_dict, client2layers, device):
         layers2prov = []
-        for layer_id in range(len(gm_layers_ios)):
+        for layer_id in range(len(gm_acts_grads_dict['activations'])):
             c2l = {cid: client2layers[cid][layer_id]
                    for cid in self.client_ids}  # clients layer
-            layer_inputs = gm_layers_ios[layer_id][0]  # layer inputs
-            layer_grads = gm_layers_grads[layer_id][1]
+            # layer inputs
+            layer_inputs = gm_acts_grads_dict['activations'][layer_id][0]
+            layer_grads = gm_acts_grads_dict['gradients'][layer_id][1]
 
-            clinet2outputs = {c: _evaluate_layer(
-                l, layer_inputs, device=self.device) for c, l in c2l.items()}
-            c2contribution = _calculate_layer_contribution(
+            clinet2outputs = {c: NeuronProvenance._evaluate_layer(l, layer_inputs, device) for c, l in c2l.items()}
+            c2contribution = NeuronProvenance._calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=clinet2outputs)
             layers2prov.append(c2contribution)
 
@@ -425,82 +477,66 @@ class NeuronProvenance:
                 client2totalpart[cid] = client2totalpart.get(
                     cid, 0) + c2part[cid]
 
-        client2totalpart = _normalize_with_softmax(client2totalpart)
+        client2totalpart = NeuronProvenance._normalize_with_softmax(
+            client2totalpart)
         return client2totalpart
 
     def run(self):
-        data_loader = torch.utils.data.DataLoader(self.test_data, batch_size=1)
-        batch_input = next(iter(data_loader))
-
-        self.gmodel.eval()
-
-        gm_layers_ios = _get_layers_io(self.gmodel, batch_input, self.device)
-        gm_layers_grads = get_layers_gradients(
-            self.gmodel, batch_input, self.device)
-        client2layers = {cid: getAllLayers(cm)
+        client2layers = {cid: NeuronProvenance.getAllLayers(cm)
                          for cid, cm in self.c2model.items()}
 
-        client2part = self._calculate_clients_contributions(
-            gm_layers_ios, gm_layers_grads, client2layers)
+        client2part = self._calculate_clients_contributions(self.gm_acts_grads_dict, client2layers)
+        
         traced_client = max(client2part, key=client2part.get)  # type: ignore
         return {"traced_client": traced_client, "client2part": client2part}
 
 
-def get_layers_gradients(net, text_input_tuple, device):
-    # Insert hooks for capturing backward gradients of the transformer model
-    hook_manager = HookManager()
-    net.zero_grad()
-    all_layers = getAllLayers(net)
-    _ = [hook_manager.insert_hook(layer, hook_type='backward')
-         for layer in all_layers]
 
-    outs = _forward(net, text_input_tuple, device)
-    logits = outs.logits  # Access the logits from the output object
+class ProvTextGenerator:
+    @staticmethod
+    def _insert_hooks(model):
+        # Insert hooks for capturing backward gradients of the transformer model
+        model.eval()
+        hook_manager = HookManager()
+        model.zero_grad()
+        all_layers = NeuronProvenance.getAllLayers(model)
+        _ = [hook_manager.insert_hook(layer) for layer in all_layers]
+        return hook_manager
+    
+    @staticmethod
+    def _get_next_token_id(model, idx_cond):
+        hook_manager =  ProvTextGenerator._insert_hooks(model)        
+        outputs = model(idx_cond)
+        logits = outputs.logits[:, -1, :]  # last token prediction
+        
+        next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
+        # temp_prob, temp_pred = torch.max(logits, dim=1, keepdim=True)
 
-    prob, predicted = torch.max(logits, dim=1)
-    predicted = predicted.cpu().detach().item()
-    logits[0, predicted].backward()  # computing the gradients
+        # print(f"\nPredicted token: {temp_pred.item()} with probability: {temp_prob.item()}, next token: {next_token_id.item()}, withe probability: {logits[0, next_token_id].item()}")
 
-    gm_layers_grads = hook_manager.get_hooks_data('backward')
-    return gm_layers_grads
+        logits[0, next_token_id].backward()  # computing the gradients
+        acts_grads_dict  = hook_manager.get_hooks_data()        
+        
+        return {"next_token_id": next_token_id, "acts_grads_dict": acts_grads_dict}
 
+    @staticmethod
+    def generate_text_with_prov(model, client2model, tokenizer, prompt, terminators=None, max_new_tokens=256,
+                                context_size=1024):
+        """Combined text generation function with manual token generation and decoding"""
+        model = model.cuda().eval()  # global model
+        encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
+        idx = encoding["input_ids"]
 
-def _forward(**args):
-    return None
-
-
-def generate_text(model, tokenizer, prompt, terminators=None, max_new_tokens=256,
-                  context_size=1024, temperature=0.0, top_k=None):
-    """Combined text generation function with manual token generation and decoding"""
-    model = model.cuda().eval()
-    encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
-    idx = encoding["input_ids"]
-
-    with torch.no_grad():
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -context_size:]
-            outputs = model(idx_cond)
-            logits = outputs.logits[:, -1, :]  # last token prediction
 
-            if top_k is not None:
-                top_logits, _ = torch.topk(logits, top_k)
-                min_val = top_logits[:, -1]
-                logits = torch.where(logits < min_val,
-                                     torch.tensor(float('-inf')), logits)
-
-            if temperature > 0.0:
-                logits = logits / temperature
-                probs = torch.softmax(logits, dim=-1)
-                next_token_id = torch.multinomial(probs, num_samples=1)
-            else:
-                next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
-
+            token_dict = ProvTextGenerator._get_next_token_id(model, idx_cond)
+            next_token_id = token_dict["next_token_id"]
+            
             temp_id = next_token_id.item()
-
             if temp_id in terminators:
                 print(f" =====Found EOS token {temp_id}=====")
                 break
-
             idx = torch.cat((idx, next_token_id), dim=-1)
 
         response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
@@ -510,80 +546,9 @@ def generate_text(model, tokenizer, prompt, terminators=None, max_new_tokens=256
         return text
 
 
-def _get_layers_io(model, test_data, device):
-    hook_manager = HookManager()
-    glayers = getAllLayers(model)
-    _ = [hook_manager.insert_hook(layer, hook_type='forward')
-         for layer in glayers]
-
-    with torch.no_grad():
-        _ = _forward(model, test_data, device)
-    return hook_manager.get_hooks_data('forward')
-
-
 def provenance_of_fl_clients(gmodel, c2model, test_data):
     neuron_prov = NeuronProvenance(gmodel, c2model, test_data)
     return neuron_prov.run()
-
-
-def _evaluate_layer(layer, input_tensor, device):
-    layer.zero_grad()
-    with torch.no_grad():
-        layer = layer.eval().to(device)
-        input_tensor = input_tensor.to(device)
-        activations = layer(input_tensor).cpu()
-        _ = layer.cpu()
-        _ = input_tensor.cpu()
-    return activations
-
-
-def _calculate_layer_contribution(gm_layer_grads, client2layer_acts, alpha_imp=1):
-    client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
-    # _checkAnomlies(global_neurons_outputs)
-    _check_anomlies(gm_layer_grads)
-    gm_layer_grads = gm_layer_grads.flatten().cpu()
-    for cli in client2layer_acts.keys():
-        cli_acts = client2layer_acts[cli].flatten().cpu()
-        _check_anomlies(cli_acts)
-        cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
-        cli_part = torch.dot(cli_acts, gm_layer_grads)
-        client2part[cli] = cli_part.item() * alpha_imp
-        _ = cli_acts.cpu()
-    return client2part
-
-
-def _normalize_with_softmax(contributions):
-    conts = F.softmax(torch.tensor(list(contributions.values())), dim=0)
-    client2prov = {cid: v.item()
-                   for cid, v in zip(contributions.keys(), conts)}
-    return dict(sorted(client2prov.items(), key=lambda item: item[1], reverse=True))
-
-
-def getAllLayers(net):
-    layers = getAllLayersBert(net)
-    return [layers[-1]]  # [len(layers)-1:len(layers)]
-
-
-def getAllLayersBert(net):
-    layers = []
-    for layer in net.children():
-        if isinstance(layer, (torch.nn.Linear)):
-            layers.append(layer)
-        elif len(list(layer.children())) > 0:
-            temp_layers = getAllLayersBert(layer)
-            layers = layers + temp_layers
-    return layers
-
-
-def _check_anomlies(t):
-    inf_mask = torch.isinf(t)
-    nan_mask = torch.isnan(t)
-    if inf_mask.any() or nan_mask.any():
-        logging.error(f"Inf values: {torch.sum(inf_mask)}")
-        logging.error(f"NaN values: {torch.sum(nan_mask)}")
-        logging.error(f"Total values: {torch.numel(t)}")
-        # logging.error(f"Total values: {t}")
-        raise ValueError("Anomalies detected in tensor")
 
 
 def run_simulation(cfg):
@@ -694,7 +659,7 @@ def main_fl(cfg) -> None:
         generate_self(gm_model, tokenizer, terminators, prompt)
 
         print(" ---------------- End ----------------")
-        generate_text(gm_model, tokenizer, prompt, terminators)
+        ProvTextGenerator.generate_text_with_prov(gm_model, None, tokenizer, prompt, terminators)
         _ = input("Press Enter to continue")
 
 
