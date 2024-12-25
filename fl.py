@@ -6,6 +6,8 @@ from collections import Counter, OrderedDict
 from functools import partial
 from pathlib import Path
 from typing import Dict, Optional
+import os
+import warnings
 
 # Third-Party Imports
 import flwr as fl
@@ -40,6 +42,11 @@ from hydra.core.hydra_config import HydraConfig
 from flwr.common import ndarrays_to_parameters, Context
 from logging import DEBUG, INFO
 import evaluate
+
+# Avoid warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["RAY_DISABLE_DOCKER_CPU_WARNING"] = "1"
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 
@@ -121,22 +128,22 @@ class ModelUtils:
 
 
 
-def get_model_and_tokenizer(model_cfg, peft_cfg, use_peft=True):
+def get_model_and_tokenizer(model_cfg, peft):
 
     tokenizer = AutoTokenizer.from_pretrained(model_cfg.name, use_fast=True)
 
-    if peft_cfg.task_type == 'CAUSAL_LM':
+    if peft.config.task_type == 'CAUSAL_LM':
         model = AutoModelForCausalLM.from_pretrained(
             model_cfg.name, **model_cfg.kwargs)
-    elif peft_cfg.task_type == 'SEQ_CLS':
+    elif peft.config.task_type == 'SEQ_CLS':
         model = AutoModelForSequenceClassification.from_pretrained(
             model_cfg.name, **model_cfg.kwargs)
 
     if 'microsoft/Phi-3-mini-4k-instruct' not in model_cfg.name:
         model, tokenizer = setup_chat_format(model=model, tokenizer=tokenizer)
 
-    if use_peft:
-        peft_conf = LoraConfig(**peft_cfg)
+    if peft.enabled:
+        peft_conf = LoraConfig(**peft.config)
         model = get_peft_model(model, peft_conf)
         model.print_trainable_parameters()
 
@@ -243,10 +250,10 @@ def get_labels_count(hf_dataset, target_label_col):
     return dict(label2count)
 
 
-def get_correct_predictions_subset(model, test_data, hf_trainer_config):
+def get_correct_predictions_subset(model, test_data, hf_trainer_args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    args = TrainingArguments(do_eval=True, do_train=False, **hf_trainer_config)
+    args = TrainingArguments(do_eval=True, do_train=False, **hf_trainer_args)
     trainer = Trainer(model=model, args=args,
                       eval_dataset=test_data, compute_metrics=None)
 
@@ -307,11 +314,11 @@ def select_n_per_class(dataset, n=2):
     return balanced_subset
 
 
-def _run_provenance(gmodel, client2model, client2class, test_data, hf_trainer_config):
+def _run_provenance(gmodel, client2model, client2class, test_data, hf_trainer_args):
     # Get correct predictions subset
 
     correct_ds_subset = get_correct_predictions_subset(
-        gmodel, test_data, hf_trainer_config)
+        gmodel, test_data, hf_trainer_args)
 
     correct_ds_subset = select_n_per_class(correct_ds_subset, n=2)
 
@@ -379,7 +386,7 @@ class ClientsAndServerDatasets:
         # Load client partitions
         self._load_client_partitions()
 
-        if cfg.load_server_data == True:
+        if cfg.fl.load_server_data == True:
             self.logger.info("Loading server data.")
             self._load_server_data()
 
@@ -388,11 +395,11 @@ class ClientsAndServerDatasets:
     def _initialize_partitioner(self):
         if self.cfg.dataset.distribution == "iid":
             self.logger.debug("Using IID partitioner.")
-            return IidPartitioner(num_partitions=self.cfg.num_clients)
+            return IidPartitioner(num_partitions=self.cfg.fl.num_clients)
         elif self.cfg.dataset.distribution == "non_iid":
             self.logger.debug("Using Dirichlet partitioner.")
             return DirichletPartitioner(
-                num_partitions=self.cfg.num_clients,
+                num_partitions=self.cfg.fl.num_clients,
                 alpha=self.cfg.dirichlet_alpha,
                 min_partition_size=0,
                 self_balancing=True,
@@ -401,7 +408,7 @@ class ClientsAndServerDatasets:
         elif self.cfg.dataset.distribution == "shard":
             self.logger.debug("Using Shard partitioner.")
             return PathologicalPartitioner(
-                num_partitions=self.cfg.num_clients,
+                num_partitions=self.cfg.fl.num_clients,
                 partition_by=self.cfg.dataset.label_column,
                 class_assignment_mode='deterministic',  # 'random',
                 num_classes_per_partition=3,
@@ -412,7 +419,7 @@ class ClientsAndServerDatasets:
                 f"Unsupported distribution type: {self.cfg.distribution}")
 
     def _load_client_partitions(self):
-        for cid in range(self.cfg.num_clients):
+        for cid in range(self.cfg.fl.num_clients):
             client_id = f"{cid}"
             self.logger.debug(f"Loading partition for {client_id}.")
             partition = self.federated_dataset.load_partition(cid, 'train')
@@ -511,7 +518,7 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
 
         global_model = self._to_pt_model(aggregated_parameters)
         res = _run_provenance(global_model, client2model,
-                              self.client2class, self.test_data, self.cfg.hf_trainer_config)
+                              self.client2class, self.test_data, self.cfg.hf_trainer_args)
         aggregated_metrics['provenance'] = res  # Add to metrics
         return aggregated_parameters, aggregated_metrics
 
@@ -734,7 +741,7 @@ def run_simulation(cfg):
 
     log(DEBUG, "Simulation Configuration: %s", cfg)
 
-    _, tokenizer = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
+    _, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
 
     ds_prep = ClientsAndServerDatasets(cfg, tokenizer)
     ds_dict = ds_prep.get_datasets()
@@ -743,19 +750,18 @@ def run_simulation(cfg):
     round2gm_accs = []
 
     def _create_model():
-        temp_model, _ = get_model_and_tokenizer(
-            cfg.model_config, cfg.peft_config)
+        temp_model, _ = get_model_and_tokenizer(cfg.model, cfg.peft)
         return temp_model
 
     def _get_fit_config(server_round):
-        return cfg.hf_trainer_config
+        return cfg.hf_trainer_args
 
     def _eval_gm(server_round, parameters, config):
         gm_model = _create_model()
         ModelUtils.set_parameters(gm_model, parameters, peft=cfg.peft)
 
         d_res = _cls_hf_train_or_eval(
-            gm_model, server_testdata, cfg.hf_trainer_config, do_train=False, do_eval=True)
+            gm_model, server_testdata, cfg.hf_trainer_args, do_train=False, do_eval=True)
 
         round2gm_accs.append(d_res["accuracy"])
         log(DEBUG, "config: %s", config)
@@ -792,16 +798,16 @@ def run_simulation(cfg):
             accept_failures=False,
             fraction_fit=0,
             fraction_evaluate=0.0,
-            min_fit_clients=cfg.clients_per_round,
+            min_fit_clients=cfg.fl.clients_per_round,
             min_evaluate_clients=0,
-            min_available_clients=cfg.num_clients,
+            min_available_clients=cfg.fl.num_clients,
             initial_parameters=ndarrays_to_parameters(
                 ndarrays=ModelUtils.get_parameters(initial_net, peft=cfg.peft)),  # Remove initial_parameters
             evaluate_fn=_eval_gm,
             on_fit_config_fn=_get_fit_config,
             fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,
         )
-        server_config = fl.server.ServerConfig(num_rounds=cfg.num_rounds)
+        server_config = fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds)
 
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
 
@@ -811,7 +817,7 @@ def run_simulation(cfg):
     fl.simulation.run_simulation(
         server_app=server_app,
         client_app=client_app,
-        num_supernodes=cfg.num_clients,
+        num_supernodes=cfg.fl.num_clients,
         backend_config=config_sim_resources(cfg),
     )
 
@@ -833,8 +839,7 @@ def main_central_ml(cfg) -> None:
     ################
     # Model Loading
     ################
-    model, tokenizer = get_model_and_tokenizer(
-        cfg.model_config, cfg.peft_config)
+    model, tokenizer = get_model_and_tokenizer(cfg.model_config, cfg.peft_config)
 
     ds_dict = load_datasets(cfg.dataset_config.name)
 
