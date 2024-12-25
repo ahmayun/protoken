@@ -339,7 +339,7 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         # do provenance here
         global_model = self._to_pt_model(aggregated_parameters)
 
-        self.callback_provenance_fn(global_model, client2model)
+        # self.callback_provenance_fn(global_model, client2model)
 
         return aggregated_parameters, aggregated_metrics
 
@@ -431,9 +431,9 @@ class NeuronProvenance:
     def run(self):
         data_loader = torch.utils.data.DataLoader(self.test_data, batch_size=1)
         batch_input = next(iter(data_loader))
-        
+
         self.gmodel.eval()
-        
+
         gm_layers_ios = _get_layers_io(self.gmodel, batch_input, self.device)
         gm_layers_grads = get_layers_gradients(
             self.gmodel, batch_input, self.device)
@@ -446,42 +446,84 @@ class NeuronProvenance:
         return {"traced_client": traced_client, "client2part": client2part}
 
 
+def get_layers_gradients(net, text_input_tuple, device):
+    # Insert hooks for capturing backward gradients of the transformer model
+    hook_manager = HookManager()
+    net.zero_grad()
+    all_layers = getAllLayers(net)
+    _ = [hook_manager.insert_hook(layer, hook_type='backward')
+         for layer in all_layers]
 
-def _provenance_generate(model, idx, max_new_tokens, context_size, temperature=0.0, top_k=None, terminators=None, tokenizer=None):
-    model.eval()
-    model = model.cuda()
-    idx = idx.cuda()
-    for _ in range(max_new_tokens):
-        idx_cond = idx[:, -context_size:]
-        with torch.no_grad():
+    outs = _forward(net, text_input_tuple, device)
+    logits = outs.logits  # Access the logits from the output object
+
+    prob, predicted = torch.max(logits, dim=1)
+    predicted = predicted.cpu().detach().item()
+    logits[0, predicted].backward()  # computing the gradients
+
+    gm_layers_grads = hook_manager.get_hooks_data('backward')
+    return gm_layers_grads
+
+
+def _forward(**args):
+    return None
+
+
+def generate_text(model, tokenizer, prompt, terminators=None, max_new_tokens=256,
+                  context_size=1024, temperature=0.0, top_k=None):
+    """Combined text generation function with manual token generation and decoding"""
+    model = model.cuda().eval()
+    encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
+    idx = encoding["input_ids"]
+
+    with torch.no_grad():
+        for _ in range(max_new_tokens):
+            idx_cond = idx[:, -context_size:]
             outputs = model(idx_cond)
-            logits = outputs.logits
+            logits = outputs.logits[:, -1, :]  # last token prediction
 
-        logits = logits[:, -1, :]  # last token is the prediction
+            if top_k is not None:
+                top_logits, _ = torch.topk(logits, top_k)
+                min_val = top_logits[:, -1]
+                logits = torch.where(logits < min_val,
+                                     torch.tensor(float('-inf')), logits)
 
-        if top_k is not None:
-            top_logits, _ = torch.topk(logits, top_k)
-            min_val = top_logits[:, -1]  # how does it get min val?
-            logits = torch.where(
-                logits < min_val, torch.tensor(float('-inf')), logits)
+            if temperature > 0.0:
+                logits = logits / temperature
+                probs = torch.softmax(logits, dim=-1)
+                next_token_id = torch.multinomial(probs, num_samples=1)
+            else:
+                next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
 
-        if temperature > 0.0:
-            logits = logits / temperature
-            probs = torch.softmax(logits, dim=-1)
-            next_token_id = torch.multinomial(probs, num_samples=1)
+            temp_id = next_token_id.item()
 
-        else:
-            next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
+            if temp_id in terminators:
+                print(f" =====Found EOS token {temp_id}=====")
+                break
 
-        temp_id = next_token_id.item()
+            idx = torch.cat((idx, next_token_id), dim=-1)
 
-        if temp_id in terminators:
-            print(terminators)
-            print(
-                f" =============================Found EOS token {temp_id} =============================")
-            break
-        idx = torch.cat((idx, next_token_id), dim=-1)
-    return idx
+        response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
+        text = tokenizer.decode(response, skip_special_tokens=False)
+        text = " ".join(text.split())
+        print(f'Response:\n ***|||{text}|||***\n\n')
+        return text
+
+
+def _get_layers_io(model, test_data, device):
+    hook_manager = HookManager()
+    glayers = getAllLayers(model)
+    _ = [hook_manager.insert_hook(layer, hook_type='forward')
+         for layer in glayers]
+
+    with torch.no_grad():
+        _ = _forward(model, test_data, device)
+    return hook_manager.get_hooks_data('forward')
+
+
+def provenance_of_fl_clients(gmodel, c2model, test_data):
+    neuron_prov = NeuronProvenance(gmodel, c2model, test_data)
+    return neuron_prov.run()
 
 
 def _evaluate_layer(layer, input_tensor, device):
@@ -517,66 +559,6 @@ def _normalize_with_softmax(contributions):
     return dict(sorted(client2prov.items(), key=lambda item: item[1], reverse=True))
 
 
-
-
-def generate_self(model, tokenizer, terminators, prompt, max_new_tokens=256, context_size=1024):
-    encoding = tokenizer(prompt, return_tensors="pt",).to('cuda')
-    model = model.cuda().eval()
-    with torch.no_grad():
-        m_outs = _manual_generate(
-            model, encoding["input_ids"], max_new_tokens=max_new_tokens, context_size=context_size,  terminators=terminators, tokenizer=tokenizer)
-        m_outs = m_outs.squeeze(0)
-        response = m_outs[encoding["input_ids"].shape[-1]:]
-    text = tokenizer.decode(response, skip_special_tokens=False)
-    text = " ".join(text.split())
-    print(f'Response (Manual):\n ***|||{text}|||***\n\n')
-    return text
-
-
-def _forward(model, tokenizer, test_input, device):
-    
-    prompt = _prompt(test_input['instruction'], test_input['input'])
-
-    model = model.cuda()
-    model.zero_grad()
-
-    encoding = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
-
-    
-    
-    return outs
-
-
-def _get_layers_io(model, test_data, device):
-    hook_manager = HookManager()
-    glayers = getAllLayers(model)
-    _ = [hook_manager.insert_hook(layer, hook_type='forward')
-         for layer in glayers]
-
-    with torch.no_grad():
-        _ = _forward(model, test_data, device)
-    return hook_manager.get_hooks_data('forward')
-
-
-def get_layers_gradients(net, text_input_tuple, device):
-    # Insert hooks for capturing backward gradients of the transformer model
-    hook_manager = HookManager()
-    net.zero_grad()
-    all_layers = getAllLayers(net)
-    _ = [hook_manager.insert_hook(layer, hook_type='backward')
-         for layer in all_layers]
-
-    outs = _forward(net, text_input_tuple, device)
-    logits = outs.logits  # Access the logits from the output object
-
-    prob, predicted = torch.max(logits, dim=1)
-    predicted = predicted.cpu().detach().item()
-    logits[0, predicted].backward()  # computing the gradients
-
-    gm_layers_grads = hook_manager.get_hooks_data('backward')
-    return gm_layers_grads
-
-
 def getAllLayers(net):
     layers = getAllLayersBert(net)
     return [layers[-1]]  # [len(layers)-1:len(layers)]
@@ -602,11 +584,6 @@ def _check_anomlies(t):
         logging.error(f"Total values: {torch.numel(t)}")
         # logging.error(f"Total values: {t}")
         raise ValueError("Anomalies detected in tensor")
-
-
-def provenance_of_fl_clients(gmodel, c2model, test_data):
-    neuron_prov = NeuronProvenance(gmodel, c2model, test_data)
-    return neuron_prov.run()
 
 
 def run_simulation(cfg):
@@ -668,7 +645,8 @@ def run_simulation(cfg):
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
             callback_create_model_fn=_create_model,
-            callback_provenance_fn =  partial(provenance_of_fl_clients, test_data=server_testdata),
+            callback_provenance_fn=partial(
+                provenance_of_fl_clients, test_data=server_testdata),
             fraction_fit=0,
             fraction_evaluate=0.0,
             min_fit_clients=cfg.fl.clients_per_round,
@@ -714,7 +692,9 @@ def main_fl(cfg) -> None:
         print(f"Prompt: {prompt}")
         # generat_hf(model, tokenizer, terminators,  prompt)
         generate_self(gm_model, tokenizer, terminators, prompt)
+
         print(" ---------------- End ----------------")
+        generate_text(gm_model, tokenizer, prompt, terminators)
         _ = input("Press Enter to continue")
 
 
