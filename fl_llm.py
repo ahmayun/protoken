@@ -1,5 +1,6 @@
 # Standard Library Imports
 import logging
+import math
 import random
 import time
 from collections import Counter, OrderedDict
@@ -198,18 +199,32 @@ def generate_self(model, tokenizer, terminators, prompt, max_new_tokens=256, con
 
 
 def _casual_llm_hf_train_or_eval(model, tokenizer,  hf_ds, args_config, do_train, do_eval):
-    train_conf = SFTConfig(do_train=do_train,do_eval=do_eval,**args_config)
+    train_conf = SFTConfig(do_train=do_train, do_eval=do_eval, **args_config)
     trainer = SFTTrainer(
         model=model,
         args=train_conf,
         train_dataset=hf_ds,
         eval_dataset=hf_ds,
-        formatting_func=partial(create_alpaca_prompt_with_response, eos_token=tokenizer.eos_token),
+        formatting_func=partial(
+            create_alpaca_prompt_with_response, eos_token=tokenizer.eos_token),
     )
-    train_result = trainer.train()
-    metrics = train_result.metrics
-    trainer.log_metrics("train", metrics)    
-    return {'accuracy': 0, 'loss': 0}
+    metrics = {}
+    if do_train:
+        train_result = trainer.train()
+        temp_metrics = train_result.metrics
+        trainer.log_metrics("train", temp_metrics)
+        metrics['loss'] = temp_metrics['train_loss']
+
+    if do_eval:
+        eval_result = trainer.evaluate()
+        trainer.log_metrics("eval", eval_result)
+        metrics['loss'] = eval_result['eval_loss']
+
+    metrics['perplexity'] = math.exp(metrics['loss'])
+
+    trainer.log_metrics("Generic Metrics", metrics)
+    metrics['accuracy'] = -1
+    return metrics
 
 
 def load_datasets(dname):
@@ -264,10 +279,11 @@ class ClientsAndServerDatasets:
         for cid in range(self.cfg.fl.num_clients):
             client_id = f"{cid}"
             self.client2dataset[client_id] = self.federated_dataset.load_partition(
-                cid, 'train')
+                cid, 'train').select(range(1024))
 
         if cfg.fl.load_server_data == True:
-            self.server_dataset = self.federated_dataset.load_split('train').select(range(1024))
+            self.server_dataset = self.federated_dataset.load_split(
+                'train').select(range(1024))
 
     def _initialize_partitioner(self):
         if self.cfg.dataset.distribution == "iid":
@@ -306,7 +322,8 @@ class FlowerClient(fl.client.NumPyClient):
 
         ModelUtils.set_parameters(
             model, parameters=parameters, peft=self.args["peft"])
-        train_dict = _casual_llm_hf_train_or_eval(model, tokenizer, self.args["client_data_train"], config, do_train=True, do_eval=True)
+        train_dict = _casual_llm_hf_train_or_eval(
+            model, tokenizer, self.args["client_data_train"], config, do_train=True, do_eval=True)
 
         parameters = ModelUtils.get_parameters(model, peft=self.args["peft"])
 
@@ -324,7 +341,6 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         """Initialize."""
         super().__init__(*args, **kwargs)
         self.create_model_fn = callback_create_model_fn
-        
 
     def aggregate_fit(self, server_round, results, failures):
         """Aggregate clients updates."""
@@ -332,12 +348,11 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         # client2model = {fit_res.metrics["cid"]: self._to_pt_model(
         #     fit_res.parameters) for _, fit_res in results}
 
-
         aggregated_parameters, aggregated_metrics = super(
         ).aggregate_fit(server_round, results, failures)
         # do provenance here
 
-        #global_model = self._to_pt_model(aggregated_parameters)
+        # global_model = self._to_pt_model(aggregated_parameters)
         # res = _run_provenance(global_model, client2model,
         #                       self.client2class, self.test_data, self.cfg.hf_trainer_args)
         # aggregated_metrics['provenance'] = res  # Add to metrics
@@ -560,7 +575,7 @@ def run_simulation(cfg):
 
     log(DEBUG, "Simulation Configuration: %s", cfg)
 
-    _, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
+    global_model, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
 
     ds_prep = ClientsAndServerDatasets(cfg)
     ds_dict = ds_prep.get_datasets()
@@ -568,22 +583,16 @@ def run_simulation(cfg):
 
     round2gm_accs = []
 
-    
-
     def _create_model():
-        temp_model, _  = get_model_and_tokenizer(cfg.model, cfg.peft)
+        temp_model, _ = get_model_and_tokenizer(cfg.model, cfg.peft)
         return temp_model
 
     def _get_fit_config(server_round):
         return cfg.hf_trainer_args
 
     def _eval_gm(server_round, parameters, config):
-        gm_model = _create_model()
-        ModelUtils.set_parameters(gm_model, parameters, peft=cfg.peft)
-
-        d_res = _casual_llm_hf_train_or_eval(
-            gm_model, tokenizer, server_testdata, cfg.hf_trainer_args, do_train=False, do_eval=True)
-
+        ModelUtils.set_parameters(global_model, parameters, peft=cfg.peft)
+        d_res = _casual_llm_hf_train_or_eval(global_model, tokenizer, server_testdata, cfg.hf_trainer_args, do_train=False, do_eval=True)
         round2gm_accs.append(d_res["accuracy"])
         log(DEBUG, "config: %s", config)
         return d_res["loss"], {
@@ -605,7 +614,7 @@ def run_simulation(cfg):
             "client_data_train": ds_dict["client2dataset"][cid],
             "device": torch.device(cfg.device),
             'dir': save_path,
-            'peft': cfg.peft
+            'peft': cfg.peft.enabled,
         }
         client = FlowerClient(args).to_client()
         return client
@@ -614,7 +623,6 @@ def run_simulation(cfg):
         initial_net = _create_model()
         strategy = FedAvgWithGenFL(
             callback_create_model_fn=_create_model,
-            accept_failures=False,
             fraction_fit=0,
             fraction_evaluate=0.0,
             min_fit_clients=cfg.fl.clients_per_round,
@@ -640,6 +648,8 @@ def run_simulation(cfg):
         backend_config=config_sim_resources(cfg),
     )
     log(INFO, "Training Complete for Experiment: %s", exp_key)
+
+    return global_model, server_testdata
 
 
 @hydra.main(config_path="./conf", config_name="casual_llm", version_base=None)
