@@ -339,7 +339,7 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         # do provenance here
         global_model = self._to_pt_model(aggregated_parameters)
 
-        # self.callback_provenance_fn(global_model, client2model)
+        self.callback_provenance_fn(global_model, client2model)
 
         return aggregated_parameters, aggregated_metrics
 
@@ -388,7 +388,7 @@ class HookManager:
 
 
 class NeuronProvenance:
-    def __init__(self,gm_acts_grads_dict, c2model):
+    def __init__(self, gm_acts_grads_dict, c2model):
         self.gm_acts_grads_dict = gm_acts_grads_dict
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
@@ -415,8 +415,8 @@ class NeuronProvenance:
     def _evaluate_layer(layer, input_tensor, device):
         layer.zero_grad()
         with torch.no_grad():
-            layer = layer.eval().to(device)
-            input_tensor = input_tensor.to(device)
+            layer = layer.eval().to(device).half()
+            input_tensor = input_tensor.to(device).half()
             activations = layer(input_tensor).cpu()
             _ = layer.cpu()
             _ = input_tensor.cpu()
@@ -455,18 +455,17 @@ class NeuronProvenance:
             # logging.error(f"Total values: {t}")
             raise ValueError("Anomalies detected in tensor")
 
-
     @staticmethod
     def _calculate_clients_contributions(gm_acts_grads_dict, client2layers, device):
         layers2prov = []
         for layer_id in range(len(gm_acts_grads_dict['activations'])):
-            c2l = {cid: client2layers[cid][layer_id]
-                   for cid in self.client_ids}  # clients layer
+            c2l = {cid: layers[layer_id] for cid, layers in client2layers.items()}  # clients layer
             # layer inputs
             layer_inputs = gm_acts_grads_dict['activations'][layer_id][0]
             layer_grads = gm_acts_grads_dict['gradients'][layer_id][1]
 
-            clinet2outputs = {c: NeuronProvenance._evaluate_layer(l, layer_inputs, device) for c, l in c2l.items()}
+            clinet2outputs = {c: NeuronProvenance._evaluate_layer(
+                l, layer_inputs, device) for c, l in c2l.items()}
             c2contribution = NeuronProvenance._calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=clinet2outputs)
             layers2prov.append(c2contribution)
@@ -485,11 +484,10 @@ class NeuronProvenance:
         client2layers = {cid: NeuronProvenance.getAllLayers(cm)
                          for cid, cm in self.c2model.items()}
 
-        client2part = self._calculate_clients_contributions(self.gm_acts_grads_dict, client2layers)
-        
+        client2part = self._calculate_clients_contributions(self.gm_acts_grads_dict, client2layers, self.device)
+
         traced_client = max(client2part, key=client2part.get)  # type: ignore
         return {"traced_client": traced_client, "client2part": client2part}
-
 
 
 class ProvTextGenerator:
@@ -502,28 +500,24 @@ class ProvTextGenerator:
         all_layers = NeuronProvenance.getAllLayers(model)
         _ = [hook_manager.insert_hook(layer) for layer in all_layers]
         return hook_manager
-    
+
     @staticmethod
     def _get_next_token_id(model, idx_cond):
-        hook_manager =  ProvTextGenerator._insert_hooks(model)        
+        hook_manager = ProvTextGenerator._insert_hooks(model)
         outputs = model(idx_cond)
         logits = outputs.logits[:, -1, :]  # last token prediction
-        
+
         next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
-        # temp_prob, temp_pred = torch.max(logits, dim=1, keepdim=True)
-
-        # print(f"\nPredicted token: {temp_pred.item()} with probability: {temp_prob.item()}, next token: {next_token_id.item()}, withe probability: {logits[0, next_token_id].item()}")
-
         logits[0, next_token_id].backward()  # computing the gradients
-        acts_grads_dict  = hook_manager.get_hooks_data()        
-        
+        acts_grads_dict = hook_manager.get_hooks_data()
+
         return {"next_token_id": next_token_id, "acts_grads_dict": acts_grads_dict}
 
     @staticmethod
-    def generate_text_with_prov(model, client2model, tokenizer, prompt, terminators=None, max_new_tokens=256,
-                                context_size=1024):
+    def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=256,
+                      context_size=1024):
         """Combined text generation function with manual token generation and decoding"""
-        model = model.cuda().eval()  # global model
+        model = model.cuda().eval().to(torch.float16)   
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
 
@@ -532,8 +526,16 @@ class ProvTextGenerator:
 
             token_dict = ProvTextGenerator._get_next_token_id(model, idx_cond)
             next_token_id = token_dict["next_token_id"]
-            
             temp_id = next_token_id.item()
+
+
+            if client2model is not None:
+                neuron_prov = NeuronProvenance(token_dict['acts_grads_dict'], client2model)
+                conts_dict = neuron_prov.run()
+                # print(f"temp_id: {temp_id}")
+                print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
+                model.zero_grad() # mandatory to clear the gradients
+
             if temp_id in terminators:
                 print(f" =====Found EOS token {temp_id}=====")
                 break
@@ -545,10 +547,16 @@ class ProvTextGenerator:
         print(f'Response:\n ***|||{text}|||***\n\n')
         return text
 
+    @staticmethod
+    def generate_batch_text(model, client2model, tokenizer, terminators, batach_examples):
+        """Combined text generation function with manual token generation and decoding"""
 
-def provenance_of_fl_clients(gmodel, c2model, test_data):
-    neuron_prov = NeuronProvenance(gmodel, c2model, test_data)
-    return neuron_prov.run()
+        for e in batach_examples:
+            prompt = _prompt(e['instruction'], e['input'])
+            print(f"Prompt: {prompt}")
+            response = ProvTextGenerator.generate_text(
+                model, client2model, tokenizer, prompt, terminators)
+            print(f"Response: {response}")
 
 
 def run_simulation(cfg):
@@ -607,11 +615,15 @@ def run_simulation(cfg):
         client = FlowerClient(args).to_client()
         return client
 
+    terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
+
+    callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, tokenizer=tokenizer,
+                               terminators=terminators, batach_examples=server_testdata.select(range(2)))
+
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
             callback_create_model_fn=_create_model,
-            callback_provenance_fn=partial(
-                provenance_of_fl_clients, test_data=server_testdata),
+            callback_provenance_fn=callback_prov_fn,
             fraction_fit=0,
             fraction_evaluate=0.0,
             min_fit_clients=cfg.fl.clients_per_round,
@@ -659,7 +671,8 @@ def main_fl(cfg) -> None:
         generate_self(gm_model, tokenizer, terminators, prompt)
 
         print(" ---------------- End ----------------")
-        ProvTextGenerator.generate_text_with_prov(gm_model, None, tokenizer, prompt, terminators)
+        # ProvTextGenerator.generate_text(
+        #     gm_model, None, tokenizer, prompt, terminators)
         _ = input("Press Enter to continue")
 
 
