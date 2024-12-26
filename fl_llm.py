@@ -262,16 +262,24 @@ class Federate_Dataset:
         self.client2dataset = {}
         self.server_dataset = None
         partitioner = self._initialize_partitioner()
-        self.federated_dataset = FederatedDataset(
+        self.f_ds = FederatedDataset(
             dataset=cfg.dataset.name, partitioners={'train': partitioner})
+
+        max_clients_dp = 1024 * 5
 
         for cid in range(self.cfg.fl.num_clients):
             client_id = f"{cid}"
-            self.client2dataset[client_id] = Federate_Dataset._rename_columns(self.federated_dataset.load_partition(
-                cid, 'train').select(range(1*1024)))
+            temp_ds = self.f_ds.load_partition(cid, 'train')
+            total_dp = len(temp_ds)
+            max_clients_dp = min(max_clients_dp, total_dp)
+            random_indices = np.random.choice(
+                total_dp, max_clients_dp, replace=False)
+            temp_ds = temp_ds.select(random_indices)
+            self.client2dataset[client_id] = Federate_Dataset._rename_columns(
+                temp_ds)
 
         if cfg.fl.load_server_data == True:
-            self.server_dataset = Federate_Dataset._rename_columns(self.federated_dataset.load_split(
+            self.server_dataset = Federate_Dataset._rename_columns(self.f_ds.load_split(
                 'train').select(range(1024)))
 
     def _initialize_partitioner(self):
@@ -572,8 +580,7 @@ class ProvTextGenerator:
         response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
         text = tokenizer.decode(response, skip_special_tokens=False)
         text = " ".join(text.split())
-        print(f'Response:\n ***|||{text}|||***\n\n')
-
+        # print(f'Response:\n ***|||{text}|||***\n\n')
         client2part = NeuronProvenance._normalize_with_softmax(client2part)
         return {"response": text, "client2part": client2part}
 
@@ -585,33 +592,44 @@ class ProvTextGenerator:
                           for l in label2count.keys()])
         label2client = {label:  {c: client2class[c][label] for c in client2class.keys(
         ) if label in client2class[c]} for label in all_labels}
-        print(f"Label2client: {label2client}")
         count = 0
-        for e in batach_examples:
-            prompt = _prompt(e['instruction'], e['input'])
-            print(f"Prompt: {prompt}")
-            res = ProvTextGenerator.generate_text(
-                model, client2model, tokenizer, prompt, terminators)
-            print(f"Response: {res}")
-
+        total = 0
+        print("\n\n\n> ************ Server Side Provenance ************")
+        print(f"> Label2client: {label2client} \n")
+        for e_i, e in enumerate(batach_examples):
             label = e['label']
             if label not in label2client:
                 continue
+
+            print(
+                f"\n\n====================== Start Provenance: Input {e_i} ==============================")
+
+            prompt = _prompt(e['instruction'], e['input'])
+            print("\n>Prompt: [", prompt.replace('\n', ' ')+ "]")
+
+            res = ProvTextGenerator.generate_text(
+                model, client2model, tokenizer, prompt, terminators)
+            print(f"\n>LLM Response: ||{res['response']}||")
+
             true_responsible_clients = list(label2client[label].keys())
-            traced_client = max(res['client2part'], key=client2part.get)
-            client2part = {c: round(v, 3)
+            traced_client = max(res['client2part'], key=res['client2part'].get)
+            client2part = {c: v  # round(v, 3)
                            for c, v in res['client2part'].items()}
 
             print(
-                f"Label: {label} TClient: {traced_client}, client2part: {client2part}, Label2client: {label2client[label]}")
+                f"\n>[Prov] Label: {label} TClient: {traced_client}, client2part: {client2part}, Label2client: {label2client[label]}")
 
             if traced_client in true_responsible_clients:
                 count += 1
 
-        accuracy = (count/len(batach_examples)) * 100
-        print(
-            f"Correctly traced clients: {count}/{len(batach_examples)}, Accuracy: {accuracy}%")
-        # _ = input("Press any key to continue...")
+            total += 1
+
+        accuracy = -1
+        if total > 0:
+            accuracy = (count/total) * 100
+            print(
+                f"\n\n ********** [Result] Correctly traced clients: {count}/{total}, Accuracy: {accuracy}% **********")
+        print("\n\n\n")
         return accuracy
 
 

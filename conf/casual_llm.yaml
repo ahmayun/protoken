@@ -44,7 +44,7 @@ label_col:
 
 
 dataset:
-  distribution: "shard" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
+  distribution: "iid" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
   # name: "yahma/alpaca-cleaned"
   name: "yahoo_answers_topics"
   label_column: ${label_col.${dataset.name}}
