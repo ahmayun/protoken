@@ -279,8 +279,13 @@ class Federate_Dataset:
                 temp_ds)
 
         if cfg.fl.load_server_data == True:
-            self.server_dataset = Federate_Dataset._rename_columns(self.f_ds.load_split(
-                'train').select(range(1024)))
+            temp_ds = self.f_ds.load_split('train')
+            total_dp = len(temp_ds)
+            max_server_dp = min(1024*4, total_dp)
+            random_indices = np.random.choice(
+                total_dp, max_server_dp, replace=False)
+            temp_ds = temp_ds.select(random_indices)
+            self.server_dataset = Federate_Dataset._rename_columns(temp_ds)
 
     def _initialize_partitioner(self):
         if self.cfg.dataset.distribution == "iid":

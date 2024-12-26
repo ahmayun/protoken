@@ -27,8 +27,8 @@ peft:
 # Federated Learning (FL) Configuration
 # =========================
 fl:
-  num_rounds: 1
-  num_clients: 2
+  num_rounds: 10
+  num_clients: 5
   clients_per_round: ${fl.num_clients}
   load_server_data: true
 
@@ -44,7 +44,7 @@ label_col:
 
 
 dataset:
-  distribution: "iid" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
+  distribution: "shard" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
   # name: "yahma/alpaca-cleaned"
   name: "yahoo_answers_topics"
   label_column: ${label_col.${dataset.name}}
@@ -73,7 +73,7 @@ model:
 # =========================
 hf_trainer_args:
   remove_unused_columns: true
-  num_train_epochs: 0.001
+  num_train_epochs: 1
   per_device_train_batch_size: 4
   per_device_eval_batch_size: 4
 
