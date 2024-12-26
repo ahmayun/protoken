@@ -16,7 +16,6 @@ import hydra
 import numpy as np
 import torch
 import torch.nn.functional as F
-from datasets import load_dataset
 from flwr.common.logger import log
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import (
@@ -313,7 +312,7 @@ class Federate_Dataset:
         if 'best_answer' in old_cols:
             hf_ds = hf_ds.rename_column("best_answer", "output")
             print("Renamed best_answer to output")
-        
+
         if 'topic' in old_cols:
             hf_ds = hf_ds.rename_column("topic", "label")
             print("Renamed topic to label")
@@ -602,10 +601,10 @@ class ProvTextGenerator:
             if label not in label2client:
                 continue
             true_responsible_clients = list(label2client[label].keys())
-            traced_client = max(res['client2part'], key=client2part.get) 
-            client2part = {c: round(v, 3) for c, v in res['client2part'].items()}
-            
-            
+            traced_client = max(res['client2part'], key=client2part.get)
+            client2part = {c: round(v, 3)
+                           for c, v in res['client2part'].items()}
+
             print(
                 f"Label: {label} TClient: {traced_client}, client2part: {client2part}, Label2client: {label2client[label]}")
 
@@ -617,7 +616,6 @@ class ProvTextGenerator:
             f"Correctly traced clients: {count}/{len(batach_examples)}, Accuracy: {accuracy}%")
         # _ = input("Press any key to continue...")
         return accuracy
-
 
 
 def run_simulation(cfg):
@@ -636,7 +634,8 @@ def run_simulation(cfg):
     ds_prep = Federate_Dataset(cfg)
     ds_dict = ds_prep.get_datasets()
     server_testdata = ds_dict["server_dataset"]
-    client2class = {k: get_labels_count(v) for k, v in ds_dict["client2dataset"].items()}
+    client2class = {k: get_labels_count(
+        v) for k, v in ds_dict["client2dataset"].items()}
 
     round2gm_accs = []
 
@@ -680,7 +679,7 @@ def run_simulation(cfg):
     terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
 
     callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, client2class=client2class, tokenizer=tokenizer,
-                               terminators=terminators,batach_examples=server_testdata.select(range(2)))
+                               terminators=terminators, batach_examples=server_testdata.select(range(2)))
 
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
@@ -722,21 +721,7 @@ def main_fl(cfg) -> None:
     gm_model, tokenizer,  hf_ds = run_simulation(cfg)
     log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
 
-    # print(" ---------------- Testing Start ----------------")
-
-    # terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
-    # for e in hf_ds:
-    #     prompt = _prompt(e['instruction'], e['input'])
-    #     print(" ---------------- Start ----------------")
-    #     print(f"Prompt: {prompt}")
-    #     # generat_hf(model, tokenizer, terminators,  prompt)
-    #     generate_self(gm_model, tokenizer, terminators, prompt)
-
-    #     print(" ---------------- End ----------------")
-    #     # ProvTextGenerator.generate_text(
-    #     #     gm_model, None, tokenizer, prompt, terminators)
-    #     _ = input("Press Enter to continue")
-
+    
 
 if __name__ == "__main__":
     main_fl()
