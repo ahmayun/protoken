@@ -118,7 +118,7 @@ def seed_everything(seed=786):
 
 def _prompt(instruction, input_of_instruction):
     prompt = f"### Instruction:\n{instruction}"
-    if len(input_of_instruction) > 2:
+    if len(input_of_instruction) >= 1:
         prompt += f"\n### Input:\n{input_of_instruction}"
     prompt += '\n### Response:\n'
     return prompt
@@ -419,7 +419,6 @@ class NeuronProvenance:
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.c2model = c2model
-        self.client_ids = list(self.c2model.keys())
 
     @staticmethod
     def getAllLayers(net):
@@ -438,14 +437,12 @@ class NeuronProvenance:
         return layers
 
     @staticmethod
-    def _evaluate_layer(layer, input_tensor, device):
-        layer.zero_grad()
+    def _evaluate_layer(layer, input_tensor):
         with torch.no_grad():
-            layer = layer.eval().to(device).half()
-            input_tensor = input_tensor.to(device).half()
-            activations = layer(input_tensor).cpu()
+            layer = layer.eval().half()
+            activations = layer(input_tensor.half())
             _ = layer.cpu()
-            _ = input_tensor.cpu()
+            # _ = input_tensor.cpu()
         return activations
 
     @staticmethod
@@ -453,9 +450,9 @@ class NeuronProvenance:
         client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
         # _checkAnomlies(global_neurons_outputs)
         NeuronProvenance._check_anomlies(gm_layer_grads)
-        gm_layer_grads = gm_layer_grads.flatten().cpu()
+        gm_layer_grads = gm_layer_grads.flatten()
         for cli in client2layer_acts.keys():
-            cli_acts = client2layer_acts[cli].flatten().cpu()
+            cli_acts = client2layer_acts[cli].flatten()
             NeuronProvenance._check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
             cli_part = torch.dot(cli_acts, gm_layer_grads)
@@ -492,7 +489,7 @@ class NeuronProvenance:
             layer_grads = gm_acts_grads_dict['gradients'][layer_id][1]
 
             clinet2outputs = {c: NeuronProvenance._evaluate_layer(
-                l, layer_inputs, device) for c, l in c2l.items()}
+                l.to(device), layer_inputs) for c, l in c2l.items()}
             c2contribution = NeuronProvenance._calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=clinet2outputs)
             layers2prov.append(c2contribution)
@@ -542,7 +539,7 @@ class ProvTextGenerator:
         return {"next_token_id": next_token_id, "acts_grads_dict": acts_grads_dict}
 
     @staticmethod
-    def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=256,
+    def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=64,
                       context_size=1024):
         """Combined text generation function with manual token generation and decoding"""
         model = model.cuda().eval().to(torch.float16)
@@ -721,7 +718,6 @@ def main_fl(cfg) -> None:
     gm_model, tokenizer,  hf_ds = run_simulation(cfg)
     log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
 
-    
 
 if __name__ == "__main__":
     main_fl()
