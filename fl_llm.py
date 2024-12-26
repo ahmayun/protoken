@@ -85,6 +85,11 @@ class ModelUtils:
             net.load_state_dict(state_dict, strict=True)
 
 
+def get_labels_count(hf_dataset):
+    label2count = Counter(example['label'] for example in hf_dataset)
+    return dict(label2count)
+
+
 def set_exp_key(cfg):
     """Set the experiment key."""
     key = f"hello fl world"
@@ -267,7 +272,7 @@ class Federate_Dataset:
                 cid, 'train').select(range(1*1024)))
 
         if cfg.fl.load_server_data == True:
-            self.server_dataset =  Federate_Dataset._rename_columns(self.federated_dataset.load_split(
+            self.server_dataset = Federate_Dataset._rename_columns(self.federated_dataset.load_split(
                 'train').select(range(1024)))
 
     def _initialize_partitioner(self):
@@ -292,6 +297,7 @@ class Federate_Dataset:
         else:
             raise ValueError(
                 f"Unsupported distribution type: {self.cfg.distribution}")
+
     @staticmethod
     def _rename_columns(hf_ds):
         old_cols = list(hf_ds.features)
@@ -299,21 +305,23 @@ class Federate_Dataset:
         if 'question_title' in old_cols:
             hf_ds = hf_ds.rename_column("question_title", "instruction")
             print("Renamed question_title to instruction")
-        
+
         if 'question_content' in old_cols:
             hf_ds = hf_ds.rename_column("question_content", "input")
             print("Renamed question_content to input")
 
         if 'best_answer' in old_cols:
             hf_ds = hf_ds.rename_column("best_answer", "output")
-            print("Renamed best_answer to output")        
-         
+            print("Renamed best_answer to output")
+        
+        if 'topic' in old_cols:
+            hf_ds = hf_ds.rename_column("topic", "label")
+            print("Renamed topic to label")
+
         return hf_ds
 
     def get_datasets(self):
         return {"client2dataset": self.client2dataset, "server_dataset": self.server_dataset}
-
-
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -478,7 +486,8 @@ class NeuronProvenance:
     def _calculate_clients_contributions(gm_acts_grads_dict, client2layers, device):
         layers2prov = []
         for layer_id in range(len(gm_acts_grads_dict['activations'])):
-            c2l = {cid: layers[layer_id] for cid, layers in client2layers.items()}  # clients layer
+            c2l = {cid: layers[layer_id] for cid,
+                   layers in client2layers.items()}  # clients layer
             # layer inputs
             layer_inputs = gm_acts_grads_dict['activations'][layer_id][0]
             layer_grads = gm_acts_grads_dict['gradients'][layer_id][1]
@@ -503,7 +512,8 @@ class NeuronProvenance:
         client2layers = {cid: NeuronProvenance.getAllLayers(cm)
                          for cid, cm in self.c2model.items()}
 
-        client2part = self._calculate_clients_contributions(self.gm_acts_grads_dict, client2layers, self.device)
+        client2part = self._calculate_clients_contributions(
+            self.gm_acts_grads_dict, client2layers, self.device)
 
         traced_client = max(client2part, key=client2part.get)  # type: ignore
         return {"traced_client": traced_client, "client2part": client2part}
@@ -536,10 +546,11 @@ class ProvTextGenerator:
     def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=256,
                       context_size=1024):
         """Combined text generation function with manual token generation and decoding"""
-        model = model.cuda().eval().to(torch.float16)   
+        model = model.cuda().eval().to(torch.float16)
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
 
+        client2part = {}
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -context_size:]
 
@@ -547,13 +558,15 @@ class ProvTextGenerator:
             next_token_id = token_dict["next_token_id"]
             temp_id = next_token_id.item()
 
-
             if client2model is not None:
-                neuron_prov = NeuronProvenance(token_dict['acts_grads_dict'], client2model)
+                neuron_prov = NeuronProvenance(
+                    token_dict['acts_grads_dict'], client2model)
                 conts_dict = neuron_prov.run()
                 # print(f"temp_id: {temp_id}")
-                print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
-                model.zero_grad() # mandatory to clear the gradients
+                # print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
+                model.zero_grad()  # mandatory to clear the gradients
+                for c, v in conts_dict['client2part'].items():
+                    client2part[c] = client2part.get(c, 0) + v
 
             if temp_id in terminators:
                 print(f" =====Found EOS token {temp_id}=====")
@@ -564,18 +577,47 @@ class ProvTextGenerator:
         text = tokenizer.decode(response, skip_special_tokens=False)
         text = " ".join(text.split())
         print(f'Response:\n ***|||{text}|||***\n\n')
-        return text
+
+        client2part = NeuronProvenance._normalize_with_softmax(client2part)
+        return {"response": text, "client2part": client2part}
 
     @staticmethod
-    def generate_batch_text(model, client2model, tokenizer, terminators, batach_examples):
+    def generate_batch_text(model, client2model, client2class,  tokenizer, terminators, batach_examples):
         """Combined text generation function with manual token generation and decoding"""
 
+        all_labels = set([l for label2count in client2class.values()
+                          for l in label2count.keys()])
+        label2client = {label:  {c: client2class[c][label] for c in client2class.keys(
+        ) if label in client2class[c]} for label in all_labels}
+        print(f"Label2client: {label2client}")
+        count = 0
         for e in batach_examples:
             prompt = _prompt(e['instruction'], e['input'])
             print(f"Prompt: {prompt}")
-            response = ProvTextGenerator.generate_text(
+            res = ProvTextGenerator.generate_text(
                 model, client2model, tokenizer, prompt, terminators)
-            print(f"Response: {response}")
+            print(f"Response: {res}")
+
+            label = e['label']
+            if label not in label2client:
+                continue
+            true_responsible_clients = list(label2client[label].keys())
+            traced_client = max(res['client2part'], key=client2part.get) 
+            client2part = {c: round(v, 3) for c, v in res['client2part'].items()}
+            
+            
+            print(
+                f"Label: {label} TClient: {traced_client}, client2part: {client2part}, Label2client: {label2client[label]}")
+
+            if traced_client in true_responsible_clients:
+                count += 1
+
+        accuracy = (count/len(batach_examples)) * 100
+        print(
+            f"Correctly traced clients: {count}/{len(batach_examples)}, Accuracy: {accuracy}%")
+        # _ = input("Press any key to continue...")
+        return accuracy
+
 
 
 def run_simulation(cfg):
@@ -594,6 +636,7 @@ def run_simulation(cfg):
     ds_prep = Federate_Dataset(cfg)
     ds_dict = ds_prep.get_datasets()
     server_testdata = ds_dict["server_dataset"]
+    client2class = {k: get_labels_count(v) for k, v in ds_dict["client2dataset"].items()}
 
     round2gm_accs = []
 
@@ -636,8 +679,8 @@ def run_simulation(cfg):
 
     terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
 
-    callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, tokenizer=tokenizer,
-                               terminators=terminators, batach_examples=server_testdata.select(range(2)))
+    callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, client2class=client2class, tokenizer=tokenizer,
+                               terminators=terminators,batach_examples=server_testdata.select(range(2)))
 
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
@@ -679,20 +722,20 @@ def main_fl(cfg) -> None:
     gm_model, tokenizer,  hf_ds = run_simulation(cfg)
     log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
 
-    print(" ---------------- Testing Start ----------------")
+    # print(" ---------------- Testing Start ----------------")
 
-    terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
-    for e in hf_ds:
-        prompt = _prompt(e['instruction'], e['input'])
-        print(" ---------------- Start ----------------")
-        print(f"Prompt: {prompt}")
-        # generat_hf(model, tokenizer, terminators,  prompt)
-        generate_self(gm_model, tokenizer, terminators, prompt)
+    # terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
+    # for e in hf_ds:
+    #     prompt = _prompt(e['instruction'], e['input'])
+    #     print(" ---------------- Start ----------------")
+    #     print(f"Prompt: {prompt}")
+    #     # generat_hf(model, tokenizer, terminators,  prompt)
+    #     generate_self(gm_model, tokenizer, terminators, prompt)
 
-        print(" ---------------- End ----------------")
-        # ProvTextGenerator.generate_text(
-        #     gm_model, None, tokenizer, prompt, terminators)
-        _ = input("Press Enter to continue")
+    #     print(" ---------------- End ----------------")
+    #     # ProvTextGenerator.generate_text(
+    #     #     gm_model, None, tokenizer, prompt, terminators)
+    #     _ = input("Press Enter to continue")
 
 
 if __name__ == "__main__":
