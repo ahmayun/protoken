@@ -251,7 +251,7 @@ def _fit_metrics_aggregation_fn(metrics):
     return {"loss": 0.0, "accuracy": 0.0}
 
 
-class ClientsAndServerDatasets:
+class Federate_Dataset:
 
     def __init__(self, cfg):
         self.cfg = cfg
@@ -263,12 +263,12 @@ class ClientsAndServerDatasets:
 
         for cid in range(self.cfg.fl.num_clients):
             client_id = f"{cid}"
-            self.client2dataset[client_id] = self.federated_dataset.load_partition(
-                cid, 'train').select(range(1*1024))
+            self.client2dataset[client_id] = Federate_Dataset._rename_columns(self.federated_dataset.load_partition(
+                cid, 'train').select(range(1*1024)))
 
         if cfg.fl.load_server_data == True:
-            self.server_dataset = self.federated_dataset.load_split(
-                'train').select(range(1024))
+            self.server_dataset =  Federate_Dataset._rename_columns(self.federated_dataset.load_split(
+                'train').select(range(1024)))
 
     def _initialize_partitioner(self):
         if self.cfg.dataset.distribution == "iid":
@@ -292,9 +292,28 @@ class ClientsAndServerDatasets:
         else:
             raise ValueError(
                 f"Unsupported distribution type: {self.cfg.distribution}")
+    @staticmethod
+    def _rename_columns(hf_ds):
+        old_cols = list(hf_ds.features)
+
+        if 'question_title' in old_cols:
+            hf_ds = hf_ds.rename_column("question_title", "instruction")
+            print("Renamed question_title to instruction")
+        
+        if 'question_content' in old_cols:
+            hf_ds = hf_ds.rename_column("question_content", "input")
+            print("Renamed question_content to input")
+
+        if 'best_answer' in old_cols:
+            hf_ds = hf_ds.rename_column("best_answer", "output")
+            print("Renamed best_answer to output")        
+         
+        return hf_ds
 
     def get_datasets(self):
         return {"client2dataset": self.client2dataset, "server_dataset": self.server_dataset}
+
+
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -572,7 +591,7 @@ def run_simulation(cfg):
 
     global_model, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
 
-    ds_prep = ClientsAndServerDatasets(cfg)
+    ds_prep = Federate_Dataset(cfg)
     ds_dict = ds_prep.get_datasets()
     server_testdata = ds_dict["server_dataset"]
 
