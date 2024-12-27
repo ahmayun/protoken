@@ -28,7 +28,7 @@ peft:
 # =========================
 fl:
   num_rounds: 10
-  num_clients: 5
+  num_clients: 2
   clients_per_round: ${fl.num_clients}
   load_server_data: true
 

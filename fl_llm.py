@@ -303,7 +303,7 @@ class Federate_Dataset:
                 num_partitions=self.cfg.fl.num_clients,
                 partition_by=self.cfg.dataset.label_column,
                 class_assignment_mode='deterministic',  # 'random',
-                num_classes_per_partition=3,
+                num_classes_per_partition=5,
             )
 
         else:
