@@ -11,6 +11,7 @@ import os
 import warnings
 
 # Third-Party Imports
+from diskcache import Index
 import flwr as fl
 import hydra
 import numpy as np
@@ -57,28 +58,28 @@ class ModelUtils:
     """Utility class for model parameter handling."""
 
     @staticmethod
-    def _get_state_dict(net: torch.nn.Module, peft: bool) -> Dict:
-        if peft:
+    def _get_state_dict(net: torch.nn.Module, peft) -> Dict:
+        if peft.enabled:
             return get_peft_model_state_dict(net)
         else:
             return net.state_dict()
 
     @staticmethod
-    def get_parameters(model: torch.nn.Module, peft: bool) -> list:
+    def get_parameters(model: torch.nn.Module, peft) -> list:
         """Return model parameters as a list of NumPy ndarrays."""
         model = model.cpu()
         state_dict = ModelUtils._get_state_dict(model, peft)
         return [val.cpu().numpy() for _, val in state_dict.items()]
 
     @staticmethod
-    def set_parameters(net: torch.nn.Module, parameters: list, peft: bool) -> None:
+    def set_parameters(net: torch.nn.Module, parameters: list, peft) -> None:
         """Set model parameters from a list of NumPy ndarrays."""
         net = net.cpu()
         state_dict = ModelUtils._get_state_dict(net, peft)
         params_dict = zip(state_dict.keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
 
-        if peft:
+        if peft.enabled:
             set_peft_model_state_dict(net, state_dict)
         else:
             net.load_state_dict(state_dict, strict=True)
@@ -91,7 +92,7 @@ def get_labels_count(hf_dataset):
 
 def set_exp_key(cfg):
     """Set the experiment key."""
-    key = f"hello fl world"
+    key = f"hello-fl-world"
     return key
 
 
@@ -338,34 +339,64 @@ class Federate_Dataset:
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
+        print(f"\n\n Client {args['cid']} initialized")
         self.args = args
+        self.cache = self.args['clients_cache']
+        self.key = self.args['client_key']
 
     def fit(self, parameters, config):
+        trainer_args = config  # ["trainer_args"]
+
+        print(f"client  {self.args['cid']} -> key {self.key}")
+
+        if self.cache is not None and self.key not in self.cache.keys():
+            to_return = self._train_fit(parameters, trainer_args)
+
+            if self.cache is not None:
+                self.cache[self.key] = to_return  # cache the results
+                print(
+                    f"Client {self.args['cid']} is cached.")
+            return to_return
+
+        elif self.cache is not None and self.key in self.cache.keys():
+            return self._cache_fit(self.key)
+
+        else:
+            print(f"Client {self.args['cid']} training model without cache")
+            return self._train_fit(parameters, trainer_args)
+
+    def _train_fit(self, parameters, trainer_args):
         model = self.args["model"]
         tokenizer = self.args["tokenizer"]
 
         ModelUtils.set_parameters(
             model, parameters=parameters, peft=self.args["peft"])
         train_dict = _casual_llm_hf_train_or_eval(
-            model, tokenizer, self.args["client_data_train"], config, do_train=True, do_eval=True)
+            model, tokenizer, self.args["client_data_train"], trainer_args, do_train=True, do_eval=True)
 
         parameters = ModelUtils.get_parameters(model, peft=self.args["peft"])
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
-
-        log(INFO, "Client %s trained.", self.args["cid"])
         nk_client_data_points = len(self.args["client_data_train"])
+
         return parameters, nk_client_data_points, client_train_dict
+
+    def _cache_fit(self, key):
+        to_return = self.cache[key]
+        print(
+            f"[Cach Hit] [Client-{self.args['cid']}] using its own cached model. ***** Train Dict: {to_return[2]} *****")
+        return to_return
 
 
 class FedAvgWithGenFL(fl.server.strategy.FedAvg):
     """FedAvg with Differential Testing."""
 
-    def __init__(self, callback_create_model_fn, callback_provenance_fn, *args, **kwargs):
+    def __init__(self, peft, callback_create_model_fn, callback_provenance_fn, *args, **kwargs):
         """Initialize."""
         super().__init__(*args, **kwargs)
         self.callback_provenance_fn = callback_provenance_fn
         self.callback_create_model_fn = callback_create_model_fn
+        self.peft = peft
 
     def aggregate_fit(self, server_round, results, failures):
         """Aggregate clients updates."""
@@ -385,7 +416,7 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
     def _to_pt_model(self, parameters):
         ndarr = fl.common.parameters_to_ndarrays(parameters)
         model = self.callback_create_model_fn()
-        ModelUtils.set_parameters(model, ndarr, peft=True)
+        ModelUtils.set_parameters(model, ndarr, self.peft)
         return model
 
 
@@ -607,10 +638,10 @@ class ProvTextGenerator:
                 continue
 
             print(
-                f"\n\n====================== Start Provenance: Input {e_i} ==============================")
+                f"\n\n====================== Input {e_i} Provenance ==============================")
 
             prompt = _prompt(e['instruction'], e['input'])
-            print("\n>Prompt: [", prompt.replace('\n', ' ')+ "]")
+            print("\n>Prompt: [", prompt.replace('\n', ' ') + "]")
 
             res = ProvTextGenerator.generate_text(
                 model, client2model, tokenizer, prompt, terminators)
@@ -641,6 +672,10 @@ class ProvTextGenerator:
 def run_simulation(cfg):
     """Run the simulation."""
 
+    exps_cache = None
+    if cfg.exp.cache_path is not None:
+        exps_cache = Index(cfg.exp.cache_path)
+
     save_path = Path(HydraConfig.get().runtime.output_dir)
 
     exp_key = set_exp_key(cfg)
@@ -658,6 +693,8 @@ def run_simulation(cfg):
         v) for k, v in ds_dict["client2dataset"].items()}
 
     round2gm_accs = []
+    global global_round
+    global_round = 0
 
     def _create_model():
         temp_model, _ = get_model_and_tokenizer(cfg.model, cfg.peft)
@@ -672,6 +709,9 @@ def run_simulation(cfg):
             global_model, tokenizer, server_testdata, cfg.hf_trainer_args, do_train=False, do_eval=True)
         round2gm_accs.append(d_res["accuracy"])
         log(DEBUG, "config: %s", config)
+        global global_round
+        global_round += 1
+
         return d_res["loss"], {
             "accuracy": d_res["accuracy"],
             "loss": d_res["loss"],
@@ -680,7 +720,7 @@ def run_simulation(cfg):
 
     def _client_fn(context: Context):
         """Give the new client."""
-        # print("context", context)
+        global global_round
         partition_id = context.node_config["partition-id"]
         cid = f"{partition_id}"
 
@@ -691,7 +731,9 @@ def run_simulation(cfg):
             "client_data_train": ds_dict["client2dataset"][cid],
             "device": torch.device(cfg.device),
             'dir': save_path,
-            'peft': cfg.peft.enabled,
+            'peft': cfg.peft,
+            'clients_cache': exps_cache,
+            'client_key': exp_key + f"[round-{global_round}]" + f"-[client-{cid}]"
         }
         client = FlowerClient(args).to_client()
         return client
@@ -703,6 +745,7 @@ def run_simulation(cfg):
 
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
+            peft=cfg.peft,
             callback_create_model_fn=_create_model,
             callback_provenance_fn=callback_prov_fn,
             fraction_fit=0,
@@ -711,7 +754,7 @@ def run_simulation(cfg):
             min_evaluate_clients=0,
             min_available_clients=cfg.fl.num_clients,
             initial_parameters=ndarrays_to_parameters(
-                ndarrays=ModelUtils.get_parameters(global_model, peft=cfg.peft.enabled)),  # Remove initial_parameters
+                ndarrays=ModelUtils.get_parameters(global_model, peft=cfg.peft)),  # Remove initial_parameters
             evaluate_fn=_eval_gm,
             on_fit_config_fn=_get_fit_config,
             fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,

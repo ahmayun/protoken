@@ -7,13 +7,16 @@
 # Experiment Settings
 exp:
   key: "hello_fl_world"
-  dir: "fl_hf_checkpoints"
+  storage_dir: /projects/semcache/github/new-project-genai/genfl/_storage/fl_training
+  dir: ${exp.storage_dir}/hf_dir_trainer
+  cache_path: ${exp.storage_dir}/fl_clients_models_cache
+
 
 # =========================
 # PEFT (Parameter-Efficient Fine-Tuning) Configuration
 # =========================
 peft:
-  enabled: true
+  enabled: false
   config:
     r: 4
     lora_alpha: 32
@@ -27,10 +30,11 @@ peft:
 # Federated Learning (FL) Configuration
 # =========================
 fl:
-  num_rounds: 10
-  num_clients: 2
+  num_rounds: 4
+  num_clients: 4
   clients_per_round: ${fl.num_clients}
   load_server_data: true
+  use_cache_client_model: true
 
 # =========================
 # Dataset Configuration
@@ -73,12 +77,12 @@ model:
 # =========================
 hf_trainer_args:
   remove_unused_columns: true
-  num_train_epochs: 1
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 4
+  num_train_epochs: 0.1
+  per_device_train_batch_size: 32
+  per_device_eval_batch_size: 32
 
   # learning rate settings
-  learning_rate: 5.0e-06
+  learning_rate: 5.0e-05
   lr_scheduler_type: cosine
   warmup_ratio: 0.2
 
@@ -109,25 +113,25 @@ hf_trainer_args:
 device: "cuda" # Options: "cuda", "cpu"
 
 total_gpus: 1
-total_cpus: 8
+total_cpus: 10
 
 client_resources:
-  num_cpus: 8
+  num_cpus: 8 # if its more than  # clients x num_cpus> total_cpus, it will become sequential.  
   num_gpus: 1 # Only relevant if device.type is "cuda"
 
 # =========================
 # Logging Configuration (Hydra)
 # =========================
 # Logging Configuration (Hydra)
-hydra:
-  job_logging:
-    root:
-      level: INFO # Set the job logging level to INFO
-    loggers:
-      flwr:
-        level: INFO
-      accelerate.utils.other:
-        level: ERROR
+# hydra:
+#   job_logging:
+#     root:
+#       level: INFO # Set the job logging level to INFO
+#     loggers:
+#       flwr:
+#         level: INFO
+#       accelerate.utils.other:
+#         level: ERROR
 # =========================
 # Additional Configurations (Optional)
 # =========================
