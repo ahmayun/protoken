@@ -15,3 +15,5 @@ pip install scikit-learn evaluate diskcache transformers peft flwr-datasets trl 
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p dgx_normal_q -t 6:00:00 --gres=gpu:1  
 ```
 
+- currently cache is not perfect. It can resume but it will not consider the randomly sampling of data points. even all the configurations are same. 
+
