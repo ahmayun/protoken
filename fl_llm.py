@@ -339,7 +339,6 @@ class Federate_Dataset:
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
-        print(f"\n\n Client {args['cid']} initialized")
         self.args = args
         self.cache = self.args['clients_cache']
         self.key = self.args['client_key']
@@ -686,11 +685,17 @@ def run_simulation(cfg):
 
     global_model, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
 
-    ds_prep = Federate_Dataset(cfg)
-    ds_dict = ds_prep.get_datasets()
-    server_testdata = ds_dict["server_dataset"]
-    client2class = {k: get_labels_count(
-        v) for k, v in ds_dict["client2dataset"].items()}
+    if exps_cache is None or exp_key not in exps_cache.keys():
+        ds_prep = Federate_Dataset(cfg)
+        ds_dict = ds_prep.get_datasets()
+        server_testdata = ds_dict["server_dataset"]
+        client2class = {k: get_labels_count(
+            v) for k, v in ds_dict["client2dataset"].items()}
+        exps_cache[exp_key] = ds_dict, client2class
+    else:
+        log(INFO, "Loading from cache")
+        ds_dict, client2class = exps_cache[exp_key]
+        server_testdata = ds_dict["server_dataset"]
 
     round2gm_accs = []
     global global_round
