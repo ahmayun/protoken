@@ -11,7 +11,6 @@ exp:
   dir: ${exp.storage_dir}/hf_dir_trainer
   cache_path: ${exp.storage_dir}/fl_clients_models_cache
 
-
 # =========================
 # PEFT (Parameter-Efficient Fine-Tuning) Configuration
 # =========================
@@ -30,9 +29,9 @@ peft:
 # Federated Learning (FL) Configuration
 # =========================
 fl:
-  num_rounds: 4
-  num_clients: 4
-  clients_per_round: ${fl.num_clients}
+  num_rounds: 50
+  num_clients: 100
+  clients_per_round: 5 #${fl.num_clients}
   load_server_data: true
   use_cache_client_model: true
 
@@ -44,16 +43,11 @@ fl:
 label_col:
   yahoo_answers_topics: "topic"
 
-
-
-
 dataset:
   distribution: "shard" #"iid" # Change to "iid" for iid data distribution. Change it to `non_iid` for non-iid data distribution.
   # name: "yahma/alpaca-cleaned"
   name: "yahoo_answers_topics"
   label_column: ${label_col.${dataset.name}}
-  
-  
 
 # =========================
 # PEFT Configuration for Hydra
@@ -77,7 +71,7 @@ model:
 # =========================
 hf_trainer_args:
   remove_unused_columns: true
-  num_train_epochs: 0.1
+  num_train_epochs: 6
   per_device_train_batch_size: 32
   per_device_eval_batch_size: 32
 
@@ -92,7 +86,6 @@ hf_trainer_args:
   max_steps: -1
   gradient_accumulation_steps: 1
 
-
   fp16: true
 
   # logging
@@ -101,7 +94,7 @@ hf_trainer_args:
   save_steps: 0 #100
   save_total_limit: 0 # 1
   save_strategy: "no"
-  
+
   # logging_strategy: steps
   # logging_steps: 20
   # log_level: info
@@ -116,7 +109,7 @@ total_gpus: 1
 total_cpus: 10
 
 client_resources:
-  num_cpus: 8 # if its more than  # clients x num_cpus> total_cpus, it will become sequential.  
+  num_cpus: 8 # if its more than  # clients x num_cpus> total_cpus, it will become sequential.
   num_gpus: 1 # Only relevant if device.type is "cuda"
 
 # =========================

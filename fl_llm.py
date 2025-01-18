@@ -92,8 +92,17 @@ def get_labels_count(hf_dataset):
 
 def set_exp_key(cfg):
     """Set the experiment key."""
-    key = f"hello-fl-world"
-    return key
+    
+    key = f"hello-genfl-1-"
+
+    print(f"Default Key: {key}")
+
+    temp = input("Enter the experiment key to change: ")
+    if temp != "":
+        key = temp
+    print(f"Experiment Key: {key}") 
+         
+    return key 
 
 
 def config_sim_resources(cfg):
@@ -601,8 +610,8 @@ class ProvTextGenerator:
                 neuron_prov = NeuronProvenance(
                     token_dict['acts_grads_dict'], client2model)
                 conts_dict = neuron_prov.run()
-                # print(f"temp_id: {temp_id}")
-                # print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
+                print(f"temp_id: {temp_id}")
+                print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
                 model.zero_grad()  # mandatory to clear the gradients
                 for c, v in conts_dict['client2part'].items():
                     client2part[c] = client2part.get(c, 0) + v
@@ -617,6 +626,7 @@ class ProvTextGenerator:
         text = " ".join(text.split())
         # print(f'Response:\n ***|||{text}|||***\n\n')
         client2part = NeuronProvenance._normalize_with_softmax(client2part)
+        _ = input("Press Enter to continue")
         return {"response": text, "client2part": client2part}
 
     @staticmethod
@@ -746,7 +756,7 @@ def run_simulation(cfg):
     terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
 
     callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, client2class=client2class, tokenizer=tokenizer,
-                               terminators=terminators, batach_examples=server_testdata.select(range(2)))
+                               terminators=terminators, batach_examples=server_testdata.select(range(10)))
 
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
