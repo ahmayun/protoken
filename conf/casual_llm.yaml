@@ -4,12 +4,13 @@
 # General Configuration
 # =========================
 
+experiment_key: "hello_fl_world"
+
 # Experiment Settings
-exp:
-  key: "hello_fl_world"
-  storage_dir: /projects/semcache/github/new-project-genai/genfl/_storage/fl_training
-  dir: ${exp.storage_dir}/hf_dir_trainer
-  cache_path: ${exp.storage_dir}/fl_clients_models_cache
+experiment_directories:
+  root_dir: /projects/semcache/github/new-project-genai/genfl/_storage/ex1
+  trainer_dir: ${experiment_directories.root_dir}/trainer_dir
+  fl_cache_dir: ${experiment_directories.root_dir}/fl_cache
 
 # =========================
 # PEFT (Parameter-Efficient Fine-Tuning) Configuration
@@ -29,11 +30,11 @@ peft:
 # Federated Learning (FL) Configuration
 # =========================
 fl:
-  num_rounds: 50
-  num_clients: 100
-  clients_per_round: 5 #${fl.num_clients}
+  num_rounds: 2
+  num_clients: 5
+  clients_per_round: 5
   load_server_data: true
-  use_cache_client_model: true
+  use_cache_client_model: false
 
 # =========================
 # Dataset Configuration
@@ -48,6 +49,9 @@ dataset:
   # name: "yahma/alpaca-cleaned"
   name: "yahoo_answers_topics"
   label_column: ${label_col.${dataset.name}}
+  num_classes_per_partition: 2 # if distribution is shard/pathological, this will be the number of classes per partition
+  each_client_data_points: 5000
+  server_data_points: 5000
 
 # =========================
 # PEFT Configuration for Hydra
@@ -76,7 +80,7 @@ hf_trainer_args:
   per_device_eval_batch_size: 32
 
   # learning rate settings
-  learning_rate: 5.0e-05
+  learning_rate: 1e-04
   lr_scheduler_type: cosine
   warmup_ratio: 0.2
 
@@ -89,7 +93,7 @@ hf_trainer_args:
   fp16: true
 
   # logging
-  output_dir: ${exp.dir}
+  output_dir: ${experiment_directories.trainer_dir}
   # overwrite_output_dir: true
   save_steps: 0 #100
   save_total_limit: 0 # 1
@@ -116,15 +120,15 @@ client_resources:
 # Logging Configuration (Hydra)
 # =========================
 # Logging Configuration (Hydra)
-# hydra:
-#   job_logging:
-#     root:
-#       level: INFO # Set the job logging level to INFO
-#     loggers:
-#       flwr:
-#         level: INFO
-#       accelerate.utils.other:
-#         level: ERROR
+hydra:
+  job_logging:
+    root:
+      level: INFO # Set the job logging level to INFO
+    loggers:
+      flwr:
+        level: INFO
+      accelerate.utils.other:
+        level: ERROR
 # =========================
 # Additional Configurations (Optional)
 # =========================
