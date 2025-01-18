@@ -4,11 +4,13 @@
 # General Configuration
 # =========================
 
+
+
 experiment_key: "hello_fl_world"
 
 # Experiment Settings
 experiment_directories:
-  root_dir: /projects/semcache/github/new-project-genai/genfl/_storage/ex1
+  root_dir: ${oc.env:TMPFS} #/projects/semcache/github/new-project-genai/genfl/_storage/ex1
   trainer_dir: ${experiment_directories.root_dir}/trainer_dir
   fl_cache_dir: ${experiment_directories.root_dir}/fl_cache
 

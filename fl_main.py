@@ -20,6 +20,8 @@ from fl_utils import set_exp_key, config_sim_resources
 from fl_dataset import get_labels_count, Federate_Dataset
 from fl_prov import ProvTextGenerator
 
+# print(os.environ['HF_HOME'])
+# _ = input("Press Enter to continue...")
 
 # Avoid warnings
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -117,34 +119,36 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
         return model
 
 
-def run_simulation(cfg):
-    """Run the simulation."""
+def prepare_datasets(exp_key, fl_cache, cfg):
 
-    fl_cache = None
-    if cfg.experiment_directories.fl_cache_dir is not None:
-        fl_cache = Index(cfg.experiment_directories.fl_cache_dir)
-
-    save_path = Path(HydraConfig.get().runtime.output_dir)
-
-    exp_key = set_exp_key(cfg)
-
-    log(INFO, " ***********  Starting Experiment: %s ***************", exp_key)
-
-    log(DEBUG, "Simulation Configuration: %s", cfg)
-
-    global_model, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
-
-    if fl_cache is None or exp_key not in fl_cache.keys():
-        ds_prep = Federate_Dataset(cfg)
-        ds_dict = ds_prep.get_datasets()
-        server_testdata = ds_dict["server_dataset"]
-        client2class = {k: get_labels_count(
-            v) for k, v in ds_dict["client2dataset"].items()}
-        fl_cache[exp_key] = ds_dict, client2class
-    else:
+    if exp_key in fl_cache.keys():
         log(INFO, "Loading from cache")
         ds_dict, client2class = fl_cache[exp_key]
-        server_testdata = ds_dict["server_dataset"]
+        return ds_dict, client2class
+
+    ds_prep = Federate_Dataset(cfg)
+    ds_dict = ds_prep.get_datasets()
+    client2class = {k: get_labels_count(
+        v) for k, v in ds_dict["client2dataset"].items()}
+    fl_cache[exp_key] = ds_dict, client2class
+    return ds_dict, client2class
+
+
+def fl_simulation(cfg):
+    """Run the simulation."""
+
+    fl_cache = Index(cfg.experiment_directories.fl_cache_dir)
+    save_path = Path(HydraConfig.get().runtime.output_dir)
+    exp_key = set_exp_key(cfg)
+    log(INFO, " ***********  Starting Experiment: %s ***************", exp_key)
+    log(DEBUG, "Simulation Configuration: %s", cfg)
+
+    fl_dataset, client2class = prepare_datasets(
+        cfg.experiment_key, fl_cache, cfg)
+    global_model, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
+    terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
+    callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, client2class=client2class, tokenizer=tokenizer,
+                               terminators=terminators, batach_examples=fl_dataset['server_dataset'].select(range(10)))
 
     round2gm_accs = []
     global global_round
@@ -160,7 +164,7 @@ def run_simulation(cfg):
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters, peft=cfg.peft)
         d_res = train_or_eval_llm(
-            global_model, tokenizer, server_testdata, cfg.hf_trainer_args, do_train=False, do_eval=True)
+            global_model, tokenizer, fl_dataset['server_dataset'], cfg.hf_trainer_args, do_train=False, do_eval=True)
         round2gm_accs.append(d_res["accuracy"])
         log(DEBUG, "config: %s", config)
         global global_round
@@ -182,7 +186,7 @@ def run_simulation(cfg):
             "cid": cid,
             "model": _create_model(),
             "tokenizer": tokenizer,
-            "client_data_train": ds_dict["client2dataset"][cid],
+            "client_data_train": fl_dataset["client2dataset"][cid],
             "device": torch.device(cfg.device),
             'dir': save_path,
             'peft': cfg.peft,
@@ -192,11 +196,6 @@ def run_simulation(cfg):
         }
         client = FlowerClient(args).to_client()
         return client
-
-    terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
-
-    callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, client2class=client2class, tokenizer=tokenizer,
-                               terminators=terminators, batach_examples=server_testdata.select(range(10)))
 
     def _server_fn(context: Context):
         strategy = FedAvgWithGenFL(
@@ -229,14 +228,12 @@ def run_simulation(cfg):
     )
     log(INFO, "Training Complete for Experiment: %s", exp_key)
 
-    return global_model, tokenizer, server_testdata
-
 
 @hydra.main(config_path="./conf", config_name="casual_llm", version_base=None)
 def main_fl(cfg) -> None:
     """Run the baseline."""
     start_time = time.time()
-    gm_model, tokenizer,  hf_ds = run_simulation(cfg)
+    fl_simulation(cfg)
     log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
 
 
