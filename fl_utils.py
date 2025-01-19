@@ -33,6 +33,7 @@ def config_sim_resources(cfg):
     backend_config = {
         "client_resources": client_resources,
         "init_args": init_args,
+        "working_dir":cfg.experiment_directories.root_dir
     }
     return backend_config
 

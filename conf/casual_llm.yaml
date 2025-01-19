@@ -4,39 +4,27 @@
 # General Configuration
 # =========================
 
-
-
 experiment_key: "hello_fl_world"
+
+# ${oc.env:TMPFS} #
 
 # Experiment Settings
 experiment_directories:
-  root_dir: ${oc.env:TMPFS} #/projects/semcache/github/new-project-genai/genfl/_storage/ex1
+  root_dir: /projects/semcache/github/new-project-genai/genfl/_storage/ex1
   trainer_dir: ${experiment_directories.root_dir}/trainer_dir
   fl_cache_dir: ${experiment_directories.root_dir}/fl_cache
 
-# =========================
-# PEFT (Parameter-Efficient Fine-Tuning) Configuration
-# =========================
-peft:
-  enabled: false
-  config:
-    r: 4
-    lora_alpha: 32
-    lora_dropout: 0.05
-    bias: "none"
-    task_type: "CAUSAL_LM"
-    target_modules: "all-linear"
-    modules_to_save: null
+
 
 # =========================
 # Federated Learning (FL) Configuration
 # =========================
 fl:
-  num_rounds: 2
-  num_clients: 5
-  clients_per_round: 5
+  num_rounds: 50
+  num_clients: 20
+  clients_per_round: 4
   load_server_data: true
-  use_cache_client_model: false
+  use_cache_client_model: true
 
 # =========================
 # Dataset Configuration
@@ -69,17 +57,33 @@ model:
   kwargs:
     use_cache: false
     trust_remote_code: true
-    attn_implementation: "flash_attention_2"
+    # attn_implementation: "flash_attention_2"
     device_map: null
+    # torch_dtype: "bfloat16"
+
+
+# =========================
+# PEFT (Parameter-Efficient Fine-Tuning) Configuration
+# =========================
+peft:
+  enabled: false
+  config:
+    r: 4
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bias: "none"
+    task_type: "CAUSAL_LM"
+    target_modules: "all-linear"
+    modules_to_save: null
 
 # =========================
 # HF Trainer Configuration
 # =========================
 hf_trainer_args:
   remove_unused_columns: true
-  num_train_epochs: 6
-  per_device_train_batch_size: 32
-  per_device_eval_batch_size: 32
+  num_train_epochs: 4
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 16
 
   # learning rate settings
   learning_rate: 1e-04
@@ -92,7 +96,10 @@ hf_trainer_args:
   max_steps: -1
   gradient_accumulation_steps: 1
 
-  fp16: true
+  # fp16: true
+  # bf16: true
+  neftune_noise_alpha: 5 # it improves the llm generated text a lot
+
 
   # logging
   output_dir: ${experiment_directories.trainer_dir}
@@ -111,11 +118,11 @@ hf_trainer_args:
 # =========================
 device: "cuda" # Options: "cuda", "cpu"
 
-total_gpus: 1
-total_cpus: 10
+total_gpus: 4
+total_cpus: 16
 
 client_resources:
-  num_cpus: 8 # if its more than  # clients x num_cpus> total_cpus, it will become sequential.
+  num_cpus: 3 # if its more than  # clients x num_cpus> total_cpus, it will become sequential.
   num_gpus: 1 # Only relevant if device.type is "cuda"
 
 # =========================

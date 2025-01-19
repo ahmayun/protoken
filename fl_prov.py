@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from fl_model import PromptUtils
 
 
-
 class HookManager:
     def __init__(self):
         self.storage_forward = []
@@ -182,8 +181,8 @@ class ProvTextGenerator:
                 neuron_prov = NeuronProvenance(
                     token_dict['acts_grads_dict'], client2model)
                 conts_dict = neuron_prov.run()
-                print(f"temp_id: {temp_id}")
-                print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
+                # print(f"temp_id: {temp_id}")
+                # print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
                 model.zero_grad()  # mandatory to clear the gradients
                 for c, v in conts_dict['client2part'].items():
                     client2part[c] = client2part.get(c, 0) + v
@@ -205,10 +204,13 @@ class ProvTextGenerator:
     def generate_batch_text(model, client2model, client2class,  tokenizer, terminators, batach_examples):
         """Combined text generation function with manual token generation and decoding"""
 
+        client2class = {k: v for k, v in client2class.items() if k in client2model}
+
         all_labels = set([l for label2count in client2class.values()
                           for l in label2count.keys()])
         label2client = {label:  {c: client2class[c][label] for c in client2class.keys(
         ) if label in client2class[c]} for label in all_labels}
+
         count = 0
         total = 0
         print("\n\n\n> ************ Server Side Provenance ************")
@@ -233,11 +235,19 @@ class ProvTextGenerator:
             client2part = {c: v  # round(v, 3)
                            for c, v in res['client2part'].items()}
 
-            print(
-                f"\n>[Prov] Label: {label} TClient: {traced_client}, client2part: {client2part}, Label2client: {label2client[label]}")
-
+            
+            
+            correct_trace = False
             if traced_client in true_responsible_clients:
                 count += 1
+                correct_trace = True
+            
+            prov_ouptput_to_print = f""">[Prov] Label: {label} TClient: {traced_client}, Trace: {correct_trace} 
+                                         \n     Actual Responsible clients {true_responsible_clients} 
+                                         \n     Clients Trace Ranks: {client2part}
+                                         \n     Client to Label : {label2client[label]}"""
+            print(prov_ouptput_to_print)
+
 
             total += 1
 

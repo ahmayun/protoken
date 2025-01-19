@@ -132,7 +132,7 @@ def get_model_and_tokenizer(model_cfg, peft):
         model = get_peft_model(model, peft_conf)
         model.print_trainable_parameters()
 
-    return model, tokenizer
+    return model.cpu(), tokenizer
 
 
 def train_or_eval_llm(model, tokenizer,  hf_ds, args_config, do_train, do_eval):
