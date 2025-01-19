@@ -38,8 +38,5 @@ def config_sim_resources(cfg):
     return backend_config
 
 
-def seed_everything(seed=786):
-    """Seed everything."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+# def seed_everything(seed=786):
+#     """Seed everything."""

@@ -4,6 +4,9 @@ from functools import partial
 from pathlib import Path
 import os
 import warnings
+import random
+import numpy as np
+import torch
 
 # Third-Party Imports
 from diskcache import Index
@@ -16,9 +19,16 @@ from flwr.common import ndarrays_to_parameters, Context
 from logging import DEBUG, INFO
 
 from fl_model import ModelUtils, get_model_and_tokenizer, train_or_eval_llm
-from fl_utils import set_exp_key, config_sim_resources
 from fl_dataset import get_labels_count, Federate_Dataset
 from fl_prov import ProvTextGenerator
+from fl_utils import set_exp_key, config_sim_resources
+
+
+seed = 786
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
 
 
 
@@ -92,10 +102,12 @@ class FedAvgWithGenFL(fl.server.strategy.FedAvg):
 
     def __init__(self, peft, callback_create_model_fn, callback_provenance_fn, *args, **kwargs):
         """Initialize."""
+        random.seed(seed)   
         super().__init__(*args, **kwargs)
         self.callback_provenance_fn = callback_provenance_fn
         self.callback_create_model_fn = callback_create_model_fn
         self.peft = peft
+
 
     def aggregate_fit(self, server_round, results, failures):
         """Aggregate clients updates."""
