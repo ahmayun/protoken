@@ -14,6 +14,8 @@ pip install scikit-learn evaluate diskcache transformers peft flwr-datasets trl 
 # 16 cores on one node.  
 # for arc 
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p dgx_normal_q -t 6:00:00 --gres=gpu:1  
+#a100_normal_q
+interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p a100_normal_q -t 6:00:00 --gres=gpu:1
 
 # for falcon
 
