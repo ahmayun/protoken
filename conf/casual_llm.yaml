@@ -4,7 +4,7 @@
 # General Configuration
 # =========================
 
-experiment_key: "hello_fl_world"
+experiment_key: "prov_1"
 
 # ${oc.env:TMPFS} #
 
@@ -20,9 +20,9 @@ experiment_directories:
 # Federated Learning (FL) Configuration
 # =========================
 fl:
-  num_rounds: 1
-  num_clients: 8
-  clients_per_round: 8
+  num_rounds: 2
+  num_clients: 4
+  clients_per_round: 4
   load_server_data: true
   use_cache_client_model: true
 
@@ -81,7 +81,7 @@ peft:
 # =========================
 hf_trainer_args:
   remove_unused_columns: true
-  num_train_epochs: 1
+  num_train_epochs: 5
   per_device_train_batch_size: 8
   per_device_eval_batch_size: 16
 

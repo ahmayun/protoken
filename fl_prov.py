@@ -181,8 +181,8 @@ class ProvTextGenerator:
                 neuron_prov = NeuronProvenance(
                     token_dict['acts_grads_dict'], client2model)
                 conts_dict = neuron_prov.run()
-                # print(f"temp_id: {temp_id}")
-                # print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
+                print(f"temp_id: {temp_id}")
+                print(f"{tokenizer.decode(temp_id)}, {conts_dict}")
                 model.zero_grad()  # mandatory to clear the gradients
                 for c, v in conts_dict['client2part'].items():
                     client2part[c] = client2part.get(c, 0) + v
@@ -192,7 +192,7 @@ class ProvTextGenerator:
                 break
             idx = torch.cat((idx, next_token_id), dim=-1)
 
-        response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
+        response  = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
         text = tokenizer.decode(response, skip_special_tokens=False)
         text = " ".join(text.split())
         # print(f'Response:\n ***|||{text}|||***\n\n')

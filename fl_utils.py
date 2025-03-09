@@ -11,7 +11,7 @@ import torch
 def set_exp_key(cfg):
     """Set the experiment key."""
 
-    key = f"hello-genfl-1-"
+    key = cfg.experiment_key
 
     print(f"Default Key: {key}")
 
