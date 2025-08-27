@@ -23,5 +23,3 @@ dependencies = [
     "trl>=0.15.2",
 ]
 
-[tool.uv.workspace]
-members = ["playground"]
