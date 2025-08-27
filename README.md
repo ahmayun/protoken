@@ -1,12 +1,3 @@
-pip3 install torch torchvision torchaudio 
-
-pip install packaging
-
-pip install ninja
-
-pip install flash-attn --no-build-isolation
-
-pip install scikit-learn evaluate diskcache transformers peft flwr-datasets trl flwr[simulation] hydra-core
 
 
 # important commands 

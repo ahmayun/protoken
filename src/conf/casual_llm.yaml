@@ -23,6 +23,44 @@ fl:
   num_rounds: 2
   num_clients: 2
   clients_per_round: 2
+
+# =========================
+# Training Configuration
+# =========================
+train:
+  batch: 8
+  ga: 1
+  warmup_steps: 10
+  max_steps: 200
+  lr: 5e-5
+  logging_steps: 5
+  optim: "adamw_8bit"
+  weight_decay: 0.01
+  scheduler: "linear"
+  seed: 3407
+  output_dir: "outputs_federated"
+  report_to: "none"
+
+# =========================
+# Model Configuration
+# =========================
+model:
+  name: "unsloth/gemma-3-270m-it"
+  max_seq_length: 2048
+  load_in_4bit: false
+  load_in_8bit: false
+
+# =========================
+# Dataset Configuration
+# =========================
+datasets:
+  chess:
+    name: "Thytu/ChessInstruct"
+    split: "train[:10000]"
+  math:
+    name: "m-gopichand/deepmind_math_dataset_processed"
+    split: "train[:10000]"
+    filter_difficulty: "train-easy"
    
 
 
