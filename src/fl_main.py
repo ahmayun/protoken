@@ -1,41 +1,59 @@
-# Standard Library Imports
-import time
-from functools import partial
-from pathlib import Path
-import os
-import warnings
-import random
-import numpy as np
-import torch
 
-# Third-Party Imports
+import time
+from pathlib import Path
+
+
 from diskcache import Index
 import flwr as fl
 import hydra
-import torch
 from flwr.common.logger import log
 from hydra.core.hydra_config import HydraConfig
-from flwr.common import ndarrays_to_parameters, Context
+from flwr.common import Context
 from logging import DEBUG, INFO
+import torch
 
-from src.fl_model import ModelUtils, get_model_and_tokenizer, train_or_eval_llm
-from src.fl_dataset import get_labels_count, Federate_Dataset
-from src.fl_prov import ProvTextGenerator
-from src.fl_utils import set_exp_key, config_sim_resources
-
-
-seed = 786
-random.seed(seed)
-np.random.seed(seed)
-torch.manual_seed(seed)
+from typing import Dict
+from collections import OrderedDict
 
 
+def config_sim_resources(cfg):
+    """Configure the resources for the simulation."""
+    client_resources = {"num_cpus": cfg.client_resources.num_cpus}
+    if cfg.device == "cuda":
+        client_resources["num_gpus"] = cfg.client_resources.num_gpus
+
+    init_args = {"num_cpus": cfg.total_cpus, "num_gpus": cfg.total_gpus}
+    backend_config = {
+        "client_resources": client_resources,
+        "init_args": init_args,
+        "working_dir": cfg.experiment_directories.root_dir
+    }
+    return backend_config
 
 
-# Avoid warnings
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
-os.environ["RAY_DISABLE_DOCKER_CPU_WARNING"] = "1"
-warnings.filterwarnings("ignore", category=UserWarning)
+class ModelUtils:
+    """Utility class for model parameter handling."""
+
+    @staticmethod
+    def _get_state_dict(net: torch.nn.Module) -> Dict:
+        return net.state_dict()
+
+    @staticmethod
+    def get_parameters(model: torch.nn.Module) -> list:
+        """Return model parameters as a list of NumPy ndarrays."""
+        model = model.cpu()
+        state_dict = ModelUtils._get_state_dict(model)
+        return [val.cpu().numpy() for _, val in state_dict.items()]
+
+    @staticmethod
+    def set_parameters(net: torch.nn.Module, parameters: list) -> None:
+        """Set model parameters from a list of NumPy ndarrays."""
+        net = net.cpu()
+        state_dict = ModelUtils._get_state_dict(net)
+        params_dict = zip(state_dict.keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+
+        net.load_state_dict(state_dict, strict=True)
 
 
 def _fit_metrics_aggregation_fn(metrics):
@@ -59,24 +77,12 @@ def _fit_metrics_aggregation_fn(metrics):
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.args = args
-        self.cache = self.args['clients_cache']
-        self.client_key = self.args['client_key']
-        self.use_cache_client_model = args['use_cache_client_model']
 
     def fit(self, parameters, config):
         trainer_args = config  # ["trainer_args"]
-        print(f"client  {self.args['cid']} -> key {self.client_key}")
-
-        if self.use_cache_client_model == True and self.client_key in self.cache.keys():
-            client_train_response = self.cache[self.client_key]
-            print(
-                f"[Cach Hit] [Client-{self.args['cid']}] using its own cached model. ***** Train Dict: {client_train_response[2]} *****")
-            return client_train_response
-
+        print(f"client  {self.args['cid']}")
         client_train_response = self._train_fit(
             parameters, trainer_args)
-        self.cache[self.client_key] = client_train_response
-        print(f"Client {self.args['cid']} is cached.")
         return client_train_response
 
     def _train_fit(self, parameters, trainer_args):
@@ -84,12 +90,12 @@ class FlowerClient(fl.client.NumPyClient):
         tokenizer = self.args["tokenizer"]
 
         ModelUtils.set_parameters(
-            model, parameters=parameters, peft=self.args["peft"])
+            model, parameters=parameters)
         model = model.to(self.args["device"])
-        train_dict = train_or_eval_llm(
-            model, tokenizer, self.args["client_data_train"], trainer_args, do_train=True, do_eval=True)
+        train_dict = train_llm(
+            model, tokenizer, self.args["client_data_train"])
 
-        parameters = ModelUtils.get_parameters(model, peft=self.args["peft"])
+        parameters = ModelUtils.get_parameters(model)
 
         client_train_dict = {"cid": self.args["cid"]} | train_dict
         nk_client_data_points = len(self.args["client_data_train"])
@@ -97,97 +103,34 @@ class FlowerClient(fl.client.NumPyClient):
         return parameters, nk_client_data_points, client_train_dict
 
 
-class FedAvgWithGenFL(fl.server.strategy.FedAvg):
-    """FedAvg with Differential Testing."""
-
-    def __init__(self, peft, callback_create_model_fn, callback_provenance_fn, *args, **kwargs):
-        """Initialize."""
-        random.seed(seed)   
-        super().__init__(*args, **kwargs)
-        self.callback_provenance_fn = callback_provenance_fn
-        self.callback_create_model_fn = callback_create_model_fn
-        self.peft = peft
-
-
-    def aggregate_fit(self, server_round, results, failures):
-        """Aggregate clients updates."""
-
-        client2model = {fit_res.metrics["cid"]: self._to_pt_model(
-            fit_res.parameters) for _, fit_res in results}
-
-        aggregated_parameters, aggregated_metrics = super(
-        ).aggregate_fit(server_round, results, failures)
-        # do provenance here
-        global_model = self._to_pt_model(aggregated_parameters)
-
-        self.callback_provenance_fn(global_model, client2model)
-
-        return aggregated_parameters, aggregated_metrics
-
-    def _to_pt_model(self, parameters):
-        ndarr = fl.common.parameters_to_ndarrays(parameters)
-        model = self.callback_create_model_fn()
-        ModelUtils.set_parameters(model, ndarr, self.peft)
-        return model
-
-
-def prepare_datasets(exp_key, fl_cache, cfg):
-
-    if exp_key in fl_cache.keys() and cfg.fl.use_cache_client_model:
-        log(INFO, "Loading from cache")
-        ds_dict, client2class = fl_cache[exp_key]
-        return ds_dict, client2class
-
-    ds_prep = Federate_Dataset(cfg)
-    ds_dict = ds_prep.get_datasets()
-    client2class = {k: get_labels_count(
-        v) for k, v in ds_dict["client2dataset"].items()}
-    fl_cache[exp_key] = ds_dict, client2class
-    return ds_dict, client2class
-
-
 def fl_simulation(cfg):
     """Run the simulation."""
-    global_model, tokenizer = get_model_and_tokenizer(cfg.model, cfg.peft)
+    global_model, tokenizer = get_model_and_tokenizer()
 
     fl_cache = Index(cfg.experiment_directories.fl_cache_dir)
     save_path = Path(HydraConfig.get().runtime.output_dir)
-    exp_key = set_exp_key(cfg)
-    log(INFO, " ***********  Starting Experiment: %s ***************", exp_key)
+    # log(INFO, " ***********  Starting Experiment: %s ***************", exp_key)
     log(DEBUG, "Simulation Configuration: %s", cfg)
-
-    fl_dataset, client2class = prepare_datasets(
-        cfg.experiment_key, fl_cache, cfg)
-    terminators = [tokenizer.eos_token_id, tokenizer.pad_token_id, 50256]
-    callback_prov_fn = partial(ProvTextGenerator.generate_batch_text, client2class=client2class, tokenizer=tokenizer,
-                               terminators=terminators, batach_examples=fl_dataset['server_dataset'].select(range(10)))
 
     round2gm_accs = []
     global global_round
     global_round = 0
 
     def _create_model():
-        temp_model, _ = get_model_and_tokenizer(cfg.model, cfg.peft)
+        temp_model, _ = get_model_and_tokenizer()
         return temp_model
 
     def _get_fit_config(server_round):
         return cfg.hf_trainer_args
 
     def _eval_gm(server_round, parameters, config):
-        ModelUtils.set_parameters(global_model, parameters, peft=cfg.peft)
-            
-        d_res = train_or_eval_llm(
-            global_model.to(cfg.device), tokenizer, fl_dataset['server_dataset'], cfg.hf_trainer_args, do_train=False, do_eval=True)
-        round2gm_accs.append(d_res["accuracy"])
+        ModelUtils.set_parameters(global_model, parameters)
+
+
         log(DEBUG, "config: %s", config)
         global global_round
         global_round += 1
-
-        return d_res["loss"], {
-            "accuracy": d_res["accuracy"],
-            "loss": d_res["loss"],
-            "round": server_round,
-        }
+        return -1, {"round": server_round}
 
     def _client_fn(context: Context):
         """Give the new client."""
@@ -195,39 +138,19 @@ def fl_simulation(cfg):
         partition_id = context.node_config["partition-id"]
         cid = f"{partition_id}"
 
-        args = {
-            "cid": cid,
-            "model": _create_model(),
-            "tokenizer": tokenizer,
-            "client_data_train": fl_dataset["client2dataset"][cid],
-            "device": torch.device(cfg.device),
-            'dir': save_path,
-            'peft': cfg.peft,
-            'clients_cache': fl_cache,
-            'use_cache_client_model': cfg.fl.use_cache_client_model,
-            'client_key': exp_key + f"[round-{global_round}]" + f"-[client_id-{cid}]"
-        }
+        args = {"cid": cid,
+                "model": _create_model(),
+                "tokenizer": tokenizer,
+                "client_data_train": fl_dataset["client2dataset"][cid],
+                'dir': save_path,
+                }
+
         client = FlowerClient(args).to_client()
         return client
 
     def _server_fn(context: Context):
-        strategy = FedAvgWithGenFL(
-            peft=cfg.peft,
-            callback_create_model_fn=_create_model,
-            callback_provenance_fn=callback_prov_fn,
-            fraction_fit=0,
-            fraction_evaluate=0.0,
-            min_fit_clients=cfg.fl.clients_per_round,
-            min_evaluate_clients=0,
-            min_available_clients=cfg.fl.num_clients,
-            initial_parameters=ndarrays_to_parameters(
-                ndarrays=ModelUtils.get_parameters(global_model, peft=cfg.peft)),  # Remove initial_parameters
-            evaluate_fn=_eval_gm,
-            on_fit_config_fn=_get_fit_config,
-            fit_metrics_aggregation_fn=_fit_metrics_aggregation_fn,
-        )
+        strategy = fl.server.strategy.FedAvg()
         server_config = fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds)
-
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
 
     client_app = fl.client.ClientApp(client_fn=_client_fn)
@@ -239,7 +162,6 @@ def fl_simulation(cfg):
         num_supernodes=cfg.fl.num_clients,
         backend_config=config_sim_resources(cfg),
     )
-    log(INFO, "Training Complete for Experiment: %s", exp_key)
 
 
 @hydra.main(config_path="./conf", config_name="casual_llm", version_base=None)
