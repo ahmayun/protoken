@@ -14,12 +14,19 @@ pip install scikit-learn evaluate diskcache transformers peft flwr-datasets trl 
 # 16 cores on one node.  
 # for arc 
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p dgx_normal_q -t 6:00:00 --gres=gpu:1  
+
 #a100_normal_q
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p a100_normal_q -t 6:00:00 --gres=gpu:1
 
+# for h200 
+interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p h200_preemptable_q -t 3:00:00 --gres=gpu:1
+
+# for h200_normal_q
+interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p h200_normal_q -t 3:00:00 --gres=gpu:1
+
 # for falcon
 
-interact -N1 --gres=gpu:4 -p l40s_normal_q --ntasks-per-node=1 --cpus-per-task=16 --gres-flags=enforce-binding -A semcache -t 6:00:00
+interact -N1 --gres=gpu:1 -p l40s_normal_q --ntasks-per-node=1 --cpus-per-task=32 --gres-flags=enforce-binding -A semcache -t 6:00:00
 
 
 ```
@@ -38,4 +45,6 @@ Different Categories datasets
 - fedml/databricks-dolly-15k-niid
 - [llm-wizard/dolly-15k-instruction-alpaca-format · Datasets at Hugging Face](https://huggingface.co/datasets/llm-wizard/dolly-15k-instruction-alpaca-format)
 -
+
+
 
