@@ -18,10 +18,10 @@ from hydra.core.hydra_config import HydraConfig
 from flwr.common import ndarrays_to_parameters, Context
 from logging import DEBUG, INFO
 
-from genfl.fl_model import ModelUtils, get_model_and_tokenizer, train_or_eval_llm
-from genfl.fl_dataset import get_labels_count, Federate_Dataset
-from genfl.fl_prov import ProvTextGenerator
-from genfl.fl_utils import set_exp_key, config_sim_resources
+from src.fl_model import ModelUtils, get_model_and_tokenizer, train_or_eval_llm
+from src.fl_dataset import get_labels_count, Federate_Dataset
+from src.fl_prov import ProvTextGenerator
+from src.fl_utils import set_exp_key, config_sim_resources
 
 
 seed = 786

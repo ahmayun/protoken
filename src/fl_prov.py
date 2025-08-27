@@ -1,7 +1,7 @@
 import torch
 import logging
 import torch.nn.functional as F
-from genfl.fl_model import PromptUtils
+from src.fl_model import PromptUtils
 
 
 class HookManager:
