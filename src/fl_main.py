@@ -20,42 +20,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def get_config():
-    return {
-        "fl": {
-            "num_rounds": 2,
-            "num_clients": 2,
-            "clients_per_round": 2
-        },
-        "train": {
-            "batch": 8,
-            "ga": 1,
-            "warmup_steps": 10,
-            "max_steps": 200,
-            "lr": 5e-5,
-            "logging_steps": 5,
-            "optim": "adamw_8bit",
-            "weight_decay": 0.01,
-            "scheduler": "linear",
-            "seed": 3407,
-            "output_dir": "outputs_federated",
-            "report_to": "none"
-        },
-        "model": {
-            "name": "unsloth/gemma-3-270m-it",
-            "max_seq_length": 2048,
-            "load_in_4bit": False,
-            "load_in_8bit": False
-        },
-        "device": "cuda",
-        "total_gpus": 2,
-        "total_cpus": 16,
-        "client_resources": {
-            "num_cpus": 3,
-            "num_gpus": 1
-        }
-    }
-   
 
 
 def get_model_and_tokenizer():
@@ -69,6 +33,7 @@ def get_model_and_tokenizer():
     tokenizer = get_chat_template(tokenizer, chat_template="gemma3")
     return model, tokenizer
 
+
 def dataset_adapter(name: str):
     name = name.lower()
     if name == "chess":
@@ -77,9 +42,11 @@ def dataset_adapter(name: str):
         def convert_to_chatml(ex):
             return {
                 "conversations": [
-                    {"role": "system", "content": ex.get("task", "You are a helpful chess tutor.")},
+                    {"role": "system", "content": ex.get(
+                        "task", "You are a helpful chess tutor.")},
                     {"role": "user", "content": ex.get("input")},
-                    {"role": "assistant", "content": ex.get("expected_output")},
+                    {"role": "assistant", "content": ex.get(
+                        "expected_output")},
                 ]
             }
 
@@ -101,6 +68,7 @@ def dataset_adapter(name: str):
 
     raise ValueError(f"Unknown dataset adapter: {name}")
 
+
 def format_with_template(tokenizer, dataset):
     def formatting_prompts_func(examples):
         convos = examples["conversations"]
@@ -116,8 +84,9 @@ def format_with_template(tokenizer, dataset):
 
     return dataset.map(formatting_prompts_func, batched=True)
 
-def build_trainer(model, tokenizer, train_dataset, cfg: Dict[str, Any]):
-    args = cfg["train"]
+
+def build_trainer(model, tokenizer, train_dataset, args):
+
     return SFTTrainer(
         model=model,
         tokenizer=tokenizer,
@@ -140,18 +109,21 @@ def build_trainer(model, tokenizer, train_dataset, cfg: Dict[str, Any]):
         ),
     )
 
+
 def get_client_dataset(cid: str):
     dataset_name = "chess" if cid == "0" else "math"
     hf_name, convert_to_chatml = dataset_adapter(dataset_name)
-    
+
     split = "train[:10000]"
     dataset = load_dataset(hf_name, split=split)
-    
+
     if dataset_name == "math":
-        dataset = dataset.filter(lambda ex: ex.get("difficulty") == 'train-easy')
-    
+        dataset = dataset.filter(
+            lambda ex: ex.get("difficulty") == 'train-easy')
+
     dataset = dataset.map(convert_to_chatml)
     return dataset
+
 
 def get_eval_datasets():
     # TODO: Use separate test datasets instead of train data
@@ -159,69 +131,59 @@ def get_eval_datasets():
     math_dataset = get_client_dataset("1")
     return {"chess": chess_dataset, "math": math_dataset}
 
+
 def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
     model.eval()
     device = next(model.parameters()).device
-    
+
     formatted_dataset = format_with_template(tokenizer, dataset)
-    
+
     total_loss = 0.0
     num_samples = 0
-    
+
     with torch.no_grad():
         for i, example in enumerate(formatted_dataset):
             if i >= 100:  # Evaluate on first 100 samples for speed
                 break
-                
+
             text = example["text"]
-            inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=2048)
-            
+            inputs = tokenizer(text, return_tensors="pt",
+                               truncation=True, max_length=2048)
+
             inputs = {k: v.to(device) for k, v in inputs.items()}
-            
+
             outputs = model(**inputs, labels=inputs["input_ids"])
             loss = outputs.loss
-            
+
             total_loss += loss.item()
             num_samples += 1
-    
+
     avg_loss = total_loss / num_samples if num_samples > 0 else float('inf')
     perplexity = torch.exp(torch.tensor(avg_loss)).item()
-    
+
     return {"loss": avg_loss, "perplexity": perplexity}
 
 
-
 def train_llm(model, tokenizer, dataset, cid):
-    train_config = {
-        "train": {
-            "batch": 8,
-            "ga": 1,
-            "warmup_steps": 10,
-            "max_steps": 20,
-            "lr": 5e-5,
-            "logging_steps": 5,
-            "optim": "adamw_8bit",
-            "weight_decay": 0.01,
-            "scheduler": "linear",
-            "seed": 3407,
-            "output_dir": f"outputs_client_{cid}",
-            "report_to": "none",
-        }
-    }
-    
+
+    train_config = get_config()["train"]
+    train_config["output_dir"] = f"outputs_client_{cid}"
+
     formatted_dataset = format_with_template(tokenizer, dataset)
-    trainer = build_trainer(model, tokenizer, formatted_dataset, train_config)
+    trainer = build_trainer(
+        model, tokenizer, formatted_dataset, args=train_config)
     trainer = train_on_responses_only(
         trainer,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
     )
-    
+
     print(f"> Starting training for client {cid}...")
     trainer.train()
     print(f"> Training completed for client {cid}.")
-    
+
     return {"loss": -100.0, "accuracy": -100.0}
+
 
 def config_sim_resources(cfg):
     client_resources = {"num_cpus": cfg["client_resources"]["num_cpus"]}
@@ -235,6 +197,7 @@ def config_sim_resources(cfg):
         "working_dir": "outputs"
     }
     return backend_config
+
 
 class ModelUtils:
     @staticmethod
@@ -255,48 +218,56 @@ class ModelUtils:
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         net.load_state_dict(state_dict, strict=False)
 
+
 def save_and_plot_metrics(metrics_list, results_dir):
-     
+
     results_dir = Path(results_dir)
     results_dir.mkdir(exist_ok=True)
-    
+
     json_path = results_dir / "fl_metrics.json"
     with open(json_path, 'w') as f:
         json.dump(metrics_list, f, indent=2)
-    
+
     if not metrics_list:
         print("No metrics to plot")
         return
-    
+
     df = pd.DataFrame(metrics_list)
-    
+
     plt.style.use('default')
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    
-    sns.lineplot(data=df, x='round', y='chess_loss', label='Chess', ax=ax1, marker='o')
-    sns.lineplot(data=df, x='round', y='math_loss', label='Math', ax=ax1, marker='s')
-    sns.lineplot(data=df, x='round', y='avg_loss', label='Average', ax=ax1, marker='^')
+
+    sns.lineplot(data=df, x='round', y='chess_loss',
+                 label='Chess', ax=ax1, marker='o')
+    sns.lineplot(data=df, x='round', y='math_loss',
+                 label='Math', ax=ax1, marker='s')
+    sns.lineplot(data=df, x='round', y='avg_loss',
+                 label='Average', ax=ax1, marker='^')
     ax1.set_title('Loss vs Round')
     ax1.set_xlabel('Round')
     ax1.set_ylabel('Loss')
     ax1.grid(True, alpha=0.3)
-    
-    sns.lineplot(data=df, x='round', y='chess_perplexity', label='Chess', ax=ax2, marker='o')
-    sns.lineplot(data=df, x='round', y='math_perplexity', label='Math', ax=ax2, marker='s')
-    sns.lineplot(data=df, x='round', y='avg_perplexity', label='Average', ax=ax2, marker='^')
+
+    sns.lineplot(data=df, x='round', y='chess_perplexity',
+                 label='Chess', ax=ax2, marker='o')
+    sns.lineplot(data=df, x='round', y='math_perplexity',
+                 label='Math', ax=ax2, marker='s')
+    sns.lineplot(data=df, x='round', y='avg_perplexity',
+                 label='Average', ax=ax2, marker='^')
     ax2.set_title('Perplexity vs Round')
     ax2.set_xlabel('Round')
     ax2.set_ylabel('Perplexity')
     ax2.grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
-    
+
     plot_path = results_dir / "fl_metrics.png"
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     print(f"Metrics saved to: {json_path}")
     print(f"Plot saved to: {plot_path}")
+
 
 def _fit_metrics_aggregation_fn(metrics):
     log(INFO, ">>   ------------------- Clients Metrics ------------- ")
@@ -312,6 +283,7 @@ def _fit_metrics_aggregation_fn(metrics):
     for k in sorted(all_logs.keys()):
         log(INFO, all_logs[k])
     return {"loss": 0.0, "accuracy": 0.0}
+
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
@@ -333,7 +305,7 @@ class FlowerClient(fl.client.NumPyClient):
             ModelUtils.set_parameters(model, parameters=parameters)
         else:
             print(f"No parameters to load for client {cid}, using fresh model")
-        
+
         model = model.to(self.args["device"])
         dataset = get_client_dataset(cid)
         train_dict = train_llm(model, tokenizer, dataset, cid)
@@ -344,15 +316,15 @@ class FlowerClient(fl.client.NumPyClient):
 
         return parameters, nk_client_data_points, client_train_dict
 
+
 def fl_simulation(cfg):
     global_model, tokenizer = get_model_and_tokenizer()
 
-    save_path = Path("outputs")
     print(f"Simulation Configuration: {cfg}")
 
     global global_round
     global_round = 0
-    
+
     results_dir = Path("results")
     global_metrics_history = []
 
@@ -366,32 +338,36 @@ def fl_simulation(cfg):
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
         global_model_device = global_model.to(cfg["device"])
-        
+
         eval_datasets = get_eval_datasets()
-        
-        print(f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
-        
+
+        print(
+            f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
+
         all_metrics = {}
         total_loss = 0.0
         total_perplexity = 0.0
         dataset_count = 0
-        
+
         for dataset_name, dataset in eval_datasets.items():
-            metrics = evaluate_model_on_dataset(global_model_device, tokenizer, dataset, dataset_name)
+            metrics = evaluate_model_on_dataset(
+                global_model_device, tokenizer, dataset, dataset_name)
             all_metrics[dataset_name] = metrics
-            
-            print(f"{dataset_name.capitalize()} Dataset    - Loss: {metrics['loss']:.2f}, Perplexity: {metrics['perplexity']:.2f}")
-            
+
+            print(
+                f"{dataset_name.capitalize()} Dataset    - Loss: {metrics['loss']:.2f}, Perplexity: {metrics['perplexity']:.2f}")
+
             total_loss += metrics['loss']
             total_perplexity += metrics['perplexity']
             dataset_count += 1
-        
+
         avg_loss = total_loss / dataset_count
         avg_perplexity = total_perplexity / dataset_count
-        
-        print(f"Average          - Loss: {avg_loss:.2f}, Perplexity: {avg_perplexity:.2f}")
+
+        print(
+            f"Average          - Loss: {avg_loss:.2f}, Perplexity: {avg_perplexity:.2f}")
         print("=" * 60)
-        
+
         metrics_record = {
             "round": server_round,
             "chess_loss": all_metrics["chess"]["loss"],
@@ -402,10 +378,10 @@ def fl_simulation(cfg):
             "avg_perplexity": avg_perplexity
         }
         global_metrics_history.append(metrics_record)
-        
+
         global global_round
         global_round += 1
-        
+
         return avg_loss, {"round": server_round, "avg_loss": avg_loss, "avg_perplexity": avg_perplexity} | all_metrics
 
     def _client_fn(context: Context):
@@ -418,7 +394,6 @@ def fl_simulation(cfg):
             "model": _create_model(),
             "tokenizer": tokenizer,
             "device": cfg["device"],
-            'dir': save_path,
         }
 
         client = FlowerClient(args).to_client()
@@ -426,11 +401,12 @@ def fl_simulation(cfg):
 
     def _server_fn(context: Context):
         strategy = fl.server.strategy.FedAvg(
-            min_evaluate_clients=0, 
+            min_evaluate_clients=0,
             fraction_evaluate=0,
             evaluate_fn=_eval_gm
         )
-        server_config = fl.server.ServerConfig(num_rounds=cfg["fl"]["num_rounds"])
+        server_config = fl.server.ServerConfig(
+            num_rounds=cfg["fl"]["num_rounds"])
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
 
     client_app = fl.client.ClientApp(client_fn=_client_fn)
@@ -442,14 +418,52 @@ def fl_simulation(cfg):
         num_supernodes=cfg["fl"]["num_clients"],
         backend_config=config_sim_resources(cfg),
     )
-    
+
     save_and_plot_metrics(global_metrics_history, results_dir)
+
+
+def get_config():
+    return {
+        "fl": {
+            "num_rounds": 10,
+            "num_clients": 2,
+            "clients_per_round": 2
+        },
+        "train": {
+            "batch": 8,
+            "ga": 1,
+            "warmup_steps": 10,
+            "max_steps": 20,
+            "lr": 5e-5,
+            "logging_steps": 5,
+            "optim": "adamw_8bit",
+            "weight_decay": 0.01,
+            "scheduler": "linear",
+            "seed": 3407,
+            "output_dir": "outputs_federated", # make sure to change it each time 
+            "report_to": "none"
+        },
+        "model": {
+            "name": "unsloth/gemma-3-270m-it",
+            "max_seq_length": 2048,
+            "load_in_4bit": False,
+            "load_in_8bit": False
+        },
+        "device": "cuda",
+        "total_gpus": 2,
+        "total_cpus": 16,
+        "client_resources": {
+            "num_cpus": 7,
+            "num_gpus": 1
+        }
+    }
 
 def main():
     start_time = time.time()
     cfg = get_config()
     fl_simulation(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")
+
 
 if __name__ == "__main__":
     main()
