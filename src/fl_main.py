@@ -113,12 +113,7 @@ def get_client_dataset(cid: str):
     dataset = dataset.map(convert_to_chatml)
     return dataset
 
-fl_dataset = {
-    "client2dataset": {
-        "0": None,  # Will be loaded dynamically
-        "1": None,  # Will be loaded dynamically
-    }
-}
+
 
 def train_llm(model, tokenizer, dataset, cid):
     train_config = {
@@ -126,7 +121,7 @@ def train_llm(model, tokenizer, dataset, cid):
             "batch": 8,
             "ga": 1,
             "warmup_steps": 10,
-            "max_steps": 200,
+            "max_steps": 20,
             "lr": 5e-5,
             "logging_steps": 5,
             "optim": "adamw_8bit",
@@ -150,7 +145,7 @@ def train_llm(model, tokenizer, dataset, cid):
     trainer.train()
     print(f"> Training completed for client {cid}.")
     
-    return {"loss": 0.1, "accuracy": 0.9}
+    return {"loss": -100.0, "accuracy": -100.0}
 
 def config_sim_resources(cfg):
     client_resources = {"num_cpus": cfg.client_resources.num_cpus}
@@ -233,7 +228,6 @@ class FlowerClient(fl.client.NumPyClient):
 def fl_simulation(cfg):
     global_model, tokenizer = get_model_and_tokenizer()
 
-    fl_cache = Index(cfg.experiment_directories.fl_cache_dir)
     save_path = Path(HydraConfig.get().runtime.output_dir)
     log(DEBUG, "Simulation Configuration: %s", cfg)
 
@@ -271,7 +265,7 @@ def fl_simulation(cfg):
         return client
 
     def _server_fn(context: Context):
-        strategy = fl.server.strategy.FedAvg()
+        strategy = fl.server.strategy.FedAvg(min_evaluate_clients=0, fraction_evaluate=0)
         server_config = fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds)
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
 
