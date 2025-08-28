@@ -21,183 +21,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def get_model_and_tokenizer():
-    model, tokenizer = FastModel.from_pretrained(
-        model_name="unsloth/gemma-3-270m-it",
-        max_seq_length=2048,
-        load_in_4bit=False,
-        load_in_8bit=False,
-        full_finetuning=True,
-    )
-    tokenizer = get_chat_template(tokenizer, chat_template="gemma3")
-    return model, tokenizer
-
-
-def dataset_adapter(name: str):
-    name = name.lower()
-    if name == "chess":
-        hf_name = "Thytu/ChessInstruct"
-
-        def convert_to_chatml(ex):
-            return {
-                "conversations": [
-                    {"role": "system", "content": ex.get(
-                        "task", "You are a helpful chess tutor.")},
-                    {"role": "user", "content": ex.get("input")},
-                    {"role": "assistant", "content": ex.get(
-                        "expected_output")},
-                ]
-            }
-
-        return hf_name, convert_to_chatml
-
-    if name == "math":
-        hf_name = "m-gopichand/deepmind_math_dataset_processed"
-
-        def convert_to_chatml(ex):
-            return {
-                "conversations": [
-                    {"role": "system", "content": "You are a helpful math tutor. Provide concise, correct solutions."},
-                    {"role": "user", "content": ex.get("question")},
-                    {"role": "assistant", "content": ex.get("answer")},
-                ]
-            }
-
-        return hf_name, convert_to_chatml
-
-    raise ValueError(f"Unknown dataset adapter: {name}")
-
-
-def format_with_template(tokenizer, dataset):
-    def formatting_prompts_func(examples):
-        convos = examples["conversations"]
-        texts = [
-            tokenizer.apply_chat_template(
-                convo,
-                tokenize=False,
-                add_generation_prompt=False,
-            ).removeprefix("<bos>")
-            for convo in convos
-        ]
-        return {"text": texts}
-
-    return dataset.map(formatting_prompts_func, batched=True)
-
-
-def build_trainer(model, tokenizer, train_dataset, args):
-
-    return SFTTrainer(
-        model=model,
-        tokenizer=tokenizer,
-        train_dataset=train_dataset,
-        eval_dataset=None,
-        args=SFTConfig(
-            dataset_text_field="text",
-            per_device_train_batch_size=int(args["batch"]),
-            gradient_accumulation_steps=int(args["ga"]),
-            warmup_steps=int(args["warmup_steps"]),
-            max_steps=int(args["max_steps"]),
-            learning_rate=float(args["lr"]),
-            logging_steps=int(args["logging_steps"]),
-            optim=str(args["optim"]),
-            weight_decay=float(args["weight_decay"]),
-            lr_scheduler_type=str(args["scheduler"]),
-            seed=int(args["seed"]),
-            output_dir=str(args["output_dir"]),
-            report_to=str(args["report_to"]),
-        ),
-    )
-
-
-def get_client_dataset(cid: str):
-    dataset_name = "chess" if cid == "0" else "math"
-    hf_name, convert_to_chatml = dataset_adapter(dataset_name)
-
-    split = "train[:10000]"
-    dataset = load_dataset(hf_name, split=split)
-
-    if dataset_name == "math":
-        dataset = dataset.filter(
-            lambda ex: ex.get("difficulty") == 'train-easy')
-
-    dataset = dataset.map(convert_to_chatml)
-    return dataset
-
-
-def get_eval_datasets():
-    # TODO: Use separate test datasets instead of train data
-    chess_dataset = get_client_dataset("0")
-    math_dataset = get_client_dataset("1")
-    return {"chess": chess_dataset, "math": math_dataset}
-
-
-def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
-    model.eval()
-    device = next(model.parameters()).device
-
-    formatted_dataset = format_with_template(tokenizer, dataset)
-
-    total_loss = 0.0
-    num_samples = 0
-
-    with torch.no_grad():
-        for i, example in enumerate(formatted_dataset):
-            if i >= 100:  # Evaluate on first 100 samples for speed
-                break
-
-            text = example["text"]
-            inputs = tokenizer(text, return_tensors="pt",
-                               truncation=True, max_length=2048)
-
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-
-            outputs = model(**inputs, labels=inputs["input_ids"])
-            loss = outputs.loss
-
-            total_loss += loss.item()
-            num_samples += 1
-
-    avg_loss = total_loss / num_samples if num_samples > 0 else float('inf')
-    perplexity = torch.exp(torch.tensor(avg_loss)).item()
-
-    return {"loss": avg_loss, "perplexity": perplexity}
-
-
-def train_llm(model, tokenizer, dataset, cid):
-
-    train_config = get_config()["train"]
-    train_config["output_dir"] = f"outputs_client_{cid}"
-
-    formatted_dataset = format_with_template(tokenizer, dataset)
-    trainer = build_trainer(
-        model, tokenizer, formatted_dataset, args=train_config)
-    trainer = train_on_responses_only(
-        trainer,
-        instruction_part="<start_of_turn>user\n",
-        response_part="<start_of_turn>model\n",
-    )
-
-    print(f"> Starting training for client {cid}...")
-    trainer.train()
-    print(f"> Training completed for client {cid}.")
-
-    return {"loss": -100.0, "accuracy": -100.0}
-
-
-def config_sim_resources(cfg):
-    client_resources = {"num_cpus": cfg["client_resources"]["num_cpus"]}
-    if cfg["device"] == "cuda":
-        client_resources["num_gpus"] = cfg["client_resources"]["num_gpus"]
-
-    init_args = {"num_cpus": cfg["total_cpus"], "num_gpus": cfg["total_gpus"]}
-    backend_config = {
-        "client_resources": client_resources,
-        "init_args": init_args,
-        "working_dir": "outputs"
-    }
-    return backend_config
-
-
 class ModelUtils:
     @staticmethod
     def _get_state_dict(net: torch.nn.Module) -> Dict:
@@ -216,6 +39,52 @@ class ModelUtils:
         params_dict = zip(state_dict.keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         net.load_state_dict(state_dict, strict=False)
+
+
+class FlowerClient(fl.client.NumPyClient):
+    def __init__(self, args):
+        self.args = args
+
+    def fit(self, parameters, config):
+        print(f"client  {self.args['cid']}")
+        client_train_response = self._train_fit(parameters, config)
+        return client_train_response
+
+    def _train_fit(self, parameters, trainer_args):
+        model = self.args["model"]
+        tokenizer = self.args["tokenizer"]
+        cid = self.args["cid"]
+
+        # Only set parameters if they exist and are valid
+        if parameters and len(parameters) > 0:
+            print(f"Loading {len(parameters)} parameters for client {cid}")
+            ModelUtils.set_parameters(model, parameters=parameters)
+        else:
+            print(f"No parameters to load for client {cid}, using fresh model")
+
+        model = model.to(self.args["device"])
+        dataset = get_client_dataset(cid)
+        train_dict = train_llm(model, tokenizer, dataset, cid)
+
+        parameters = ModelUtils.get_parameters(model)
+        client_train_dict = {"cid": cid} | train_dict
+        nk_client_data_points = len(dataset)
+
+        return parameters, nk_client_data_points, client_train_dict
+
+
+def config_sim_resources(cfg):
+    client_resources = {"num_cpus": cfg["client_resources"]["num_cpus"]}
+    if cfg["device"] == "cuda":
+        client_resources["num_gpus"] = cfg["client_resources"]["num_gpus"]
+
+    init_args = {"num_cpus": cfg["total_cpus"], "num_gpus": cfg["total_gpus"]}
+    backend_config = {
+        "client_resources": client_resources,
+        "init_args": init_args,
+        "working_dir": "outputs"
+    }
+    return backend_config
 
 
 def save_and_plot_metrics(metrics_list, results_dir):
@@ -268,6 +137,209 @@ def save_and_plot_metrics(metrics_list, results_dir):
     print(f"Plot saved to: {plot_path}")
 
 
+def get_config():
+    return {
+        "fl": {
+            "num_rounds": 10,
+            "num_clients": 2,
+            "clients_per_round": 2
+        },
+        "train": {
+            "batch": 8,
+            "ga": 1,
+            "warmup_steps": 10,
+            "max_steps": 20,
+            "lr": 5e-5,
+            "logging_steps": 5,
+            "optim": "adamw_8bit",
+            "weight_decay": 0.01,
+            "scheduler": "linear",
+            "seed": 3407,
+            "output_dir": None,  # "outputs_federated",  # make sure to change it each time
+            "report_to": "none"
+        },
+        "model": {
+            "name": "unsloth/gemma-3-270m-it",
+            "max_seq_length": 2048,
+            "load_in_4bit": False,
+            "load_in_8bit": False
+        },
+        "device": "cuda",
+        "total_gpus": 2,
+        "total_cpus": 16,
+        "client_resources": {
+            "num_cpus": 7,
+            "num_gpus": 1
+        }
+    }
+
+
+# Model, Training, Evaluations
+
+def get_model_and_tokenizer():
+    model, tokenizer = FastModel.from_pretrained(
+        model_name="unsloth/gemma-3-270m-it",
+        max_seq_length=2048,
+        load_in_4bit=False,
+        load_in_8bit=False,
+        full_finetuning=True,
+    )
+    tokenizer = get_chat_template(tokenizer, chat_template="gemma3")
+    return model, tokenizer
+
+
+def build_trainer(model, tokenizer, train_dataset, args):
+
+    return SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=train_dataset,
+        eval_dataset=None,
+        args=SFTConfig(
+            dataset_text_field="text",
+            per_device_train_batch_size=int(args["batch"]),
+            gradient_accumulation_steps=int(args["ga"]),
+            warmup_steps=int(args["warmup_steps"]),
+            max_steps=int(args["max_steps"]),
+            learning_rate=float(args["lr"]),
+            logging_steps=int(args["logging_steps"]),
+            optim=str(args["optim"]),
+            weight_decay=float(args["weight_decay"]),
+            lr_scheduler_type=str(args["scheduler"]),
+            seed=int(args["seed"]),
+            output_dir=str(args["output_dir"]),
+            report_to=str(args["report_to"]),
+        ),
+    )
+
+
+def train_llm(model, tokenizer, dataset, cid):
+
+    train_config = get_config()["train"]
+    train_config["output_dir"] = f"outputs_client_{cid}"
+
+    formatted_dataset = format_with_template(tokenizer, dataset)
+    trainer = build_trainer(
+        model, tokenizer, formatted_dataset, args=train_config)
+    trainer = train_on_responses_only(
+        trainer,
+        instruction_part="<start_of_turn>user\n",
+        response_part="<start_of_turn>model\n",
+    )
+
+    print(f"> Starting training for client {cid}...")
+    trainer.train()
+    print(f"> Training completed for client {cid}.")
+
+    return {"loss": -100.0, "accuracy": -100.0}
+
+
+def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
+    model.eval()
+    device = next(model.parameters()).device
+
+    formatted_dataset = format_with_template(tokenizer, dataset)
+
+    total_loss = 0.0
+    num_samples = 0
+
+    with torch.no_grad():
+        for i, example in enumerate(formatted_dataset):
+            if i >= 100:  # Evaluate on first 100 samples for speed
+                break
+
+            text = example["text"]
+            inputs = tokenizer(text, return_tensors="pt",
+                               truncation=True, max_length=2048)
+
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+
+            outputs = model(**inputs, labels=inputs["input_ids"])
+            loss = outputs.loss
+
+            total_loss += loss.item()
+            num_samples += 1
+
+    avg_loss = total_loss / num_samples if num_samples > 0 else float('inf')
+    perplexity = torch.exp(torch.tensor(avg_loss)).item()
+
+    return {"loss": avg_loss, "perplexity": perplexity}
+
+
+# Dataset, Preprocessing, Chat Templates, etc
+def dataset_adapter(name: str):
+    name = name.lower()
+    if name == "chess":
+        hf_name = "Thytu/ChessInstruct"
+
+        def convert_to_chatml(ex):
+            return {
+                "conversations": [
+                    {"role": "system", "content": ex.get(
+                        "task", "You are a helpful chess tutor.")},
+                    {"role": "user", "content": ex.get("input")},
+                    {"role": "assistant", "content": ex.get(
+                        "expected_output")},
+                ]
+            }
+
+        return hf_name, convert_to_chatml
+
+    if name == "math":
+        hf_name = "m-gopichand/deepmind_math_dataset_processed"
+
+        def convert_to_chatml(ex):
+            return {
+                "conversations": [
+                    {"role": "system", "content": "You are a helpful math tutor. Provide concise, correct solutions."},
+                    {"role": "user", "content": ex.get("question")},
+                    {"role": "assistant", "content": ex.get("answer")},
+                ]
+            }
+
+        return hf_name, convert_to_chatml
+
+    raise ValueError(f"Unknown dataset adapter: {name}")
+
+
+def format_with_template(tokenizer, dataset):
+    def formatting_prompts_func(examples):
+        convos = examples["conversations"]
+        texts = [
+            tokenizer.apply_chat_template(
+                convo,
+                tokenize=False,
+                add_generation_prompt=False,
+            ).removeprefix("<bos>")
+            for convo in convos
+        ]
+        return {"text": texts}
+
+    return dataset.map(formatting_prompts_func, batched=True)
+
+
+def get_client_dataset(cid: str):
+    dataset_name = "chess" if cid == "0" else "math"
+    hf_name, convert_to_chatml = dataset_adapter(dataset_name)
+
+    split = "train[:10000]"
+    dataset = load_dataset(hf_name, split=split)
+
+    if dataset_name == "math":
+        dataset = dataset.filter(
+            lambda ex: ex.get("difficulty") == 'train-easy')
+
+    dataset = dataset.map(convert_to_chatml)
+    return dataset
+
+
+def get_eval_datasets():
+    # TODO: Use separate test datasets instead of train data
+    chess_dataset = get_client_dataset("0")
+    math_dataset = get_client_dataset("1")
+    return {"chess": chess_dataset, "math": math_dataset}
+
+
 def _fit_metrics_aggregation_fn(metrics):
     log(INFO, ">>   ------------------- Clients Metrics ------------- ")
     all_logs = {}
@@ -282,38 +354,6 @@ def _fit_metrics_aggregation_fn(metrics):
     for k in sorted(all_logs.keys()):
         log(INFO, all_logs[k])
     return {"loss": 0.0, "accuracy": 0.0}
-
-
-class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, args):
-        self.args = args
-
-    def fit(self, parameters, config):
-        print(f"client  {self.args['cid']}")
-        client_train_response = self._train_fit(parameters, config)
-        return client_train_response
-
-    def _train_fit(self, parameters, trainer_args):
-        model = self.args["model"]
-        tokenizer = self.args["tokenizer"]
-        cid = self.args["cid"]
-
-        # Only set parameters if they exist and are valid
-        if parameters and len(parameters) > 0:
-            print(f"Loading {len(parameters)} parameters for client {cid}")
-            ModelUtils.set_parameters(model, parameters=parameters)
-        else:
-            print(f"No parameters to load for client {cid}, using fresh model")
-
-        model = model.to(self.args["device"])
-        dataset = get_client_dataset(cid)
-        train_dict = train_llm(model, tokenizer, dataset, cid)
-
-        parameters = ModelUtils.get_parameters(model)
-        client_train_dict = {"cid": cid} | train_dict
-        nk_client_data_points = len(dataset)
-
-        return parameters, nk_client_data_points, client_train_dict
 
 
 def fl_simulation(cfg):
@@ -419,43 +459,6 @@ def fl_simulation(cfg):
     )
 
     save_and_plot_metrics(global_metrics_history, results_dir)
-
-
-def get_config():
-    return {
-        "fl": {
-            "num_rounds": 10,
-            "num_clients": 2,
-            "clients_per_round": 2
-        },
-        "train": {
-            "batch": 8,
-            "ga": 1,
-            "warmup_steps": 10,
-            "max_steps": 20,
-            "lr": 5e-5,
-            "logging_steps": 5,
-            "optim": "adamw_8bit",
-            "weight_decay": 0.01,
-            "scheduler": "linear",
-            "seed": 3407,
-            "output_dir": None, #"outputs_federated",  # make sure to change it each time
-            "report_to": "none"
-        },
-        "model": {
-            "name": "unsloth/gemma-3-270m-it",
-            "max_seq_length": 2048,
-            "load_in_4bit": False,
-            "load_in_8bit": False
-        },
-        "device": "cuda",
-        "total_gpus": 2,
-        "total_cpus": 16,
-        "client_resources": {
-            "num_cpus": 7,
-            "num_gpus": 1
-        }
-    }
 
 
 def main():
