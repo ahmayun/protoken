@@ -21,7 +21,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-
 def get_model_and_tokenizer():
     model, tokenizer = FastModel.from_pretrained(
         model_name="unsloth/gemma-3-270m-it",
@@ -440,7 +439,7 @@ def get_config():
             "weight_decay": 0.01,
             "scheduler": "linear",
             "seed": 3407,
-            "output_dir": "outputs_federated", # make sure to change it each time 
+            "output_dir": None, #"outputs_federated",  # make sure to change it each time
             "report_to": "none"
         },
         "model": {
@@ -457,6 +456,7 @@ def get_config():
             "num_gpus": 1
         }
     }
+
 
 def main():
     start_time = time.time()
