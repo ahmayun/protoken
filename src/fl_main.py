@@ -2,14 +2,13 @@ import time
 from pathlib import Path
 from diskcache import Index
 import flwr as fl
-import hydra
 from flwr.common.logger import log
-from hydra.core.hydra_config import HydraConfig
 from flwr.common import Context
 from logging import DEBUG, INFO
 import torch
 from typing import Dict, Any
 from collections import OrderedDict
+import json
 
 import unsloth
 from datasets import load_dataset
@@ -17,6 +16,47 @@ from transformers import TextStreamer
 from trl import SFTConfig, SFTTrainer
 from unsloth import FastModel
 from unsloth.chat_templates import get_chat_template, train_on_responses_only
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+
+def get_config():
+    return {
+        "fl": {
+            "num_rounds": 2,
+            "num_clients": 2,
+            "clients_per_round": 2
+        },
+        "train": {
+            "batch": 8,
+            "ga": 1,
+            "warmup_steps": 10,
+            "max_steps": 200,
+            "lr": 5e-5,
+            "logging_steps": 5,
+            "optim": "adamw_8bit",
+            "weight_decay": 0.01,
+            "scheduler": "linear",
+            "seed": 3407,
+            "output_dir": "outputs_federated",
+            "report_to": "none"
+        },
+        "model": {
+            "name": "unsloth/gemma-3-270m-it",
+            "max_seq_length": 2048,
+            "load_in_4bit": False,
+            "load_in_8bit": False
+        },
+        "device": "cuda",
+        "total_gpus": 2,
+        "total_cpus": 16,
+        "client_resources": {
+            "num_cpus": 3,
+            "num_gpus": 1
+        }
+    }
+   
+
 
 def get_model_and_tokenizer():
     model, tokenizer = FastModel.from_pretrained(
@@ -184,15 +224,15 @@ def train_llm(model, tokenizer, dataset, cid):
     return {"loss": -100.0, "accuracy": -100.0}
 
 def config_sim_resources(cfg):
-    client_resources = {"num_cpus": cfg.client_resources.num_cpus}
-    if cfg.device == "cuda":
-        client_resources["num_gpus"] = cfg.client_resources.num_gpus
+    client_resources = {"num_cpus": cfg["client_resources"]["num_cpus"]}
+    if cfg["device"] == "cuda":
+        client_resources["num_gpus"] = cfg["client_resources"]["num_gpus"]
 
-    init_args = {"num_cpus": cfg.total_cpus, "num_gpus": cfg.total_gpus}
+    init_args = {"num_cpus": cfg["total_cpus"], "num_gpus": cfg["total_gpus"]}
     backend_config = {
         "client_resources": client_resources,
         "init_args": init_args,
-        "working_dir": cfg.experiment_directories.root_dir
+        "working_dir": "outputs"
     }
     return backend_config
 
@@ -214,6 +254,49 @@ class ModelUtils:
         params_dict = zip(state_dict.keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         net.load_state_dict(state_dict, strict=False)
+
+def save_and_plot_metrics(metrics_list, results_dir):
+     
+    results_dir = Path(results_dir)
+    results_dir.mkdir(exist_ok=True)
+    
+    json_path = results_dir / "fl_metrics.json"
+    with open(json_path, 'w') as f:
+        json.dump(metrics_list, f, indent=2)
+    
+    if not metrics_list:
+        print("No metrics to plot")
+        return
+    
+    df = pd.DataFrame(metrics_list)
+    
+    plt.style.use('default')
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    sns.lineplot(data=df, x='round', y='chess_loss', label='Chess', ax=ax1, marker='o')
+    sns.lineplot(data=df, x='round', y='math_loss', label='Math', ax=ax1, marker='s')
+    sns.lineplot(data=df, x='round', y='avg_loss', label='Average', ax=ax1, marker='^')
+    ax1.set_title('Loss vs Round')
+    ax1.set_xlabel('Round')
+    ax1.set_ylabel('Loss')
+    ax1.grid(True, alpha=0.3)
+    
+    sns.lineplot(data=df, x='round', y='chess_perplexity', label='Chess', ax=ax2, marker='o')
+    sns.lineplot(data=df, x='round', y='math_perplexity', label='Math', ax=ax2, marker='s')
+    sns.lineplot(data=df, x='round', y='avg_perplexity', label='Average', ax=ax2, marker='^')
+    ax2.set_title('Perplexity vs Round')
+    ax2.set_xlabel('Round')
+    ax2.set_ylabel('Perplexity')
+    ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    plot_path = results_dir / "fl_metrics.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Metrics saved to: {json_path}")
+    print(f"Plot saved to: {plot_path}")
 
 def _fit_metrics_aggregation_fn(metrics):
     log(INFO, ">>   ------------------- Clients Metrics ------------- ")
@@ -264,11 +347,14 @@ class FlowerClient(fl.client.NumPyClient):
 def fl_simulation(cfg):
     global_model, tokenizer = get_model_and_tokenizer()
 
-    save_path = Path(HydraConfig.get().runtime.output_dir)
-    log(DEBUG, "Simulation Configuration: %s", cfg)
+    save_path = Path("outputs")
+    print(f"Simulation Configuration: {cfg}")
 
     global global_round
     global_round = 0
+    
+    results_dir = Path("results")
+    global_metrics_history = []
 
     def _create_model():
         temp_model, _ = get_model_and_tokenizer()
@@ -279,7 +365,7 @@ def fl_simulation(cfg):
 
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
-        global_model_device = global_model.to(cfg.device)
+        global_model_device = global_model.to(cfg["device"])
         
         eval_datasets = get_eval_datasets()
         
@@ -306,6 +392,17 @@ def fl_simulation(cfg):
         print(f"Average          - Loss: {avg_loss:.2f}, Perplexity: {avg_perplexity:.2f}")
         print("=" * 60)
         
+        metrics_record = {
+            "round": server_round,
+            "chess_loss": all_metrics["chess"]["loss"],
+            "chess_perplexity": all_metrics["chess"]["perplexity"],
+            "math_loss": all_metrics["math"]["loss"],
+            "math_perplexity": all_metrics["math"]["perplexity"],
+            "avg_loss": avg_loss,
+            "avg_perplexity": avg_perplexity
+        }
+        global_metrics_history.append(metrics_record)
+        
         global global_round
         global_round += 1
         
@@ -320,7 +417,7 @@ def fl_simulation(cfg):
             "cid": cid,
             "model": _create_model(),
             "tokenizer": tokenizer,
-            "device": cfg.device,
+            "device": cfg["device"],
             'dir': save_path,
         }
 
@@ -333,7 +430,7 @@ def fl_simulation(cfg):
             fraction_evaluate=0,
             evaluate_fn=_eval_gm
         )
-        server_config = fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds)
+        server_config = fl.server.ServerConfig(num_rounds=cfg["fl"]["num_rounds"])
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
 
     client_app = fl.client.ClientApp(client_fn=_client_fn)
@@ -342,15 +439,17 @@ def fl_simulation(cfg):
     fl.simulation.run_simulation(
         server_app=server_app,
         client_app=client_app,
-        num_supernodes=cfg.fl.num_clients,
+        num_supernodes=cfg["fl"]["num_clients"],
         backend_config=config_sim_resources(cfg),
     )
+    
+    save_and_plot_metrics(global_metrics_history, results_dir)
 
-@hydra.main(config_path="./conf", config_name="casual_llm", version_base=None)
-def main_fl(cfg) -> None:
+def main():
     start_time = time.time()
+    cfg = get_config()
     fl_simulation(cfg)
-    log(INFO, "Total Time Taken: %s seconds", time.time() - start_time)
+    print(f"Total Time Taken: {time.time() - start_time} seconds")
 
 if __name__ == "__main__":
-    main_fl()
+    main()
