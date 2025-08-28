@@ -113,6 +113,42 @@ def get_client_dataset(cid: str):
     dataset = dataset.map(convert_to_chatml)
     return dataset
 
+def get_eval_datasets():
+    # TODO: Use separate test datasets instead of train data
+    chess_dataset = get_client_dataset("0")
+    math_dataset = get_client_dataset("1")
+    return {"chess": chess_dataset, "math": math_dataset}
+
+def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
+    model.eval()
+    device = next(model.parameters()).device
+    
+    formatted_dataset = format_with_template(tokenizer, dataset)
+    
+    total_loss = 0.0
+    num_samples = 0
+    
+    with torch.no_grad():
+        for i, example in enumerate(formatted_dataset):
+            if i >= 100:  # Evaluate on first 100 samples for speed
+                break
+                
+            text = example["text"]
+            inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=2048)
+            
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+            
+            outputs = model(**inputs, labels=inputs["input_ids"])
+            loss = outputs.loss
+            
+            total_loss += loss.item()
+            num_samples += 1
+    
+    avg_loss = total_loss / num_samples if num_samples > 0 else float('inf')
+    perplexity = torch.exp(torch.tensor(avg_loss)).item()
+    
+    return {"loss": avg_loss, "perplexity": perplexity}
+
 
 
 def train_llm(model, tokenizer, dataset, cid):
@@ -243,10 +279,37 @@ def fl_simulation(cfg):
 
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
-        log(DEBUG, "config: %s", config)
+        global_model_device = global_model.to(cfg.device)
+        
+        eval_datasets = get_eval_datasets()
+        
+        print(f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
+        
+        all_metrics = {}
+        total_loss = 0.0
+        total_perplexity = 0.0
+        dataset_count = 0
+        
+        for dataset_name, dataset in eval_datasets.items():
+            metrics = evaluate_model_on_dataset(global_model_device, tokenizer, dataset, dataset_name)
+            all_metrics[dataset_name] = metrics
+            
+            print(f"{dataset_name.capitalize()} Dataset    - Loss: {metrics['loss']:.2f}, Perplexity: {metrics['perplexity']:.2f}")
+            
+            total_loss += metrics['loss']
+            total_perplexity += metrics['perplexity']
+            dataset_count += 1
+        
+        avg_loss = total_loss / dataset_count
+        avg_perplexity = total_perplexity / dataset_count
+        
+        print(f"Average          - Loss: {avg_loss:.2f}, Perplexity: {avg_perplexity:.2f}")
+        print("=" * 60)
+        
         global global_round
         global_round += 1
-        return -1, {"round": server_round}
+        
+        return avg_loss, {"round": server_round, "avg_loss": avg_loss, "avg_perplexity": avg_perplexity} | all_metrics
 
     def _client_fn(context: Context):
         global global_round
@@ -265,7 +328,11 @@ def fl_simulation(cfg):
         return client
 
     def _server_fn(context: Context):
-        strategy = fl.server.strategy.FedAvg(min_evaluate_clients=0, fraction_evaluate=0)
+        strategy = fl.server.strategy.FedAvg(
+            min_evaluate_clients=0, 
+            fraction_evaluate=0,
+            evaluate_fn=_eval_gm
+        )
         server_config = fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds)
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
 
