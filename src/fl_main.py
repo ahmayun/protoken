@@ -12,7 +12,6 @@ from collections import OrderedDict
 import json
 
 from datasets import load_dataset
-from transformers import TextStreamer
 from trl import SFTConfig, SFTTrainer
 from unsloth import FastModel
 from unsloth.chat_templates import get_chat_template, train_on_responses_only
@@ -72,7 +71,7 @@ class FlowerClient(fl.client.NumPyClient):
         client_cache = Index("_storage/client_models")
         global global_round
         client_key = f"client_{cid}_round_{global_round}"
-        
+
         client_model_data = {
             "model_state_dict": model.state_dict(),
             "training_metrics": train_dict,
@@ -162,7 +161,7 @@ def get_config():
             "clients_per_round": 2
         },
         "train": {
-            "batch":16,
+            "batch": 16,
             "ga": 2,
             "warmup_steps": 10,
             "max_steps": 20,
@@ -357,35 +356,9 @@ def get_eval_datasets(tokenizer):
     math_dataset = format_with_template(tokenizer, get_client_dataset("1"))
     return {"chess": chess_dataset, "math": math_dataset}
 
-def load_client_model(client_id, round_num):
-    client_cache = Index("_storage/client_models")
-    key = f"client_{client_id}_round_{round_num}"
-    
-    if key in client_cache:
-        model_data = client_cache[key]
-        model = _create_model()
-        model.load_state_dict(model_data["model_state_dict"])
-        return model, model_data
-    return None, None
-
-def get_all_client_models_for_round(round_num):
-    client_cache = Index("_storage/client_models")
-    round_models = {}
-    
-    for key in client_cache:
-        if key.endswith(f"_round_{round_num}"):
-            client_id = key.split("_")[1]
-            round_models[client_id] = client_cache[key]
-    
-    return round_models
-
-def list_saved_client_models():
-    client_cache = Index("_storage/client_models")
-    return list(client_cache.keys())
-
 
 def fl_simulation(cfg):
-    cache_model = Index("_storage/model_cache") 
+    cache_model = Index("_storage/model_cache")
     global_model, tokenizer = get_model_and_tokenizer()
 
     print(f"Simulation Configuration: {cfg}")
@@ -443,8 +416,8 @@ def fl_simulation(cfg):
         global global_round
         global_round += 1
 
-
-        saving_dict = {"global_model": global_model.state_dict(), "metrics": metrics_record}
+        saving_dict = {"global_model": global_model.state_dict(),
+                       "metrics": metrics_record}
         cache_model[server_round] = saving_dict
 
         return avg_loss, all_metrics
