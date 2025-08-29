@@ -3,7 +3,7 @@ from diskcache import Index
 import torch
 from transformers import TextStreamer
 from src.fl_train import get_model_and_tokenizer, get_client_dataset
-
+from src.fl_prov import ProvTextGenerator
 
 def generate_response(model, tokenizer, dataset, sample_idx=10):
     conversation = dataset['conversations'][sample_idx]
@@ -36,6 +36,29 @@ def generate_response(model, tokenizer, dataset, sample_idx=10):
 
     return conversation[2]['content']
 
+def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models, terminators):
+    conversation = dataset['conversations'][sample_idx]
+    
+    messages = [
+        {'role': conversation[0]['role'], 'content': conversation[0]['content']},
+        {"role": conversation[1]['role'], 'content': conversation[1]['content']}
+    ]
+    
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    ).removeprefix('<bos>')
+    
+    result = ProvTextGenerator.generate_text(
+        model, client_models, tokenizer, text, terminators
+    )
+    
+    print(f">> Provenance Analysis: {result['client2part']}")
+    print(f">> Generated Response: {result['response']}")
+    print(f"[[Actual Response (Ground Truth) -> {conversation[2]['content']}]]")
+    
+    return result
 
 def load_global_model_from_cache(round_num):
     cache = Index("_storage/model_cache")
@@ -44,7 +67,6 @@ def load_global_model_from_cache(round_num):
     model.load_state_dict(cached_data["global_model"])
     model = model.to("cuda" if torch.cuda.is_available() else "cpu")
     return model, tokenizer, cached_data["metrics"]
-
 
 def load_all_client_models_from_cache(round_num):
     client_cache = Index("_storage/client_models")
@@ -62,7 +84,6 @@ def load_all_client_models_from_cache(round_num):
             client_models[client_id] = (model, tokenizer, model_data)
 
     return client_models
-
 
 def test_round_comprehensive(round_num, sample_idx=10):
     print(f"\n{'='*60}")
@@ -119,6 +140,38 @@ def test_round_comprehensive(round_num, sample_idx=10):
         print(f"{'-'*40}")
         generate_response(model, tokenizer, math_dataset, sample_idx)
 
+def test_round_with_provenance(round_num, sample_idx=10):
+    print(f"\n{'='*60}")
+    print(f"PROVENANCE ANALYSIS - ROUND {round_num}")
+    print(f"{'='*60}")
+    
+    global_model, global_tokenizer, _ = load_global_model_from_cache(round_num)
+    client_models_data = load_all_client_models_from_cache(round_num)
+    
+    client_models = {cid: model for cid, (model, _, _) in client_models_data.items()}
+    
+    terminators = [global_tokenizer.eos_token_id]
+    
+    chess_dataset = get_client_dataset("0")
+    math_dataset = get_client_dataset("1")
+    
+    print(f"\n{'-'*40}")
+    print(f"PROVENANCE - CHESS DATASET")
+    print(f"{'-'*40}")
+    result_chess = generate_response_with_provenance(
+        global_model, global_tokenizer, chess_dataset, sample_idx, 
+        client_models, terminators
+    )
+    
+    print(f"\n{'-'*40}")
+    print(f"PROVENANCE - MATH DATASET") 
+    print(f"{'-'*40}")
+    result_math = generate_response_with_provenance(
+        global_model, global_tokenizer, math_dataset, sample_idx,
+        client_models, terminators
+    )
+    
+    return {"chess": result_chess, "math": result_math}
 
 def test_all_available_rounds(sample_idx=10):
     # global_cache = Index("_storage/model_cache")
@@ -137,6 +190,9 @@ def test_all_available_rounds(sample_idx=10):
     for round_num in available_rounds:
         test_round_comprehensive(round_num, sample_idx)
 
-
 if __name__ == "__main__":
-    test_all_available_rounds(sample_idx=10)
+
+    test_round_with_provenance(round_num=5, sample_idx=10)
+
+
+    # test_all_available_rounds(sample_idx=10)
