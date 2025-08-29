@@ -19,7 +19,12 @@ from unsloth.chat_templates import get_chat_template, train_on_responses_only
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+import math
 
+# choose a single GPU the server should use
+import os
+os.environ["TORCH_COMPILE_DISABLE"] = "1"   # or: os.environ["TORCHDYNAMO_DISABLE"] = "1"
+from flwr.common import ndarrays_to_parameters
 
 class ModelUtils:
     @staticmethod
@@ -155,8 +160,6 @@ def get_config():
             "weight_decay": 0.01,
             "scheduler": "linear",
             "seed": 3407,
-            "output_dir": None,  # "outputs_federated",  # make sure to change it each time
-            "report_to": "none"
         },
         "model": {
             "name": "unsloth/gemma-3-270m-it",
@@ -165,11 +168,11 @@ def get_config():
             "load_in_8bit": False
         },
         "device": "cuda",
-        "total_gpus": 2,
+        "total_gpus": 1,
         "total_cpus": 16,
         "client_resources": {
             "num_cpus": 7,
-            "num_gpus": 1
+            "num_gpus": 0.5
         }
     }
 
@@ -186,6 +189,11 @@ def get_model_and_tokenizer():
     )
     tokenizer = get_chat_template(tokenizer, chat_template="gemma3")
     return model, tokenizer
+
+
+def _create_model():
+    temp_model, _ = get_model_and_tokenizer()
+    return temp_model
 
 
 def build_trainer(model, tokenizer, train_dataset, args):
@@ -207,8 +215,8 @@ def build_trainer(model, tokenizer, train_dataset, args):
             weight_decay=float(args["weight_decay"]),
             lr_scheduler_type=str(args["scheduler"]),
             seed=int(args["seed"]),
-            output_dir=str(args["output_dir"]),
-            report_to=str(args["report_to"]),
+            output_dir=None,
+            report_to=None,
         ),
     )
 
@@ -216,7 +224,6 @@ def build_trainer(model, tokenizer, train_dataset, args):
 def train_llm(model, tokenizer, dataset, cid):
 
     train_config = get_config()["train"]
-    train_config["output_dir"] = f"outputs_client_{cid}"
 
     formatted_dataset = format_with_template(tokenizer, dataset)
     trainer = build_trainer(
@@ -234,36 +241,43 @@ def train_llm(model, tokenizer, dataset, cid):
     return {"loss": -100.0, "accuracy": -100.0}
 
 
-def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
-    model.eval()
-    device = next(model.parameters()).device
 
+def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
+    
+    args = get_config()["train"]
+    
     formatted_dataset = format_with_template(tokenizer, dataset)
 
-    total_loss = 0.0
-    num_samples = 0
+    model = model.to("cuda:0")
+    
+    model.eval()
+    trainer =  SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=formatted_dataset,
+        eval_dataset=formatted_dataset,
+        args=SFTConfig(
+            dataset_text_field="text",
+            per_device_eval_batch_size=8,
+            seed=int(args["seed"]),
+            output_dir=None,
+            report_to=None,
+            do_train=False,
+            do_eval=True,
+            no_cuda=True, 
+        ),
+    )
 
-    with torch.no_grad():
-        for i, example in enumerate(formatted_dataset):
-            if i >= 100:  # Evaluate on first 100 samples for speed
-                break
+    trainer = train_on_responses_only(
+        trainer,
+        instruction_part="<start_of_turn>user\n",
+        response_part="<start_of_turn>model\n",
+    )
 
-            text = example["text"]
-            inputs = tokenizer(text, return_tensors="pt",
-                               truncation=True, max_length=2048)
+    metrics =  trainer.evaluate()
+    print(f"===========>>>>>>>>>>> WARIS Eval Metrics: {metrics}")
 
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-
-            outputs = model(**inputs, labels=inputs["input_ids"])
-            loss = outputs.loss
-
-            total_loss += loss.item()
-            num_samples += 1
-
-    avg_loss = total_loss / num_samples if num_samples > 0 else float('inf')
-    perplexity = torch.exp(torch.tensor(avg_loss)).item()
-
-    return {"loss": avg_loss, "perplexity": perplexity}
+    return {"loss": -1, "perplexity": -1}
 
 
 # Dataset, Preprocessing, Chat Templates, etc
@@ -322,7 +336,7 @@ def get_client_dataset(cid: str):
     dataset_name = "chess" if cid == "0" else "math"
     hf_name, convert_to_chatml = dataset_adapter(dataset_name)
 
-    split = "train[:10000]"
+    split = "train[:100]"
     dataset = load_dataset(hf_name, split=split)
 
     if dataset_name == "math":
@@ -340,21 +354,6 @@ def get_eval_datasets():
     return {"chess": chess_dataset, "math": math_dataset}
 
 
-def _fit_metrics_aggregation_fn(metrics):
-    log(INFO, ">>   ------------------- Clients Metrics ------------- ")
-    all_logs = {}
-    for nk_points, metric_d in metrics:
-        cid = int(metric_d["cid"])
-        temp_s = (
-            f' Client {metric_d["cid"]}, Loss Train {metric_d["loss"]}, '
-            f'Accuracy Train {metric_d["accuracy"]}, data_points = {nk_points}'
-        )
-        all_logs[cid] = temp_s
-
-    for k in sorted(all_logs.keys()):
-        log(INFO, all_logs[k])
-    return {"loss": 0.0, "accuracy": 0.0}
-
 
 def fl_simulation(cfg):
     global_model, tokenizer = get_model_and_tokenizer()
@@ -366,13 +365,6 @@ def fl_simulation(cfg):
 
     results_dir = Path("results")
     global_metrics_history = []
-
-    def _create_model():
-        temp_model, _ = get_model_and_tokenizer()
-        return temp_model
-
-    def _get_fit_config(server_round):
-        return {}
 
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
@@ -439,10 +431,12 @@ def fl_simulation(cfg):
         return client
 
     def _server_fn(context: Context):
+        init_ndarrays = ModelUtils.get_parameters(global_model)  # from your already-loaded model
         strategy = fl.server.strategy.FedAvg(
             min_evaluate_clients=0,
             fraction_evaluate=0,
-            evaluate_fn=_eval_gm
+            evaluate_fn=_eval_gm,
+            initial_parameters=ndarrays_to_parameters(init_ndarrays),  # 👈 seed server with real weights
         )
         server_config = fl.server.ServerConfig(
             num_rounds=cfg["fl"]["num_rounds"])
