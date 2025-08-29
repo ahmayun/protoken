@@ -1,0 +1,101 @@
+[
+  {
+    "round": 0,
+    "chess_loss": 3.741097927093506,
+    "chess_perplexity": 42.144236071652564,
+    "math_loss": 3.991081476211548,
+    "math_perplexity": 54.113380062740035,
+    "avg_loss": 3.866089701652527,
+    "avg_perplexity": 48.1288080671963
+  },
+  {
+    "round": 1,
+    "chess_loss": 0.4483194053173065,
+    "chess_perplexity": 1.5656787018995242,
+    "math_loss": 0.6092212796211243,
+    "math_perplexity": 1.838998775224459,
+    "avg_loss": 0.5287703424692154,
+    "avg_perplexity": 1.7023387385619917
+  },
+  {
+    "round": 2,
+    "chess_loss": 0.32237136363983154,
+    "chess_perplexity": 1.380397310152586,
+    "math_loss": 0.36435166001319885,
+    "math_perplexity": 1.4395803680070096,
+    "avg_loss": 0.3433615118265152,
+    "avg_perplexity": 1.4099888390797979
+  },
+  {
+    "round": 3,
+    "chess_loss": 0.2520240843296051,
+    "chess_perplexity": 1.2866270244610223,
+    "math_loss": 0.27731257677078247,
+    "math_perplexity": 1.3195787762501292,
+    "avg_loss": 0.2646683305501938,
+    "avg_perplexity": 1.3031029003555759
+  },
+  {
+    "round": 4,
+    "chess_loss": 0.17189425230026245,
+    "chess_perplexity": 1.187552245655429,
+    "math_loss": 0.3084065616130829,
+    "math_perplexity": 1.3612543101981065,
+    "avg_loss": 0.24015040695667267,
+    "avg_perplexity": 1.2744032779267678
+  },
+  {
+    "round": 5,
+    "chess_loss": 0.12552735209465027,
+    "chess_perplexity": 1.1337461788692256,
+    "math_loss": 0.1337490677833557,
+    "math_perplexity": 1.1431059415449023,
+    "avg_loss": 0.129638209939003,
+    "avg_perplexity": 1.138426060207064
+  },
+  {
+    "round": 6,
+    "chess_loss": 0.09558085352182388,
+    "chess_perplexity": 1.1002977813882286,
+    "math_loss": 0.09165152907371521,
+    "math_perplexity": 1.095982837374868,
+    "avg_loss": 0.09361619129776955,
+    "avg_perplexity": 1.0981403093815483
+  },
+  {
+    "round": 7,
+    "chess_loss": 0.05763452500104904,
+    "chess_perplexity": 1.059327767138833,
+    "math_loss": 0.06454302370548248,
+    "math_perplexity": 1.0666714694165844,
+    "avg_loss": 0.06108877435326576,
+    "avg_perplexity": 1.0629996182777086
+  },
+  {
+    "round": 8,
+    "chess_loss": 0.09172796458005905,
+    "chess_perplexity": 1.0960666125796463,
+    "math_loss": 0.04943465813994408,
+    "math_perplexity": 1.0506769367864446,
+    "avg_loss": 0.07058131136000156,
+    "avg_perplexity": 1.0733717746830456
+  },
+  {
+    "round": 9,
+    "chess_loss": 0.052255261689424515,
+    "chess_perplexity": 1.0536446633061252,
+    "math_loss": 0.034171875566244125,
+    "math_perplexity": 1.034762441825543,
+    "avg_loss": 0.04321356862783432,
+    "avg_perplexity": 1.044203552565834
+  },
+  {
+    "round": 10,
+    "chess_loss": 0.04224422574043274,
+    "chess_perplexity": 1.0431492115319143,
+    "math_loss": 0.04153488203883171,
+    "math_perplexity": 1.042409522586747,
+    "avg_loss": 0.041889553889632225,
+    "avg_perplexity": 1.0427793670593306
+  }
+]

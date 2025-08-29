@@ -1,3 +1,4 @@
+import unsloth
 import time
 from pathlib import Path
 from diskcache import Index
@@ -10,7 +11,6 @@ from typing import Dict, Any
 from collections import OrderedDict
 import json
 
-import unsloth
 from datasets import load_dataset
 from transformers import TextStreamer
 from trl import SFTConfig, SFTTrainer
@@ -20,10 +20,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import math
-
-# choose a single GPU the server should use
-import os
 from flwr.common import ndarrays_to_parameters
+
 
 class ModelUtils:
     @staticmethod
@@ -149,13 +147,13 @@ def get_config():
             "clients_per_round": 2
         },
         "train": {
-            "batch": 8,
-            "ga": 1,
+            "batch":16,
+            "ga": 2,
             "warmup_steps": 10,
             "max_steps": 20,
-            "lr": 5e-5,
+            "lr": 1e-5,
             "logging_steps": 5,
-            "optim": "adamw_8bit",
+            "optim": "adamw_torch",
             "weight_decay": 0.01,
             "scheduler": "linear",
             "seed": 3407,
@@ -240,11 +238,10 @@ def train_llm(model, tokenizer, dataset, cid):
     return {"loss": -100.0, "accuracy": -100.0}
 
 
-
 def evaluate_model_on_dataset(model, tokenizer, dataset):
-    args = get_config()["train"]        
+    args = get_config()["train"]
     model.eval()
-    trainer =  SFTTrainer(
+    trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
@@ -257,7 +254,6 @@ def evaluate_model_on_dataset(model, tokenizer, dataset):
             report_to=None,
             do_train=False,
             do_eval=True,
-            no_cuda=True, 
         ),
     )
 
@@ -267,10 +263,10 @@ def evaluate_model_on_dataset(model, tokenizer, dataset):
         response_part="<start_of_turn>model\n",
     )
 
-    metrics =  trainer.evaluate()
+    metrics = trainer.evaluate()
     print(f"===========>>>>>>>>>>> WARIS Eval Metrics: {metrics}")
 
-    return {"loss": metrics['eval_loss'] , "perplexity": math.exp(metrics['eval_loss'])}
+    return {"loss": metrics['eval_loss'], "perplexity": math.exp(metrics['eval_loss'])}
 
 
 # Dataset, Preprocessing, Chat Templates, etc
@@ -322,7 +318,7 @@ def format_with_template(tokenizer, dataset):
         ]
         return {"text": texts}
 
-    return dataset.map(formatting_prompts_func, batched=True)
+    return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
 
 
 def get_client_dataset(cid: str):
@@ -347,9 +343,6 @@ def get_eval_datasets(tokenizer):
     return {"chess": chess_dataset, "math": math_dataset}
 
 
-
-
-
 def fl_simulation(cfg):
     global_model, tokenizer = get_model_and_tokenizer()
 
@@ -363,11 +356,9 @@ def fl_simulation(cfg):
 
     eval_datasets = get_eval_datasets(tokenizer)
 
-
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
         global_model_device = global_model.to(cfg["device"])
-
 
         print(
             f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
@@ -428,12 +419,14 @@ def fl_simulation(cfg):
         return client
 
     def _server_fn(context: Context):
-        init_ndarrays = ModelUtils.get_parameters(global_model)  # from your already-loaded model
+        init_ndarrays = ModelUtils.get_parameters(
+            global_model)  # from your already-loaded model
         strategy = fl.server.strategy.FedAvg(
             min_evaluate_clients=0,
             fraction_evaluate=0,
             evaluate_fn=_eval_gm,
-            initial_parameters=ndarrays_to_parameters(init_ndarrays),  # 👈 seed server with real weights
+            initial_parameters=ndarrays_to_parameters(
+                init_ndarrays),  # 👈 seed server with real weights
         )
         server_config = fl.server.ServerConfig(
             num_rounds=cfg["fl"]["num_rounds"])
