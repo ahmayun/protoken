@@ -2,7 +2,7 @@ import unsloth
 from diskcache import Index
 import torch
 from transformers import TextStreamer
-from src.fl_main import get_model_and_tokenizer, get_client_dataset
+from src.fl_train import get_model_and_tokenizer, get_client_dataset
 
 
 def generate_response(model, tokenizer, dataset, sample_idx=10):
