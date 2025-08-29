@@ -68,6 +68,21 @@ class FlowerClient(fl.client.NumPyClient):
         dataset = get_client_dataset(cid)
         train_dict = train_llm(model, tokenizer, dataset, cid)
 
+        # Save client model after training
+        client_cache = Index("_storage/client_models")
+        global global_round
+        client_key = f"client_{cid}_round_{global_round}"
+        
+        client_model_data = {
+            "model_state_dict": model.state_dict(),
+            "training_metrics": train_dict,
+            "client_id": cid,
+            "round": global_round,
+            "timestamp": time.time(),
+            "dataset_size": len(dataset)
+        }
+        client_cache[client_key] = client_model_data
+
         parameters = ModelUtils.get_parameters(model)
         client_train_dict = {"cid": cid} | train_dict
         nk_client_data_points = len(dataset)
@@ -341,6 +356,32 @@ def get_eval_datasets(tokenizer):
     chess_dataset = format_with_template(tokenizer, get_client_dataset("0"))
     math_dataset = format_with_template(tokenizer, get_client_dataset("1"))
     return {"chess": chess_dataset, "math": math_dataset}
+
+def load_client_model(client_id, round_num):
+    client_cache = Index("_storage/client_models")
+    key = f"client_{client_id}_round_{round_num}"
+    
+    if key in client_cache:
+        model_data = client_cache[key]
+        model = _create_model()
+        model.load_state_dict(model_data["model_state_dict"])
+        return model, model_data
+    return None, None
+
+def get_all_client_models_for_round(round_num):
+    client_cache = Index("_storage/client_models")
+    round_models = {}
+    
+    for key in client_cache:
+        if key.endswith(f"_round_{round_num}"):
+            client_id = key.split("_")[1]
+            round_models[client_id] = client_cache[key]
+    
+    return round_models
+
+def list_saved_client_models():
+    client_cache = Index("_storage/client_models")
+    return list(client_cache.keys())
 
 
 def fl_simulation(cfg):
