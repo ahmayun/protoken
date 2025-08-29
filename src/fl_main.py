@@ -344,6 +344,7 @@ def get_eval_datasets(tokenizer):
 
 
 def fl_simulation(cfg):
+    cache_model = Index("_storage/model_cache") 
     global_model, tokenizer = get_model_and_tokenizer()
 
     print(f"Simulation Configuration: {cfg}")
@@ -358,7 +359,7 @@ def fl_simulation(cfg):
 
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
-        global_model_device = global_model.to(cfg["device"])
+        global_model_device = global_model
 
         print(
             f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
@@ -401,7 +402,11 @@ def fl_simulation(cfg):
         global global_round
         global_round += 1
 
-        return avg_loss, {"round": server_round, "avg_loss": avg_loss, "avg_perplexity": avg_perplexity} | all_metrics
+
+        saving_dict = {"global_model": global_model.state_dict(), "metrics": metrics_record}
+        cache_model[server_round] = saving_dict
+
+        return avg_loss, all_metrics
 
     def _client_fn(context: Context):
         global global_round
