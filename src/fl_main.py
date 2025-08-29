@@ -156,7 +156,7 @@ def get_config():
             "max_steps": 20,
             "lr": 5e-5,
             "logging_steps": 5,
-            "optim": "adamw_8bit",
+            "optim": "adamw",
             "weight_decay": 0.01,
             "scheduler": "linear",
             "seed": 3407,
@@ -277,7 +277,7 @@ def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
     metrics =  trainer.evaluate()
     print(f"===========>>>>>>>>>>> WARIS Eval Metrics: {metrics}")
 
-    return {"loss": -1, "perplexity": -1}
+    return {"loss": metrics['eval_loss'] , "perplexity": math.exp(metrics['eval_loss'])}
 
 
 # Dataset, Preprocessing, Chat Templates, etc
