@@ -23,7 +23,6 @@ import math
 
 # choose a single GPU the server should use
 import os
-os.environ["TORCH_COMPILE_DISABLE"] = "1"   # or: os.environ["TORCHDYNAMO_DISABLE"] = "1"
 from flwr.common import ndarrays_to_parameters
 
 class ModelUtils:
@@ -156,7 +155,7 @@ def get_config():
             "max_steps": 20,
             "lr": 5e-5,
             "logging_steps": 5,
-            "optim": "adamw",
+            "optim": "adamw_8bit",
             "weight_decay": 0.01,
             "scheduler": "linear",
             "seed": 3407,
@@ -242,20 +241,14 @@ def train_llm(model, tokenizer, dataset, cid):
 
 
 
-def evaluate_model_on_dataset(model, tokenizer, dataset, dataset_name):
-    
-    args = get_config()["train"]
-    
-    formatted_dataset = format_with_template(tokenizer, dataset)
-
-    model = model.to("cuda:0")
-    
+def evaluate_model_on_dataset(model, tokenizer, dataset):
+    args = get_config()["train"]        
     model.eval()
     trainer =  SFTTrainer(
         model=model,
         tokenizer=tokenizer,
-        train_dataset=formatted_dataset,
-        eval_dataset=formatted_dataset,
+        train_dataset=dataset,
+        eval_dataset=dataset,
         args=SFTConfig(
             dataset_text_field="text",
             per_device_eval_batch_size=8,
@@ -290,7 +283,7 @@ def dataset_adapter(name: str):
             return {
                 "conversations": [
                     {"role": "system", "content": ex.get(
-                        "task", "You are a helpful chess tutor.")},
+                        "task", "You are a helpful assistant.")},
                     {"role": "user", "content": ex.get("input")},
                     {"role": "assistant", "content": ex.get(
                         "expected_output")},
@@ -305,7 +298,7 @@ def dataset_adapter(name: str):
         def convert_to_chatml(ex):
             return {
                 "conversations": [
-                    {"role": "system", "content": "You are a helpful math tutor. Provide concise, correct solutions."},
+                    {"role": "system", "content": "You are a helpful math assistant. Provide concise, correct solutions."},
                     {"role": "user", "content": ex.get("question")},
                     {"role": "assistant", "content": ex.get("answer")},
                 ]
@@ -347,11 +340,13 @@ def get_client_dataset(cid: str):
     return dataset
 
 
-def get_eval_datasets():
+def get_eval_datasets(tokenizer):
     # TODO: Use separate test datasets instead of train data
-    chess_dataset = get_client_dataset("0")
-    math_dataset = get_client_dataset("1")
+    chess_dataset = format_with_template(tokenizer, get_client_dataset("0"))
+    math_dataset = format_with_template(tokenizer, get_client_dataset("1"))
     return {"chess": chess_dataset, "math": math_dataset}
+
+
 
 
 
@@ -366,11 +361,13 @@ def fl_simulation(cfg):
     results_dir = Path("results")
     global_metrics_history = []
 
+    eval_datasets = get_eval_datasets(tokenizer)
+
+
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
         global_model_device = global_model.to(cfg["device"])
 
-        eval_datasets = get_eval_datasets()
 
         print(
             f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
@@ -382,7 +379,7 @@ def fl_simulation(cfg):
 
         for dataset_name, dataset in eval_datasets.items():
             metrics = evaluate_model_on_dataset(
-                global_model_device, tokenizer, dataset, dataset_name)
+                global_model_device, tokenizer, dataset)
             all_metrics[dataset_name] = metrics
 
             print(
