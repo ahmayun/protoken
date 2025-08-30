@@ -3,6 +3,17 @@ import logging
 import torch.nn.functional as F
 
 
+def _insert_hooks_and_get_hooks_manger(model):
+    model.eval()
+    model.zero_grad()
+    hook_manager = HookManager()
+    layers = get_all_layers(model)
+    for layer_dict in layers:
+        hook_manager.insert_hook(
+            layer_dict['layer'], key=layer_dict['name'])  # <-- stable key
+    return hook_manager
+
+
 def get_all_layers(net):
     all_layers = []
     for name, mode in net.named_modules():
@@ -45,6 +56,8 @@ def get_all_layers(net):
 #         return {'activations': self.storage_forward, 'gradients': self.storage_backward}
 
 # HookManager: store by key instead of append-order
+
+
 class HookManager:
     def __init__(self):
         self.storage_forward = {}
@@ -81,8 +94,6 @@ class NeuronProvenance:
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.c2model = c2model
-
-     
 
     @staticmethod
     def _evaluate_layer(layer, input_tensor):
@@ -123,56 +134,15 @@ class NeuronProvenance:
             # logging.error(f"Total values: {t}")
             raise ValueError("Anomalies detected in tensor")
 
-    @staticmethod
-    def _calculate_clients_contributions2(gm_acts_grads_dict, client2layers, device):
-        layers2prov = []
-        
-        for layer_id in range(len(gm_acts_grads_dict['activations'])):
-            c2l = {cid: layers[layer_id] for cid,
-                   layers in client2layers.items()}  # clients layer
-            # layer inputs
-
-            sample_layer = c2l[list(c2l.keys())[0]]
-            print(
-                f"Sample layer {sample_layer}, input and output shapes: {sample_layer.in_features}, {sample_layer.out_features}")
-
-            layer_inputs = gm_acts_grads_dict['activations'][layer_id][0]
-            print(
-                f"Layer {layer_id} input shape 0: {layer_inputs.shape}, input shape 1 : {gm_acts_grads_dict['activations'][layer_id][1].shape}")
-            layer_grads = gm_acts_grads_dict['gradients'][layer_id][1]
-
-            clinet2outputs = {c: NeuronProvenance._evaluate_layer(
-                l.to(device), layer_inputs) for c, l in c2l.items()}
-            c2contribution = NeuronProvenance._calculate_layer_contribution(
-                gm_layer_grads=layer_grads, client2layer_acts=clinet2outputs)
-            layers2prov.append(c2contribution)
-
-        client2totalpart = {}
-        for c2part in layers2prov:
-            for cid in c2part.keys():
-                client2totalpart[cid] = client2totalpart.get(
-                    cid, 0) + c2part[cid]
-
-        # client2totalpart = NeuronProvenance._normalize_with_softmax(
-        #     client2totalpart)
-        return client2totalpart
-
     # NeuronProvenance: use the same keys to line up data and client layers
     @staticmethod
     def _calculate_clients_contributions(gm_acts_grads_dict, client2layers, device):
         client2totalpart = {}
 
-        keys = sorted(gm_acts_grads_dict["activations"].keys())
-        for key in keys:
-            print(f"Processing layer: {key}")
-            _ = input("Press Enter to continue...")
+        layers_names = sorted(gm_acts_grads_dict["activations"].keys())
+        for key in layers_names:
             layer_inputs = gm_acts_grads_dict["activations"][key]
-            layer_grads  = gm_acts_grads_dict["gradients"][key]
-
-            print(f"client2layers: {client2layers}")
-
-            # pick the SAME layer index from every client
-            # c2l = {cid: layers[key] for cid, layers in client2layers.items()}
+            layer_grads = gm_acts_grads_dict["gradients"][key]
             c2l = {}
             for cid, client_layers in client2layers.items():
                 for layer_dict in client_layers:
@@ -181,13 +151,9 @@ class NeuronProvenance:
                         break
 
             # dtype/device alignment
-            for cid, l in c2l.items():
-                out = NeuronProvenance._evaluate_layer(l.to(device), layer_inputs)
-                c2l[cid] = out
-
-            c2contribution = NeuronProvenance._calculate_layer_contribution(
-                gm_layer_grads=layer_grads, client2layer_acts=c2l
-            )
+            c2acts = {cid: NeuronProvenance._evaluate_layer(l, layer_inputs) for cid, l in c2l.items()}
+            
+            c2contribution = NeuronProvenance._calculate_layer_contribution(gm_layer_grads=layer_grads, client2layer_acts=c2acts)
 
             for cid, v in c2contribution.items():
                 client2totalpart[cid] = client2totalpart.get(cid, 0.0) + v
@@ -206,28 +172,10 @@ class NeuronProvenance:
 
 
 class ProvTextGenerator:
-    @staticmethod
-    # def _insert_hooks(model):
-    #     # Insert hooks for capturing backward gradients of the transformer model
-    #     model.eval()
-    #     hook_manager = HookManager()
-    #     model.zero_grad()
-    #     all_layers = NeuronProvenance.get_all_layers(model)
-    #     _ = [hook_manager.insert_hook(layer) for layer in all_layers]
-    #     return hook_manager
-    # ProvTextGenerator: pass stable keys when installing hooks
-    @staticmethod
-    def _insert_hooks(model):
-        model.eval(); model.zero_grad()
-        hook_manager = HookManager()
-        layers = get_all_layers(model)  # e.g., [down_proj, lm_head]
-        for layer_dict in layers:
-            hook_manager.insert_hook(layer_dict['layer'], key=layer_dict['name'])  # <-- stable key
-        return hook_manager
 
     @staticmethod
     def _get_next_token_id(model, idx_cond):
-        hook_manager = ProvTextGenerator._insert_hooks(model)
+        hook_manager = _insert_hooks_and_get_hooks_manger(model)
         outputs = model(idx_cond)
         logits = outputs.logits[:, -1, :]  # last token prediction
 
