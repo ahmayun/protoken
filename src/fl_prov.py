@@ -25,13 +25,13 @@ class HookManager:
 
     def insert_hook(self, layer):
         def _forward_hook(module, input_tensor, output_tensor):
-            input_tensor = input_tensor[0].detach()
-            output_tensor = output_tensor.detach()
+            input_tensor = input_tensor[0].clone().detach()
+            output_tensor = output_tensor.clone().detach()
             self.storage_forward.append((input_tensor, output_tensor))
 
         def _backward_hook(module, grad_input, grad_output):
-            grad_input = grad_input[0].detach()
-            grad_output = grad_output[0].detach()
+            grad_input = grad_input[0].clone().detach()
+            grad_output = grad_output[0].clone().detach()
             self.storage_backward.append((grad_input, grad_output))
 
         hook_forward = layer.register_forward_hook(_forward_hook)
@@ -77,8 +77,6 @@ class NeuronProvenance:
         with torch.no_grad():
             layer = layer.eval()
             activations = layer(input_tensor)
-            _ = layer.cpu()
-            # _ = input_tensor.cpu()
         return activations
 
     @staticmethod
@@ -93,7 +91,6 @@ class NeuronProvenance:
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
             cli_part = torch.dot(cli_acts, gm_layer_grads)
             client2part[cli] = cli_part.item() * alpha_imp
-            _ = cli_acts.cpu()
         return client2part
 
     @staticmethod
