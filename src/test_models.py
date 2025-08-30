@@ -5,6 +5,12 @@ from transformers import TextStreamer
 from src.fl_train import get_model_and_tokenizer, get_client_dataset
 from src.fl_prov import ProvTextGenerator, get_all_layers
 
+def _to_cuda_fp32(model):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # .to(dtype=...) casts all parameters & buffers; keeps device if already set
+    return model.to(device=device, dtype=torch.float32)
+
+
 def generate_response(model, tokenizer, dataset, sample_idx=10):
     conversation = dataset['conversations'][sample_idx]
 
@@ -68,6 +74,7 @@ def load_global_model_from_cache(round_num):
     cached_data = cache[round_num]
     model.load_state_dict(cached_data["global_model"])
     model = model.to("cuda" if torch.cuda.is_available() else "cpu")
+    model = _to_cuda_fp32(model)
     return model, tokenizer, cached_data["metrics"]
 
 def load_all_client_models_from_cache(round_num):
@@ -82,7 +89,7 @@ def load_all_client_models_from_cache(round_num):
             model, tokenizer = get_model_and_tokenizer()
             model.load_state_dict(model_data["model_state_dict"])
             model = model.to("cuda" if torch.cuda.is_available() else "cpu")
-
+            model = _to_cuda_fp32(model)
             client_models[client_id] = (model, tokenizer, model_data)
 
     return client_models
