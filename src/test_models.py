@@ -3,7 +3,7 @@ from diskcache import Index
 import torch
 from transformers import TextStreamer
 from src.fl_train import get_model_and_tokenizer, get_client_dataset
-from src.fl_prov import ProvTextGenerator
+from src.fl_prov import ProvTextGenerator, get_all_layers
 
 def generate_response(model, tokenizer, dataset, sample_idx=10):
     conversation = dataset['conversations'][sample_idx]
@@ -49,7 +49,9 @@ def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, cli
         tokenize=False,
         add_generation_prompt=True,
     ).removeprefix('<bos>')
+
     
+
     result = ProvTextGenerator.generate_text(
         model, client_models, tokenizer, text, terminators
     )
@@ -140,38 +142,51 @@ def test_round_comprehensive(round_num, sample_idx=10):
         print(f"{'-'*40}")
         generate_response(model, tokenizer, math_dataset, sample_idx)
 
-def test_round_with_provenance(round_num, sample_idx=10):
-    print(f"\n{'='*60}")
-    print(f"PROVENANCE ANALYSIS - ROUND {round_num}")
-    print(f"{'='*60}")
-    
-    global_model, global_tokenizer, _ = load_global_model_from_cache(round_num)
-    client_models_data = load_all_client_models_from_cache(round_num)
-    
-    client_models = {cid: model for cid, (model, _, _) in client_models_data.items()}
-    
-    terminators = [global_tokenizer.eos_token_id]
-    
+
+
+def test_rounds_batch_optimized(rounds, sample_idxs):
     chess_dataset = get_client_dataset("0")
     math_dataset = get_client_dataset("1")
     
-    print(f"\n{'-'*40}")
-    print(f"PROVENANCE - CHESS DATASET")
-    print(f"{'-'*40}")
-    result_chess = generate_response_with_provenance(
-        global_model, global_tokenizer, chess_dataset, sample_idx, 
-        client_models, terminators
-    )
-    
-    print(f"\n{'-'*40}")
-    print(f"PROVENANCE - MATH DATASET") 
-    print(f"{'-'*40}")
-    result_math = generate_response_with_provenance(
-        global_model, global_tokenizer, math_dataset, sample_idx,
-        client_models, terminators
-    )
-    
-    return {"chess": result_chess, "math": result_math}
+    for round_num in rounds:
+
+
+        global_model, global_tokenizer, _ = load_global_model_from_cache(round_num)
+        client_models_data = load_all_client_models_from_cache(round_num)
+        client_models = {cid: model for cid, (model, _, _) in client_models_data.items()}
+        terminators = [global_tokenizer.eos_token_id]
+
+        # print(f"Model {model}")
+
+        for name, mode in global_model.named_modules():
+            print(f"Layer: {name}, Type: {type(mode)}")
+
+        print(f"Layers: {get_all_layers(global_model)}")
+
+        _ = input("Press Enter to continue...")
+        
+        
+        
+        for sample_idx in sample_idxs:
+            print(f"\n{'='*60}")
+            print(f"PROVENANCE ANALYSIS - ROUND {round_num} - SAMPLE {sample_idx}")
+            print(f"{'='*60}")
+            
+            print(f"\n{'-'*40}")
+            print(f"PROVENANCE - CHESS DATASET")
+            print(f"{'-'*40}")
+            generate_response_with_provenance(
+                global_model, global_tokenizer, chess_dataset, sample_idx,
+                client_models, terminators
+            )
+            
+            print(f"\n{'-'*40}")
+            print(f"PROVENANCE - MATH DATASET")
+            print(f"{'-'*40}")
+            generate_response_with_provenance(
+                global_model, global_tokenizer, math_dataset, sample_idx,
+                client_models, terminators
+            )
 
 def test_all_available_rounds(sample_idx=10):
     # global_cache = Index("_storage/model_cache")
@@ -183,7 +198,7 @@ def test_all_available_rounds(sample_idx=10):
 
     # available_rounds = sorted(list(available_rounds))
 
-    available_rounds = [5]
+    available_rounds = [1]
 
     print(f"Available rounds: {available_rounds}")
 
@@ -191,8 +206,8 @@ def test_all_available_rounds(sample_idx=10):
         test_round_comprehensive(round_num, sample_idx)
 
 if __name__ == "__main__":
-
-    test_round_with_provenance(round_num=5, sample_idx=10)
+    # test_round_with_provenance(round_num=1, sample_idx=10)
+    test_rounds_batch_optimized(rounds= [9,10], sample_idxs=[10, 15, 100, 200, 400])
 
 
     # test_all_available_rounds(sample_idx=10)

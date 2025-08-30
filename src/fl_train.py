@@ -163,10 +163,10 @@ def get_config():
         "train": {
             "batch": 16,
             "ga": 2,
-            "warmup_steps": 10,
-            "max_steps": 20,
+            "warmup_steps": 15,
+            "num_train_epochs": 4,
             "lr": 1e-5,
-            "logging_steps": 5,
+            "logging_steps": 20,
             "optim": "adamw_torch",
             "weight_decay": 0.01,
             "scheduler": "linear",
@@ -219,7 +219,7 @@ def build_trainer(model, tokenizer, train_dataset, args):
             per_device_train_batch_size=int(args["batch"]),
             gradient_accumulation_steps=int(args["ga"]),
             warmup_steps=int(args["warmup_steps"]),
-            max_steps=int(args["max_steps"]),
+            num_train_epochs=int(args["num_train_epochs"]),
             learning_rate=float(args["lr"]),
             logging_steps=int(args["logging_steps"]),
             optim=str(args["optim"]),
@@ -262,7 +262,7 @@ def evaluate_model_on_dataset(model, tokenizer, dataset):
         eval_dataset=dataset,
         args=SFTConfig(
             dataset_text_field="text",
-            per_device_eval_batch_size=8,
+            per_device_eval_batch_size=32,
             seed=int(args["seed"]),
             output_dir=None,
             report_to=None,
@@ -308,7 +308,7 @@ def dataset_adapter(name: str):
         def convert_to_chatml(ex):
             return {
                 "conversations": [
-                    {"role": "system", "content": "You are a helpful math assistant. Provide concise, correct solutions."},
+                    {"role": "system", "content": "You are a helpful assistant. Provide concise, correct solutions."},
                     {"role": "user", "content": ex.get("question")},
                     {"role": "assistant", "content": ex.get("answer")},
                 ]
@@ -339,14 +339,14 @@ def get_client_dataset(cid: str):
     dataset_name = "chess" if cid == "0" else "math"
     hf_name, convert_to_chatml = dataset_adapter(dataset_name)
 
-    split = "train[:100]"
+    split = "train[:1000]"
     dataset = load_dataset(hf_name, split=split)
 
     if dataset_name == "math":
         dataset = dataset.filter(
             lambda ex: ex.get("difficulty") == 'train-easy')
 
-    dataset = dataset.map(convert_to_chatml)
+    dataset = dataset.map(convert_to_chatml, num_proc=8)
     return dataset
 
 
