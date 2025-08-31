@@ -342,7 +342,7 @@ def get_client_dataset(cid: str):
     dataset_name = "chess" if cid == "0" else "math"
     hf_name, convert_to_chatml = dataset_adapter(dataset_name)
 
-    split = "train[:1000]"
+    split = "train[:40000]"
     dataset = load_dataset(hf_name, split=split)
 
     if dataset_name == "math":

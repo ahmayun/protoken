@@ -214,7 +214,7 @@ def test_all_available_rounds(sample_idx=10):
 
 if __name__ == "__main__":
     # test_round_with_provenance(round_num=1, sample_idx=10)
-    test_rounds_batch_optimized(rounds= [2], sample_idxs=list(range(20)))
+    test_rounds_batch_optimized(rounds= [10], sample_idxs=list(range(20)))
 
 
     # test_all_available_rounds(sample_idx=10)
