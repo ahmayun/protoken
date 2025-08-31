@@ -165,12 +165,12 @@ def test_rounds_batch_optimized(rounds, sample_idxs):
 
         # print(f"Model {model}")
 
-        for name, mode in global_model.named_modules():
-            print(f"Layer: {name}, Type: {type(mode)}")
+        # for name, mode in global_model.named_modules():
+        #     print(f"Layer: {name}, Type: {type(mode)}")
 
         print(f"Layers: {get_all_layers(global_model)}")
 
-        _ = input("Press Enter to continue...")
+        # _ = input("Press Enter to continue...")
         
         
         
@@ -214,7 +214,7 @@ def test_all_available_rounds(sample_idx=10):
 
 if __name__ == "__main__":
     # test_round_with_provenance(round_num=1, sample_idx=10)
-    test_rounds_batch_optimized(rounds= [9,10], sample_idxs=[10, 15, 100, 200, 400])
+    test_rounds_batch_optimized(rounds= [2], sample_idxs=list(range(20)))
 
 
     # test_all_available_rounds(sample_idx=10)

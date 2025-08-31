@@ -3,9 +3,7 @@ import time
 from pathlib import Path
 from diskcache import Index
 import flwr as fl
-from flwr.common.logger import log
 from flwr.common import Context
-from logging import DEBUG, INFO
 import torch
 from typing import Dict, Any
 from collections import OrderedDict
@@ -20,7 +18,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 from flwr.common import ndarrays_to_parameters
+import logging
+# Get the logger used by the Flower library
+flwr_logger = logging.getLogger("flwr")
 
+# Set its level to INFO to suppress DEBUG messages
+flwr_logger.setLevel(logging.INFO)
+
+# Stop the flwr logger from passing messages to the root logger
+flwr_logger.propagate = False 
 
 class ModelUtils:
     @staticmethod
@@ -161,23 +167,18 @@ def get_config():
             "clients_per_round": 2
         },
         "train": {
-            "batch": 16,
+            "batch": 32,
             "ga": 2,
             "warmup_steps": 15,
-            "num_train_epochs": 4,
-            "lr": 1e-5,
+            "num_train_epochs": 6,
+            "lr": 5e-5,
             "logging_steps": 20,
             "optim": "adamw_torch",
             "weight_decay": 0.01,
-            "scheduler": "linear",
+            "scheduler": 'constant',
             "seed": 3407,
         },
-        "model": {
-            "name": "unsloth/gemma-3-270m-it",
-            "max_seq_length": 2048,
-            "load_in_4bit": False,
-            "load_in_8bit": False
-        },
+
         "device": "cuda",
         "total_gpus": 1,
         "total_cpus": 16,
@@ -243,6 +244,7 @@ def train_llm(model, tokenizer, dataset, cid):
         trainer,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
+        num_proc=8
     )
 
     print(f"> Starting training for client {cid}...")
@@ -275,6 +277,7 @@ def evaluate_model_on_dataset(model, tokenizer, dataset):
         trainer,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
+        num_proc=8
     )
 
     metrics = trainer.evaluate()
