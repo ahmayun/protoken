@@ -1,8 +1,14 @@
 import torch
 import logging
 import torch.nn.functional as F
-# Add this line to set the initial log level (INFO or DEBUG)
-logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+
+# Use a module-specific logger named "prov"
+logger = logging.getLogger("prov")
+logger.setLevel(logging.DEBUG)  # or logging.INFO as needed
+if not logger.hasHandlers():
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
+    logger.addHandler(handler)
 
 
 def _insert_hooks_and_get_hooks_manger(model):
@@ -20,10 +26,10 @@ def _check_anomlies(t):
     inf_mask = torch.isinf(t)
     nan_mask = torch.isnan(t)
     if inf_mask.any() or nan_mask.any():
-        logging.error(f"Inf values: {torch.sum(inf_mask)}")
-        logging.error(f"NaN values: {torch.sum(nan_mask)}")
-        logging.error(f"Total values: {torch.numel(t)}")
-        # logging.error(f"Total values: {t}")
+        logger.error(f"Inf values: {torch.sum(inf_mask)}")
+        logger.error(f"NaN values: {torch.sum(nan_mask)}")
+        logger.error(f"Total values: {torch.numel(t)}")
+        # logger.error(f"Total values: {t}")
         raise ValueError("Anomalies detected in tensor")
 
 
@@ -125,7 +131,7 @@ class NeuronProvenance:
                 gm_layer_grads=layer_grads, client2layer_acts=c2acts)
 
             c2contribution_per_layer = _normalize_with_softmax(c2contribution_per_layer)
-            logging.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
+            logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
             for cid, v in c2contribution_per_layer.items():
                 client2totalpart[cid] = client2totalpart.get(cid, 0.0) + v
@@ -175,7 +181,7 @@ class ProvTextGenerator:
 
             neuron_prov = NeuronProvenance(token_dict['acts_grads_dict'], client2model)
             conts_dict = neuron_prov.run()
-            logging.debug(
+            logger.debug(
                 f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
 
             # mandatory to clear the gradients
