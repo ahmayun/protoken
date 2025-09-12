@@ -1,6 +1,8 @@
 import torch
 import logging
 import torch.nn.functional as F
+# Add this line to set the initial log level (INFO or DEBUG)
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
 
 
 def _insert_hooks_and_get_hooks_manger(model):
@@ -29,7 +31,6 @@ def get_all_layers(net):
     all_layers = []
     for name, mode in net.named_modules():
         if name in ['lm_head', 'model.layers.17.mlp', 'model.layers.16.mlp',  'model.norm']:
-            # print(f"Layer: {name}, appended")
             all_layers.append({"name": name, "layer": mode})
         # elif type(mode) == torch.nn.Linear:
         #     all_layers.append({"name": name, "layer": mode})
@@ -124,7 +125,7 @@ class NeuronProvenance:
                 gm_layer_grads=layer_grads, client2layer_acts=c2acts)
 
             c2contribution_per_layer = _normalize_with_softmax(c2contribution_per_layer)
-            print(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
+            logging.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
             for cid, v in c2contribution_per_layer.items():
                 client2totalpart[cid] = client2totalpart.get(cid, 0.0) + v
@@ -160,7 +161,7 @@ class ProvTextGenerator:
     @staticmethod
     def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=64,
                       context_size=1024):
-        model = model.cuda().eval()
+        
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
 
@@ -174,7 +175,7 @@ class ProvTextGenerator:
 
             neuron_prov = NeuronProvenance(token_dict['acts_grads_dict'], client2model)
             conts_dict = neuron_prov.run()
-            print(
+            logging.debug(
                 f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
 
             # mandatory to clear the gradients
@@ -183,14 +184,11 @@ class ProvTextGenerator:
                 client2part[c] = client2part[c] + v
 
             if temp_id in terminators:
-                # print(f" =====Found EOS token {temp_id}=====")
                 break
             idx = torch.cat((idx, next_token_id), dim=-1)
 
         response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
         text = tokenizer.decode(response, skip_special_tokens=False)
         text = " ".join(text.split())
-        # print(f'Response:\n ***|||{text}|||***\n\n')
         client2part =_normalize_with_softmax(client2part)
-        # _ = input("Press Enter to continue")
         return {"response": text, "client2part": client2part}

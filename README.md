@@ -1,5 +1,10 @@
 
 
+# Important to update uv 
+```
+uv self update
+```
+
 # important commands 
 ```
 # 16 cores on one node.  
@@ -7,7 +12,7 @@
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p dgx_normal_q -t 6:00:00 --gres=gpu:1  
 
 #a100_normal_q
-interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p a100_normal_q -t 6:00:00 --gres=gpu:1
+interact -N1 --ntasks-per-node=1 --cpus-per-task=32 -A semcache -p a100_normal_q -t 6:00:00 --gres=gpu:1
 
 # for h200 
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p h200_preemptable_q -t 3:00:00 --gres=gpu:1
@@ -17,8 +22,12 @@ interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p h200_normal_q
 
 # for falcon
 
-interact -N1 --gres=gpu:1 -p l40s_normal_q --ntasks-per-node=1 --cpus-per-task=32 --gres-flags=enforce-binding -A semcache -t 6:00:00
+interact -N1 --gres=gpu:2 -p l40s_normal_q --ntasks-per-node=1 --cpus-per-task=32 -A semcache -t 6:00:00
 
+# for tinkercliff  h200_normal_q
+interact -N1 --gres=gpu:1 -p h200_normal_q --ntasks-per-node=1 --cpus-per-task=16 -A semcache -t 6:00:00
+
+interact -N1 --gres=gpu:1 -p h200_preemptable_q --ntasks-per-node=1 --cpus-per-task=32 -A semcache -t 6:00:00
 
 ```
 
