@@ -246,6 +246,6 @@ def test_all_available_rounds(sample_idx=10):
 
 
 if __name__ == "__main__":
-    rounds_provenance(rounds=list(range(1, 11)), sample_idxs=list(range(20)))
+    rounds_provenance(rounds=[10], sample_idxs=list(range(100)))
 
     # test_all_available_rounds(sample_idx=10)
