@@ -168,3 +168,6 @@ _storage
 outputs_client_0/
 outputs_client_1/
 unsloth_compiled_cache/
+
+src/arch.txt
+temp.md
