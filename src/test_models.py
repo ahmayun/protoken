@@ -6,6 +6,7 @@ from src.fl_train import get_model_and_tokenizer, get_client_dataset
 from src.fl_prov import ProvTextGenerator, get_all_layers
 from src.judge import llm_judge
 from openai import OpenAI
+import gc
 
 
 def _to_cuda_fp32(model):
@@ -209,6 +210,15 @@ def rounds_provenance(rounds, sample_idxs):
             prov_acc_list =  evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs,
                                 client_models, terminators, expected_client_id)
             print(f">> Provenance Accuracy: {sum(prov_acc_list)}/{len(prov_acc_list)} = {100.0 * sum(prov_acc_list)/len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0:.2f}%")
+        
+        _ = [m.cpu() for m in client_models.values()]
+        global_model.cpu()
+
+
+        del client_models
+        del global_model
+        torch.cuda.empty_cache()
+        gc.collect()
 
 
 def test_all_available_rounds(sample_idx=10):
@@ -236,6 +246,6 @@ def test_all_available_rounds(sample_idx=10):
 
 
 if __name__ == "__main__":
-    rounds_provenance(rounds=list(range(1, 11)), sample_idxs=list(range(50)))
+    rounds_provenance(rounds=list(range(1, 11)), sample_idxs=list(range(20)))
 
     # test_all_available_rounds(sample_idx=10)
