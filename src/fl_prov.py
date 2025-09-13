@@ -1,8 +1,14 @@
 import torch
 import logging
 import torch.nn.functional as F
-# Add this line to set the initial log level (INFO or DEBUG)
-logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+
+# Use a module-specific logger named "prov"
+logger = logging.getLogger("prov")
+logger.setLevel(logging.DEBUG)  # or logging.INFO as needed
+if not logger.hasHandlers():
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
+    logger.addHandler(handler)
 
 
 def _insert_hooks_and_get_hooks_manger(model):
@@ -20,17 +26,17 @@ def _check_anomlies(t):
     inf_mask = torch.isinf(t)
     nan_mask = torch.isnan(t)
     if inf_mask.any() or nan_mask.any():
-        logging.error(f"Inf values: {torch.sum(inf_mask)}")
-        logging.error(f"NaN values: {torch.sum(nan_mask)}")
-        logging.error(f"Total values: {torch.numel(t)}")
-        # logging.error(f"Total values: {t}")
+        logger.error(f"Inf values: {torch.sum(inf_mask)}")
+        logger.error(f"NaN values: {torch.sum(nan_mask)}")
+        logger.error(f"Total values: {torch.numel(t)}")
+        # logger.error(f"Total values: {t}")
         raise ValueError("Anomalies detected in tensor")
 
 
 def get_all_layers(net):
     all_layers = []
     for name, mode in net.named_modules():
-        if name in ['lm_head', 'model.layers.17.mlp', 'model.layers.16.mlp',  'model.norm']:
+        if name in ['lm_head', 'model.layers.17.mlp', 'model.layers.16.mlp', 'model.layers.15.mlp']:
             all_layers.append({"name": name, "layer": mode})
         # elif type(mode) == torch.nn.Linear:
         #     all_layers.append({"name": name, "layer": mode})
@@ -93,7 +99,7 @@ class NeuronProvenance:
         client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
         _check_anomlies(gm_layer_grads)
         gm_layer_grads = gm_layer_grads.flatten()
-        for cli in client2layer_acts.keys():
+        for cli in client2part.keys():
             cli_acts = client2layer_acts[cli].flatten()
             _check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
@@ -107,7 +113,7 @@ class NeuronProvenance:
 
         layers_names = sorted(gm_acts_grads_dict["activations"].keys())
         for key in layers_names:
-            
+
             layer_inputs = gm_acts_grads_dict["activations"][key]
             layer_grads = gm_acts_grads_dict["gradients"][key]
             c2l = {}
@@ -124,8 +130,8 @@ class NeuronProvenance:
             c2contribution_per_layer = NeuronProvenance._calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=c2acts)
 
-            c2contribution_per_layer = _normalize_with_softmax(c2contribution_per_layer)
-            logging.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
+            # c2contribution_per_layer = _normalize_with_softmax(c2contribution_per_layer)
+            # logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
             for cid, v in c2contribution_per_layer.items():
                 client2totalpart[cid] = client2totalpart.get(cid, 0.0) + v
@@ -149,11 +155,20 @@ class ProvTextGenerator:
     @staticmethod
     def _get_next_token_id(model, idx_cond):
         hook_manager = _insert_hooks_and_get_hooks_manger(model)
+        model.zero_grad(set_to_none=True)
+        model.eval()
+
+        # 1. Perform a forward pass to get the logits for the next token
         outputs = model(idx_cond)
-        logits = outputs.logits[:, -1, :]  # last token prediction
+        logits = outputs.logits[:, -1, :]  # Shape: (batch_size, vocab_size)
 
         next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
+
         logits[0, next_token_id].backward()  # computing the gradients
+
+        # obj = logits.log_softmax(dim=-1).gather(1, next_token_id).sum()
+        # obj.backward()
+
         acts_grads_dict = hook_manager.get_hooks_data()
 
         return {"next_token_id": next_token_id, "acts_grads_dict": acts_grads_dict}
@@ -161,7 +176,7 @@ class ProvTextGenerator:
     @staticmethod
     def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=64,
                       context_size=1024):
-        
+
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
 
@@ -173,9 +188,10 @@ class ProvTextGenerator:
             next_token_id = token_dict["next_token_id"]
             temp_id = next_token_id.item()
 
-            neuron_prov = NeuronProvenance(token_dict['acts_grads_dict'], client2model)
+            neuron_prov = NeuronProvenance(
+                token_dict['acts_grads_dict'], client2model)
             conts_dict = neuron_prov.run()
-            logging.debug(
+            logger.debug(
                 f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
 
             # mandatory to clear the gradients
@@ -190,5 +206,5 @@ class ProvTextGenerator:
         response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
         text = tokenizer.decode(response, skip_special_tokens=False)
         text = " ".join(text.split())
-        client2part =_normalize_with_softmax(client2part)
+        client2part = _normalize_with_softmax(client2part)
         return {"response": text, "client2part": client2part}
