@@ -19,6 +19,10 @@ import pandas as pd
 import math
 from flwr.common import ndarrays_to_parameters
 import logging
+
+
+
+
 # Get the logger used by the Flower library
 flwr_logger = logging.getLogger("flwr")
 
@@ -26,7 +30,8 @@ flwr_logger = logging.getLogger("flwr")
 flwr_logger.setLevel(logging.INFO)
 
 # Stop the flwr logger from passing messages to the root logger
-flwr_logger.propagate = False 
+flwr_logger.propagate = False
+
 
 class ModelUtils:
     @staticmethod
@@ -286,42 +291,6 @@ def evaluate_model_on_dataset(model, tokenizer, dataset):
     return {"loss": metrics['eval_loss'], "perplexity": math.exp(metrics['eval_loss'])}
 
 
-# Dataset, Preprocessing, Chat Templates, etc
-def dataset_adapter(name: str):
-    name = name.lower()
-    if name == "chess":
-        hf_name = "Thytu/ChessInstruct"
-
-        def convert_to_chatml(ex):
-            return {
-                "conversations": [
-                    {"role": "system", "content": ex.get(
-                        "task", "You are a helpful assistant.")},
-                    {"role": "user", "content": ex.get("input")},
-                    {"role": "assistant", "content": ex.get(
-                        "expected_output")},
-                ]
-            }
-
-        return hf_name, convert_to_chatml
-
-    if name == "math":
-        hf_name = "m-gopichand/deepmind_math_dataset_processed"
-
-        def convert_to_chatml(ex):
-            return {
-                "conversations": [
-                    {"role": "system", "content": "You are a helpful assistant. Provide concise, correct solutions."},
-                    {"role": "user", "content": ex.get("question")},
-                    {"role": "assistant", "content": ex.get("answer")},
-                ]
-            }
-
-        return hf_name, convert_to_chatml
-
-    raise ValueError(f"Unknown dataset adapter: {name}")
-
-
 def format_with_template(tokenizer, dataset):
     def formatting_prompts_func(examples):
         convos = examples["conversations"]
@@ -338,23 +307,30 @@ def format_with_template(tokenizer, dataset):
     return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
 
 
-def get_client_dataset(cid: str):
-    dataset_name = "chess" if cid == "0" else "math"
-    hf_name, convert_to_chatml = dataset_adapter(dataset_name)
+G_DS = load_dataset('waris-gill/llm-datasets-instruct-for-FL', split="train")
 
-    split = "train[:40000]"
-    dataset = load_dataset(hf_name, split=split)
+chess_ds = G_DS.filter(
+    lambda label: label == "chess",
+    input_columns="label",
+    batched=False,
+    num_proc=8,
+)
 
-    if dataset_name == "math":
-        dataset = dataset.filter(
-            lambda ex: ex.get("difficulty") == 'train-easy')
+math_ds = G_DS.filter(
+    lambda label: label == "math",
+    input_columns="label",
+    batched=False,
+    num_proc=8,
+)
 
-    dataset = dataset.map(convert_to_chatml, num_proc=8)
-    return dataset
+dataset_map = {"0": chess_ds, "1": math_ds}
+
+
+def get_client_dataset(cid: str, num_samples=1000):
+    return dataset_map.get(cid).select(range(num_samples))
 
 
 def get_eval_datasets(tokenizer):
-    # TODO: Use separate test datasets instead of train data
     chess_dataset = format_with_template(tokenizer, get_client_dataset("0"))
     math_dataset = format_with_template(tokenizer, get_client_dataset("1"))
     return {"chess": chess_dataset, "math": math_dataset}
