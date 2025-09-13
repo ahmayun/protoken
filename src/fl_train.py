@@ -19,8 +19,7 @@ import pandas as pd
 import math
 from flwr.common import ndarrays_to_parameters
 import logging
-
-
+import gc
 
 
 # Get the logger used by the Flower library
@@ -58,6 +57,8 @@ class FlowerClient(fl.client.NumPyClient):
         self.args = args
 
     def fit(self, parameters, config):
+        import unsloth
+
         print(f"client  {self.args['cid']}")
         client_train_response = self._train_fit(parameters, config)
         return client_train_response
@@ -77,17 +78,17 @@ class FlowerClient(fl.client.NumPyClient):
         model = model.to(self.args["device"])
         dataset = get_client_dataset(cid)
         train_dict = train_llm(model, tokenizer, dataset, cid)
+        model = model.to("cpu")
 
         # Save client model after training
         client_cache = Index("_storage/client_models")
-        global global_round
-        client_key = f"client_{cid}_round_{global_round}"
+        client_key = f"client_{cid}_round_{self.args['round']}"
 
         client_model_data = {
             "model_state_dict": model.state_dict(),
             "training_metrics": train_dict,
             "client_id": cid,
-            "round": global_round,
+            "round": self.args['round'],
             "timestamp": time.time(),
             "dataset_size": len(dataset)
         }
@@ -97,6 +98,9 @@ class FlowerClient(fl.client.NumPyClient):
         client_train_dict = {"cid": cid} | train_dict
         nk_client_data_points = len(dataset)
 
+        del model
+        del dataset
+        torch.cuda.empty_cache()
         return parameters, nk_client_data_points, client_train_dict
 
 
@@ -222,6 +226,7 @@ def build_trainer(model, tokenizer, train_dataset, args):
         eval_dataset=None,
         args=SFTConfig(
             dataset_text_field="text",
+            dataset_num_proc=8,
             per_device_train_batch_size=int(args["batch"]),
             gradient_accumulation_steps=int(args["ga"]),
             warmup_steps=int(args["warmup_steps"]),
@@ -238,11 +243,10 @@ def build_trainer(model, tokenizer, train_dataset, args):
     )
 
 
-def train_llm(model, tokenizer, dataset, cid):
+def train_llm(model, tokenizer, formatted_dataset, cid):
 
     train_config = get_config()["train"]
 
-    formatted_dataset = format_with_template(tokenizer, dataset)
     trainer = build_trainer(
         model, tokenizer, formatted_dataset, args=train_config)
     trainer = train_on_responses_only(
@@ -307,32 +311,34 @@ def format_with_template(tokenizer, dataset):
     return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
 
 
-G_DS = load_dataset('waris-gill/llm-datasets-instruct-for-FL', split="train")
+def get_client_dataset(cid: str, num_samples=100):
+    G_DS = load_dataset(
+        'waris-gill/llm-datasets-instruct-for-FL', split="train")
 
-chess_ds = G_DS.filter(
-    lambda label: label == "chess",
-    input_columns="label",
-    batched=False,
-    num_proc=8,
-)
+    chess_ds = G_DS.filter(
+        lambda label: label == "chess",
+        input_columns="label",
+        batched=False,
+        num_proc=8,
+    )
 
-math_ds = G_DS.filter(
-    lambda label: label == "math",
-    input_columns="label",
-    batched=False,
-    num_proc=8,
-)
+    math_ds = G_DS.filter(
+        lambda label: label == "math",
+        input_columns="label",
+        batched=False,
+        num_proc=8,
+    )
 
-dataset_map = {"0": chess_ds, "1": math_ds}
+    tokenizer = get_model_and_tokenizer()[1]
 
-
-def get_client_dataset(cid: str, num_samples=1000):
+    dataset_map = {"0":  format_with_template(
+        tokenizer, chess_ds), "1": format_with_template(tokenizer, math_ds)}
     return dataset_map.get(cid).select(range(num_samples))
 
 
 def get_eval_datasets(tokenizer):
-    chess_dataset = format_with_template(tokenizer, get_client_dataset("0"))
-    math_dataset = format_with_template(tokenizer, get_client_dataset("1"))
+    chess_dataset = get_client_dataset("0")
+    math_dataset = get_client_dataset("1")
     return {"chess": chess_dataset, "math": math_dataset}
 
 
@@ -373,6 +379,10 @@ def fl_simulation(cfg):
             total_loss += metrics['loss']
             total_perplexity += metrics['perplexity']
             dataset_count += 1
+        
+        global_model_device = global_model_device.to("cpu")
+        torch.cuda.empty_cache()
+        gc.collect()
 
         avg_loss = total_loss / dataset_count
         avg_perplexity = total_perplexity / dataset_count
@@ -411,6 +421,7 @@ def fl_simulation(cfg):
             "model": _create_model(),
             "tokenizer": tokenizer,
             "device": cfg["device"],
+            'round': global_round
         }
 
         client = FlowerClient(args).to_client()
