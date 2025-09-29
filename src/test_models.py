@@ -3,7 +3,7 @@ import torch
 from transformers import TextStreamer
 from openai import OpenAI
 import gc
-from src.fl_train import get_model_and_tokenizer, get_client_dataset
+from src.fl_train import get_client_dataset
 from src.fl_prov import ProvTextGenerator, get_all_layers
 from src.judge import llm_judge
 from src.utils import CacheManager
