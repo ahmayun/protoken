@@ -1,25 +1,22 @@
 import unsloth
 import time
 from pathlib import Path
-from diskcache import Index
 import flwr as fl
-from flwr.common import Context
+
 import torch
-from typing import Dict, Any
+from typing import Dict
 from collections import OrderedDict
-import json
 
 from datasets import load_dataset
 from trl import SFTConfig, SFTTrainer
 from unsloth import FastModel
 from unsloth.chat_templates import get_chat_template, train_on_responses_only
-import seaborn as sns
-import matplotlib.pyplot as plt
-import pandas as pd
 import math
-from flwr.common import ndarrays_to_parameters
+from flwr.common import ndarrays_to_parameters, Context
 import logging
 import gc
+from src.plotting import save_and_plot_metrics
+from src.utils import CacheManager
 
 
 # Get the logger used by the Flower library
@@ -30,6 +27,50 @@ flwr_logger.setLevel(logging.INFO)
 
 # Stop the flwr logger from passing messages to the root logger
 flwr_logger.propagate = False
+
+
+def get_config():
+    return {
+        "fl": {
+            "num_rounds": 2,
+            "num_clients": 2,
+            "clients_per_round": 2
+        },
+
+        "sft_config_args": {
+            # "dataset_text_field": "text",
+            "per_device_train_batch_size": 32,
+            "gradient_accumulation_steps": 1,
+            "warmup_steps": 15,
+            "num_train_epochs": 6,
+            "learning_rate": 5e-5,
+            "logging_steps": 20,
+            "optim": "adamw_torch",
+            "weight_decay": 0.01,
+            "lr_scheduler_type": "constant",
+            "seed": 3407,
+            "output_dir": None,
+            "report_to": None,
+        },
+
+        "model_config": {
+            "model_name": "unsloth/gemma-3-270m-it",
+            "max_seq_length": 2048,
+            "load_in_4bit": False,
+            "load_in_8bit": False,
+            "full_finetuning": True,
+        },
+
+        "chat_template": "gemma3",
+
+        "device": "cuda",
+        "total_gpus": 1,
+        "total_cpus": 8,
+        "client_resources": {
+            "num_cpus": 6,
+            "num_gpus": 1
+        }
+    }
 
 
 class ModelUtils:
@@ -57,8 +98,6 @@ class FlowerClient(fl.client.NumPyClient):
         self.args = args
 
     def fit(self, parameters, config):
-        import unsloth
-
         print(f"client  {self.args['cid']}")
         client_train_response = self._train_fit(parameters, config)
         return client_train_response
@@ -81,10 +120,7 @@ class FlowerClient(fl.client.NumPyClient):
         model = model.to("cpu")
 
         # Save client model after training
-        client_cache = Index("_storage/client_models")
-        client_key = f"client_{cid}_round_{self.args['round']}"
-
-        client_model_data = {
+        client_training_info = {
             "model_state_dict": model.state_dict(),
             "training_metrics": train_dict,
             "client_id": cid,
@@ -92,7 +128,8 @@ class FlowerClient(fl.client.NumPyClient):
             "timestamp": time.time(),
             "dataset_size": len(dataset)
         }
-        client_cache[client_key] = client_model_data
+        CacheManager.save_temp_client_model(
+            cid, self.args['round'], client_training_info)
 
         parameters = ModelUtils.get_parameters(model)
         client_train_dict = {"cid": cid} | train_dict
@@ -118,97 +155,14 @@ def config_sim_resources(cfg):
     return backend_config
 
 
-def save_and_plot_metrics(metrics_list, results_dir):
-
-    results_dir = Path(results_dir)
-    results_dir.mkdir(exist_ok=True)
-
-    json_path = results_dir / "fl_metrics.json"
-    with open(json_path, 'w') as f:
-        json.dump(metrics_list, f, indent=2)
-
-    if not metrics_list:
-        print("No metrics to plot")
-        return
-
-    df = pd.DataFrame(metrics_list)
-
-    plt.style.use('default')
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
-    sns.lineplot(data=df, x='round', y='chess_loss',
-                 label='Chess', ax=ax1, marker='o')
-    sns.lineplot(data=df, x='round', y='math_loss',
-                 label='Math', ax=ax1, marker='s')
-    sns.lineplot(data=df, x='round', y='avg_loss',
-                 label='Average', ax=ax1, marker='^')
-    ax1.set_title('Loss vs Round')
-    ax1.set_xlabel('Round')
-    ax1.set_ylabel('Loss')
-    ax1.grid(True, alpha=0.3)
-
-    sns.lineplot(data=df, x='round', y='chess_perplexity',
-                 label='Chess', ax=ax2, marker='o')
-    sns.lineplot(data=df, x='round', y='math_perplexity',
-                 label='Math', ax=ax2, marker='s')
-    sns.lineplot(data=df, x='round', y='avg_perplexity',
-                 label='Average', ax=ax2, marker='^')
-    ax2.set_title('Perplexity vs Round')
-    ax2.set_xlabel('Round')
-    ax2.set_ylabel('Perplexity')
-    ax2.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-
-    plot_path = results_dir / "fl_metrics.png"
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    plt.close()
-
-    print(f"Metrics saved to: {json_path}")
-    print(f"Plot saved to: {plot_path}")
-
-
-def get_config():
-    return {
-        "fl": {
-            "num_rounds": 10,
-            "num_clients": 2,
-            "clients_per_round": 2
-        },
-        "train": {
-            "batch": 32,
-            "ga": 2,
-            "warmup_steps": 15,
-            "num_train_epochs": 6,
-            "lr": 5e-5,
-            "logging_steps": 20,
-            "optim": "adamw_torch",
-            "weight_decay": 0.01,
-            "scheduler": 'constant',
-            "seed": 3407,
-        },
-
-        "device": "cuda",
-        "total_gpus": 1,
-        "total_cpus": 16,
-        "client_resources": {
-            "num_cpus": 7,
-            "num_gpus": 0.5
-        }
-    }
-
-
 # Model, Training, Evaluations
 
 def get_model_and_tokenizer():
-    model, tokenizer = FastModel.from_pretrained(
-        model_name="unsloth/gemma-3-270m-it",
-        max_seq_length=2048,
-        load_in_4bit=False,
-        load_in_8bit=False,
-        full_finetuning=True,
-    )
-    tokenizer = get_chat_template(tokenizer, chat_template="gemma3")
+    model_config = get_config()["model_config"]
+    get_chat_template_name = get_config()["chat_template"]
+    model, tokenizer = FastModel.from_pretrained(**model_config)
+    tokenizer = get_chat_template(
+        tokenizer, chat_template=get_chat_template_name)
     return model, tokenizer
 
 
@@ -217,43 +171,24 @@ def _create_model():
     return temp_model
 
 
-def build_trainer(model, tokenizer, train_dataset, args):
+def train_llm(model, tokenizer, train_dataset, cid):
 
-    return SFTTrainer(
+    sft_config_args = get_config()["sft_config_args"]
+
+    trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=None,
-        args=SFTConfig(
-            dataset_text_field="text",
-            dataset_num_proc=8,
-            per_device_train_batch_size=int(args["batch"]),
-            gradient_accumulation_steps=int(args["ga"]),
-            warmup_steps=int(args["warmup_steps"]),
-            num_train_epochs=int(args["num_train_epochs"]),
-            learning_rate=float(args["lr"]),
-            logging_steps=int(args["logging_steps"]),
-            optim=str(args["optim"]),
-            weight_decay=float(args["weight_decay"]),
-            lr_scheduler_type=str(args["scheduler"]),
-            seed=int(args["seed"]),
-            output_dir=None,
-            report_to=None,
-        ),
+        dataset_text_field="text",
+        args=SFTConfig(**sft_config_args)
     )
 
-
-def train_llm(model, tokenizer, formatted_dataset, cid):
-
-    train_config = get_config()["train"]
-
-    trainer = build_trainer(
-        model, tokenizer, formatted_dataset, args=train_config)
     trainer = train_on_responses_only(
         trainer,
         instruction_part="<start_of_turn>user\n",
         response_part="<start_of_turn>model\n",
-        num_proc=8
+        num_proc=int(8)
     )
 
     print(f"> Starting training for client {cid}...")
@@ -263,18 +198,17 @@ def train_llm(model, tokenizer, formatted_dataset, cid):
     return {"loss": -100.0, "accuracy": -100.0}
 
 
-def evaluate_model_on_dataset(model, tokenizer, dataset):
-    args = get_config()["train"]
+def evaluate_model_on_dataset(model, tokenizer, eval_dataset):
     model.eval()
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
-        train_dataset=dataset,
-        eval_dataset=dataset,
+        train_dataset=eval_dataset,
+        eval_dataset=eval_dataset,
         args=SFTConfig(
             dataset_text_field="text",
             per_device_eval_batch_size=32,
-            seed=int(args["seed"]),
+            seed=42,
             output_dir=None,
             report_to=None,
             do_train=False,
@@ -343,7 +277,6 @@ def get_eval_datasets(tokenizer):
 
 
 def fl_simulation(cfg):
-    cache_model = Index("_storage/model_cache")
     global_model, tokenizer = get_model_and_tokenizer()
 
     print(f"Simulation Configuration: {cfg}")
@@ -379,7 +312,7 @@ def fl_simulation(cfg):
             total_loss += metrics['loss']
             total_perplexity += metrics['perplexity']
             dataset_count += 1
-        
+
         global_model_device = global_model_device.to("cpu")
         torch.cuda.empty_cache()
         gc.collect()
@@ -405,9 +338,8 @@ def fl_simulation(cfg):
         global global_round
         global_round += 1
 
-        saving_dict = {"global_model": global_model.state_dict(),
-                       "metrics": metrics_record}
-        cache_model[server_round] = saving_dict
+        CacheManager.save_temp_global_model(
+            server_round, global_model.state_dict(), metrics_record)
 
         return avg_loss, all_metrics
 
@@ -451,14 +383,17 @@ def fl_simulation(cfg):
         backend_config=config_sim_resources(cfg),
     )
 
-    save_and_plot_metrics(global_metrics_history, results_dir)
+    return global_metrics_history, results_dir
 
 
 def main():
     start_time = time.time()
     cfg = get_config()
-    fl_simulation(cfg)
+    global_metrics_history, results_dir = fl_simulation(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")
+    CacheManager.consolidate_experiment(
+        exp_key="Test", num_rounds=cfg["fl"]["num_rounds"])
+    save_and_plot_metrics(global_metrics_history, results_dir)
 
 
 if __name__ == "__main__":
