@@ -62,7 +62,8 @@ def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, cl
     return prov_acc
 
 
-def rounds_provenance(rounds, sample_idxs):
+def rounds_provenance():
+    rounds, sample_idxs = range(16), list(range(10))
     datasets = [
         ("chess", get_client_dataset("0"), "0"),
         ("math", get_client_dataset("1"), "1"),
@@ -78,16 +79,16 @@ def rounds_provenance(rounds, sample_idxs):
         global_model, global_tokenizer, client_models = CacheManager.load_models_and_tokenizer_for_round(
             "Test", round_num)
 
-        terminators = [global_tokenizer.eos_token_id]
+        # terminators = [global_tokenizer.eos_token_id]
 
-        for dataset_name, dataset, expected_client_id in datasets:
-            print(f"\n{'-'*40}")
-            print(f"PROVENANCE - {dataset_name.upper()} DATASET")
-            print(f"{'-'*40}")
-            prov_acc_list = evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs,
-                                                client_models, terminators, expected_client_id)
-            print(
-                f">> Provenance Accuracy: {sum(prov_acc_list)}/{len(prov_acc_list)} = {100.0 * sum(prov_acc_list)/len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0:.2f}%")
+        # for dataset_name, dataset, expected_client_id in datasets:
+        #     print(f"\n{'-'*40}")
+        #     print(f"PROVENANCE - {dataset_name.upper()} DATASET")
+        #     print(f"{'-'*40}")
+        #     prov_acc_list = evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs,
+        #                                         client_models, terminators, expected_client_id)
+        #     print(
+        #         f">> Provenance Accuracy: {sum(prov_acc_list)}/{len(prov_acc_list)} = {100.0 * sum(prov_acc_list)/len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0:.2f}%")
 
         _ = [m.cpu() for m in client_models.values()]
         global_model.cpu()
@@ -99,6 +100,6 @@ def rounds_provenance(rounds, sample_idxs):
 
 
 if __name__ == "__main__":
-    rounds_provenance(rounds=[0, 1], sample_idxs=list(range(100)))
+    rounds_provenance()
 
     # test_all_available_rounds(sample_idx=10)

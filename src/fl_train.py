@@ -202,10 +202,10 @@ def train_llm(model, tokenizer, train_dataset, cid):
     )
 
     print(f"> Starting training for client {cid}...")
-    trainer.train()
-    print(f"> Training completed for client {cid}.")
+    metrics =  trainer.train().metrics
+    print(f"> Training completed for client {cid} training loss: {metrics['train_loss']:.4f}")
 
-    return {"loss": -100.0, "accuracy": -100.0}
+    return {"loss": metrics['train_loss'], "perplexity": math.exp(metrics['train_loss'])}
 
 
 def evaluate_model_on_dataset(model, tokenizer, eval_dataset):
@@ -234,7 +234,6 @@ def evaluate_model_on_dataset(model, tokenizer, eval_dataset):
     )
 
     metrics = trainer.evaluate()
-    print(f"===========>>>>>>>>>>> WARIS Eval Metrics: {metrics}")
 
     return {"loss": metrics['eval_loss'], "perplexity": math.exp(metrics['eval_loss'])}
 
@@ -280,7 +279,7 @@ def get_client_dataset(cid: str, num_samples=100):
     return dataset_map.get(cid).select(range(num_samples))
 
 
-def get_eval_datasets(tokenizer):
+def get_eval_datasets():
     chess_dataset = get_client_dataset("0")
     math_dataset = get_client_dataset("1")
     return {"chess": chess_dataset, "math": math_dataset}
@@ -297,7 +296,7 @@ def fl_simulation(cfg):
     results_dir = Path("results")
     global_metrics_history = []
 
-    eval_datasets = get_eval_datasets(tokenizer)
+    eval_datasets = get_eval_datasets()
 
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
@@ -348,8 +347,7 @@ def fl_simulation(cfg):
         global global_round
         global_round += 1
 
-        CacheManager.save_temp_global_model(
-            server_round, global_model.state_dict(), metrics_record)
+        CacheManager.save_temp_global_model(server_round, global_model.state_dict(), metrics_record)
 
         return avg_loss, all_metrics
 
