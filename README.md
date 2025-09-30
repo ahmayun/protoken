@@ -15,7 +15,8 @@ interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p dgx_normal_q 
 interact -N1 --ntasks-per-node=1 --cpus-per-task=32 -A semcache -p a100_normal_q -t 8:00:00 --gres=gpu:2
 
 # for h200 
-interact -N1 --ntasks-per-node=1 --cpus-per-task=32 -A semcache -p h200_normal_q -t 4:00:00 --gres=gpu:2
+interact -N1 -n 1 --cpus-per-task=32 -A semcache -p h200_normal_q -t 8:00:00 --gres=gpu:2
+interact -N1 -n 1 -A semcache -p h200_normal_q --qos tc_h200_normal_short -t 4:00:00 --gres=gpu:1
 
 # for h200_normal_q
 interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p h200_preemptable_q -t 2:00:00 --gres=gpu:1

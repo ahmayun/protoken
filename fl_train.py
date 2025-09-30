@@ -16,9 +16,9 @@ import math
 from flwr.common import ndarrays_to_parameters, Context
 import logging
 import gc
-from src.plotting import save_and_plot_metrics
+from src.utils.plotting import save_and_plot_metrics
 from src.utils import CacheManager, get_model_and_tokenizer
-from src.datasets import get_client_dataset, get_eval_datasets
+from src.utils.datasets import get_client_dataset, get_eval_datasets
 
 # Get the logger used by the Flower library
 flwr_logger = logging.getLogger("flwr")
