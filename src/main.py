@@ -5,9 +5,10 @@ import time
 import logging
 
 from src.config.base_config import ConfigManager
-from src.fl.simulation import run_fl_experiment
-from src.utils.utils import  CacheManager
+from src.utils.datasets import initialize_dataset_chunks
+from src.utils.utils import  CacheManager, get_model_and_tokenizer
 from src.utils.plotting import save_and_plot_metrics
+
 
 
 flwr_logger = logging.getLogger("flwr")
@@ -20,9 +21,15 @@ multiprocessing.cpu_count = lambda: 4
 if hasattr(os, 'cpu_count'):
     os.cpu_count = lambda: 4
 
+
+
 def main():
     start_time = time.time()
     cfg = ConfigManager.load_config()
+    print(f"Configuration Loaded: {cfg}")
+    initialize_dataset_chunks(get_model_and_tokenizer(cfg)[1])
+    _ = input("Press Enter to continue...")
+    from src.fl.simulation import run_fl_experiment
     global_metrics_history = run_fl_experiment(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")
     CacheManager.consolidate_experiment(

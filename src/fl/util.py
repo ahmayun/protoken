@@ -52,16 +52,20 @@ def evaluate_llm(model, tokenizer, eval_dataset):
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
-        train_dataset=eval_dataset,
+        train_dataset=eval_dataset.select(range(1)),  # dummy dataset to enable eval
         eval_dataset=eval_dataset,
+        dataset_text_field="text",
+        
         args=SFTConfig(
-            dataset_text_field="text",
             per_device_eval_batch_size=32,
             seed=42,
             output_dir=None,
             report_to=None,
             do_train=False,
             do_eval=True,
+            # evaluation_strategy="no",  # we’ll call evaluate() manually
+            logging_strategy="no",
+            eval_on_start=True,
         ),
     )
 
