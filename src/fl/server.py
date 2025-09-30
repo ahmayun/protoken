@@ -1,10 +1,7 @@
 import unsloth
 import flwr as fl
 import torch
-import math
 import gc
-from trl import SFTConfig, SFTTrainer
-from unsloth.chat_templates import train_on_responses_only
 from flwr.common import ndarrays_to_parameters
 
 from src.utils.utils import CacheManager

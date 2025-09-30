@@ -1,10 +1,17 @@
 import flwr as fl
 import torch
 import time
+import os
+import warnings
 
 from src.utils.utils import CacheManager, get_model_and_tokenizer
 from src.utils.datasets import get_client_dataset
 from src.fl.util import ModelUtils, train_llm
+
+# Avoid warnings
+# os.environ["TOKENIZERS_PARALLELISM"] = "true"
+# os.environ["RAY_DISABLE_DOCKER_CPU_WARNING"] = "1"
+# warnings.filterwarnings("ignore", category=UserWarning)
 
 
 
