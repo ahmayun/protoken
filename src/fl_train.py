@@ -29,6 +29,16 @@ flwr_logger.setLevel(logging.INFO)
 flwr_logger.propagate = False
 
 
+import multiprocessing
+import os
+_original_cpu_count = multiprocessing.cpu_count
+multiprocessing.cpu_count = lambda: 4
+
+if hasattr(os, 'cpu_count'):
+    os.cpu_count = lambda: 4
+
+
+
 def get_config():
     return {
         "fl": {
