@@ -1,4 +1,6 @@
 import unsloth
+import os
+import multiprocessing
 import time
 from pathlib import Path
 import flwr as fl
@@ -7,17 +9,16 @@ import torch
 from typing import Dict
 from collections import OrderedDict
 
-from datasets import load_dataset
+
 from trl import SFTConfig, SFTTrainer
-from unsloth import FastModel
-from unsloth.chat_templates import get_chat_template, train_on_responses_only
+from unsloth.chat_templates import train_on_responses_only
 import math
 from flwr.common import ndarrays_to_parameters, Context
 import logging
 import gc
 from src.plotting import save_and_plot_metrics
-from src.utils import CacheManager
-
+from src.utils import CacheManager, get_model_and_tokenizer
+from src.datasets import get_client_dataset, get_eval_datasets
 
 # Get the logger used by the Flower library
 flwr_logger = logging.getLogger("flwr")
@@ -29,14 +30,11 @@ flwr_logger.setLevel(logging.INFO)
 flwr_logger.propagate = False
 
 
-import multiprocessing
-import os
 _original_cpu_count = multiprocessing.cpu_count
 multiprocessing.cpu_count = lambda: 4
 
 if hasattr(os, 'cpu_count'):
     os.cpu_count = lambda: 4
-
 
 
 def get_config():
@@ -116,6 +114,7 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
         tokenizer = self.args["tokenizer"]
         cid = self.args["cid"]
+        dataset = self.args["dataset"]
 
         # Only set parameters if they exist and are valid
         if parameters and len(parameters) > 0:
@@ -125,7 +124,6 @@ class FlowerClient(fl.client.NumPyClient):
             print(f"No parameters to load for client {cid}, using fresh model")
 
         model = model.to(self.args["device"])
-        dataset = get_client_dataset(cid)
         train_dict = train_llm(model, tokenizer, dataset, cid)
         model = model.to("cpu")
 
@@ -167,19 +165,6 @@ def config_sim_resources(cfg):
 
 # Model, Training, Evaluations
 
-def get_model_and_tokenizer():
-    model_config = get_config()["model_config"]
-    get_chat_template_name = get_config()["chat_template"]
-    model, tokenizer = FastModel.from_pretrained(**model_config)
-    tokenizer = get_chat_template(
-        tokenizer, chat_template=get_chat_template_name)
-    return model, tokenizer
-
-
-def _create_model():
-    temp_model, _ = get_model_and_tokenizer()
-    return temp_model
-
 
 def train_llm(model, tokenizer, train_dataset, cid):
 
@@ -202,8 +187,9 @@ def train_llm(model, tokenizer, train_dataset, cid):
     )
 
     print(f"> Starting training for client {cid}...")
-    metrics =  trainer.train().metrics
-    print(f"> Training completed for client {cid} training loss: {metrics['train_loss']:.4f}")
+    metrics = trainer.train().metrics
+    print(
+        f"> Training completed for client {cid} training loss: {metrics['train_loss']:.4f}")
 
     return {"loss": metrics['train_loss'], "perplexity": math.exp(metrics['train_loss'])}
 
@@ -238,55 +224,8 @@ def evaluate_model_on_dataset(model, tokenizer, eval_dataset):
     return {"loss": metrics['eval_loss'], "perplexity": math.exp(metrics['eval_loss'])}
 
 
-def format_with_template(tokenizer, dataset):
-    def formatting_prompts_func(examples):
-        convos = examples["conversations"]
-        texts = [
-            tokenizer.apply_chat_template(
-                convo,
-                tokenize=False,
-                add_generation_prompt=False,
-            ).removeprefix("<bos>")
-            for convo in convos
-        ]
-        return {"text": texts}
-
-    return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
-
-
-def get_client_dataset(cid: str, num_samples=100):
-    G_DS = load_dataset(
-        'waris-gill/llm-datasets-instruct-for-FL', split="train")
-
-    chess_ds = G_DS.filter(
-        lambda label: label == "chess",
-        input_columns="label",
-        batched=False,
-        num_proc=8,
-    )
-
-    math_ds = G_DS.filter(
-        lambda label: label == "math",
-        input_columns="label",
-        batched=False,
-        num_proc=8,
-    )
-
-    tokenizer = get_model_and_tokenizer()[1]
-
-    dataset_map = {"0":  format_with_template(
-        tokenizer, chess_ds), "1": format_with_template(tokenizer, math_ds)}
-    return dataset_map.get(cid).select(range(num_samples))
-
-
-def get_eval_datasets():
-    chess_dataset = get_client_dataset("0")
-    math_dataset = get_client_dataset("1")
-    return {"chess": chess_dataset, "math": math_dataset}
-
-
 def fl_simulation(cfg):
-    global_model, tokenizer = get_model_and_tokenizer()
+    global_model, tokenizer = get_model_and_tokenizer(cfg)
 
     print(f"Simulation Configuration: {cfg}")
 
@@ -296,7 +235,7 @@ def fl_simulation(cfg):
     results_dir = Path("results")
     global_metrics_history = []
 
-    eval_datasets = get_eval_datasets()
+    eval_datasets = get_eval_datasets(tokenizer)
 
     def _eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
@@ -347,7 +286,8 @@ def fl_simulation(cfg):
         global global_round
         global_round += 1
 
-        CacheManager.save_temp_global_model(server_round, global_model.state_dict(), metrics_record)
+        CacheManager.save_temp_global_model(
+            server_round, global_model.state_dict(), metrics_record)
 
         return avg_loss, all_metrics
 
@@ -356,15 +296,16 @@ def fl_simulation(cfg):
         partition_id = context.node_config["partition-id"]
         cid = f"{partition_id}"
 
-        args = {
+        client_args = {
             "cid": cid,
-            "model": _create_model(),
+            "model": get_model_and_tokenizer(cfg)[0],
             "tokenizer": tokenizer,
             "device": cfg["device"],
-            'round': global_round
+            'round': global_round,
+            "dataset": get_client_dataset(cid, tokenizer, num_samples=100),
         }
 
-        client = FlowerClient(args).to_client()
+        client = FlowerClient(client_args).to_client()
         return client
 
     def _server_fn(context: Context):

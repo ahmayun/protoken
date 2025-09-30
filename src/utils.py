@@ -1,5 +1,17 @@
+import unsloth
 from diskcache import Index 
 import torch
+from unsloth import FastModel
+from unsloth.chat_templates import get_chat_template
+
+def get_model_and_tokenizer(config):
+    model_config = config["model_config"]
+    get_chat_template_name = config["chat_template"]
+    model, tokenizer = FastModel.from_pretrained(**model_config)
+    tokenizer = get_chat_template(
+        tokenizer, chat_template=get_chat_template_name)
+    return model, tokenizer
+
 
 class CacheManager:
     TEMP_MODEL_CACHE = "_storage/caches/global_model_cache"
