@@ -57,6 +57,8 @@ class CacheManager:
             client_model = CacheManager._to_cuda_fp32(client_model)
             client_models[client_id] = client_model
         
+    
+        print(f"==== Loaded global and {len(client_models)} client models from cache. ====")        
         return global_model, global_tokenizer, client_models
     
     @staticmethod

@@ -10,41 +10,6 @@ from src.utils import CacheManager
 
 
 
-
-
-def generate_response(model, tokenizer, dataset, sample_idx=10):
-    conversation = dataset['conversations'][sample_idx]
-
-    messages = [
-        {'role': conversation[0]['role'],
-            'content': conversation[0]['content']},
-        {"role": conversation[1]['role'],
-            'content': conversation[1]['content']}
-    ]
-
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-    ).removeprefix('<bos>')
-
-    print(">> Generated Response (Prediction) ->", end=" ")
-
-    generated = model.generate(
-        **tokenizer(text, return_tensors="pt").to(model.device),
-        max_new_tokens=125,
-        temperature=1,
-        top_p=0.95,
-        top_k=64,
-        streamer=TextStreamer(tokenizer, skip_prompt=True),
-    )
-
-    print(
-        f"[[Actual Response (Ground Truth) ->  {conversation[2]['content']}]]")
-
-    return conversation[2]['content']
-
-
 def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models, terminators):
     print(
         f"\n\n{15*'-'} Input Index {sample_idx} Response Generation Provenance {15*'-'}")
