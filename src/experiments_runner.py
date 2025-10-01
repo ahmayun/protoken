@@ -5,6 +5,13 @@ from src.fl.simulation import run_fl_experiment
 from src.utils.utils import CacheManager, save_json
 from src.config.base_config import ConfigManager
 
+import os
+import multiprocessing
+_original_cpu_count = multiprocessing.cpu_count
+multiprocessing.cpu_count = lambda: 4
+
+if hasattr(os, 'cpu_count'):
+    os.cpu_count = lambda: 4
 
 
 

@@ -9,6 +9,14 @@ from src.fl.util import ModelUtils, evaluate_llm
 
 
 def create_evaluation_function(global_model, eval_datasets, tokenizer, global_metrics_history, global_round_tracker):
+    import os
+    import multiprocessing
+    _original_cpu_count = multiprocessing.cpu_count
+    multiprocessing.cpu_count = lambda: 4
+
+    if hasattr(os, 'cpu_count'):
+        os.cpu_count = lambda: 4
+
 
     def eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
