@@ -28,7 +28,6 @@ def main():
     cfg = ConfigManager.load_config()
     print(f"Configuration Loaded: {cfg}")
     initialize_dataset_chunks(get_model_and_tokenizer(cfg)[1])
-    _ = input("Press Enter to continue...")
     from src.fl.simulation import run_fl_experiment
     global_metrics_history = run_fl_experiment(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")

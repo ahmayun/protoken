@@ -8,10 +8,10 @@ if hasattr(os, 'cpu_count'):
     os.cpu_count = lambda: 4
 
 
-SAMPLES_PER_CLIENT = 100
+SAMPLES_PER_CLIENT = 2048
 TRAIN_TEST_SPLIT = 0.8
 RANDOM_SEED = 42
-TEST_DATASET_SIZE = 100
+TEST_DATASET_SIZE = 256
 FLAG_INITIALIZED = False
 
 _dataset_cache = None
@@ -66,7 +66,7 @@ def initialize_dataset_chunks(tokenizer):
         start_idx = i * SAMPLES_PER_CLIENT
         end_idx = min(start_idx + SAMPLES_PER_CLIENT, len(chess_train))
         if start_idx < len(chess_train):
-            ds = chess_train.select(range(start_idx, end_idx))
+            ds = chess_train.select(range(start_idx, end_idx), keep_in_memory=True)
             ds = format_with_template(tokenizer, ds)
             chess_chunks.append(ds)
         
@@ -76,7 +76,7 @@ def initialize_dataset_chunks(tokenizer):
         start_idx = i * SAMPLES_PER_CLIENT
         end_idx = min(start_idx + SAMPLES_PER_CLIENT, len(math_train))
         if start_idx < len(math_train):
-            ds =  math_train.select(range(start_idx, end_idx))
+            ds =  math_train.select(range(start_idx, end_idx), keep_in_memory=True)
             ds = format_with_template(tokenizer, ds)
             math_chunks.append(ds)
         
@@ -84,8 +84,8 @@ def initialize_dataset_chunks(tokenizer):
     _dataset_cache = {
         'chess_chunks': chess_chunks,
         'math_chunks': math_chunks,
-        'chess_test': format_with_template(tokenizer, chess_test.select(range(min(TEST_DATASET_SIZE, len(chess_test))))),
-        'math_test': format_with_template(tokenizer, math_test.select(range(min(TEST_DATASET_SIZE, len(math_test)))))
+        'chess_test': format_with_template(tokenizer, chess_test.select(range(min(TEST_DATASET_SIZE, len(chess_test))), keep_in_memory=True)),
+        'math_test': format_with_template(tokenizer, math_test.select(range(min(TEST_DATASET_SIZE, len(math_test))), keep_in_memory=True))
     }
 
 def get_client_dataset(cid, tokenizer, num_samples=SAMPLES_PER_CLIENT):

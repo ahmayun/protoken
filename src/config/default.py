@@ -1,7 +1,7 @@
 def get_default_config():
     return {
         "fl": {
-            "num_rounds": 10,
+            "num_rounds": 17,
             "num_clients": 2,
             "clients_per_round": 2
         },
@@ -10,8 +10,8 @@ def get_default_config():
             "per_device_train_batch_size": 32,
             "gradient_accumulation_steps": 1,
             "warmup_steps": 15,
-            "num_train_epochs": 1,
-            "learning_rate": 5e-5,
+            "num_train_epochs": 2,
+            "learning_rate": 1e-5,
             "logging_steps": 20,
             "optim": "adamw_torch",
             "weight_decay": 0.01,
@@ -33,9 +33,9 @@ def get_default_config():
 
         "device": "cuda",
         "total_gpus": 1,
-        "total_cpus": 8,
+        "total_cpus": 10,
         "client_resources": {
-            "num_cpus": 6,
+            "num_cpus": 4,
             "num_gpus": 0.5
         }
     }
