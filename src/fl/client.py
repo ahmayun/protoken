@@ -72,7 +72,7 @@ def create_client_fn(cfg, tokenizer, global_round):
             "tokenizer": tokenizer,
             "device": cfg["device"],
             'round': global_round,
-            "dataset": get_client_dataset(cid, tokenizer, num_samples=100),
+            "dataset": get_client_dataset(cid, tokenizer, num_samples=cfg['dataset']["client_dataset_size"]),
             "sft_config_args": cfg["sft_config_args"]
         }
 

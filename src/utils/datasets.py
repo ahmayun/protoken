@@ -11,8 +11,8 @@ if hasattr(os, 'cpu_count'):
 SAMPLES_PER_CLIENT = 2048
 TRAIN_TEST_SPLIT = 0.8
 RANDOM_SEED = 42
-TEST_DATASET_SIZE = 256
-FLAG_INITIALIZED = False
+TEST_DATASET_SIZE = 2048
+
 
 _dataset_cache = None
 
@@ -84,11 +84,11 @@ def initialize_dataset_chunks(tokenizer):
     _dataset_cache = {
         'chess_chunks': chess_chunks,
         'math_chunks': math_chunks,
-        'chess_test': format_with_template(tokenizer, chess_test.select(range(min(TEST_DATASET_SIZE, len(chess_test))), keep_in_memory=True)),
-        'math_test': format_with_template(tokenizer, math_test.select(range(min(TEST_DATASET_SIZE, len(math_test))), keep_in_memory=True))
+        'chess_test': format_with_template(tokenizer, chess_test.select(range(TEST_DATASET_SIZE)), keep_in_memory=True),
+        'math_test': format_with_template(tokenizer, math_test.select(range(TEST_DATASET_SIZE)), keep_in_memory=True)
     }
 
-def get_client_dataset(cid, tokenizer, num_samples=SAMPLES_PER_CLIENT):
+def get_client_dataset(cid, tokenizer, num_samples):
     if isinstance(cid, str):
         cid = int(cid)
     global _dataset_cache
@@ -103,14 +103,15 @@ def get_client_dataset(cid, tokenizer, num_samples=SAMPLES_PER_CLIENT):
         chunk = _dataset_cache['math_chunks'][cid - 5]
     else:
         raise ValueError(f"Client ID {cid} out of range (0-9)")
-    chunk = chunk.select(range(min(num_samples, len(chunk)))) 
+    chunk = chunk.select(range(num_samples)) 
     return chunk
 
-def get_eval_datasets(tokenizer):
+def get_eval_datasets(tokenizer, num_samples):
     global _dataset_cache
     if _dataset_cache is None:
         initialize_dataset_chunks(tokenizer)
             
     return {
-        "chess": _dataset_cache['chess_test'],
-        "math": _dataset_cache['math_test']}
+        "chess": _dataset_cache['chess_test'].select(range(num_samples)),
+        "math": _dataset_cache['math_test'].select(range(num_samples))
+    }

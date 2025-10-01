@@ -37,5 +37,10 @@ def get_default_config():
         "client_resources": {
             "num_cpus": 4,
             "num_gpus": 0.5
+        },
+
+        "dataset":{
+            "client_dataset_size": 2048,
+            "test_dataset_size": 512
         }
     }

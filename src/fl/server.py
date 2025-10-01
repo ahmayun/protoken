@@ -9,10 +9,8 @@ from src.utils.datasets import get_eval_datasets
 from src.fl.util import ModelUtils, evaluate_llm
 
 
+def create_evaluation_function(global_model, eval_datasets, tokenizer, global_metrics_history, global_round_tracker):
 
-def create_evaluation_function(global_model, tokenizer, global_metrics_history, global_round_tracker):
-    eval_datasets = get_eval_datasets(tokenizer)
-    
     def eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
         global_model_device = global_model
@@ -65,20 +63,25 @@ def create_evaluation_function(global_model, tokenizer, global_metrics_history, 
             server_round, global_model.state_dict(), metrics_record)
 
         return avg_loss, all_metrics
-    
+
     return eval_gm
 
+
 def create_server_fn(global_model, tokenizer, cfg, global_metrics_history, global_round_tracker):
+    eval_datasets = get_eval_datasets(
+        tokenizer, cfg["dataset"]["test_dataset_size"])
+    init_ndarrays = ModelUtils.get_parameters(global_model)
+
     def server_fn(context):
-        init_ndarrays = ModelUtils.get_parameters(global_model)
         strategy = fl.server.strategy.FedAvg(
             min_evaluate_clients=0,
             fraction_evaluate=0,
-            evaluate_fn=create_evaluation_function(global_model, tokenizer, global_metrics_history, global_round_tracker),
+            evaluate_fn=create_evaluation_function(
+                global_model, eval_datasets, tokenizer, global_metrics_history, global_round_tracker),
             initial_parameters=ndarrays_to_parameters(init_ndarrays),
         )
         server_config = fl.server.ServerConfig(
             num_rounds=cfg["fl"]["num_rounds"])
         return fl.server.ServerAppComponents(strategy=strategy, config=server_config)
-    
+
     return server_fn
