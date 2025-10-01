@@ -48,7 +48,7 @@ class CacheManager:
         
     @staticmethod
     def _to_cuda_fp32(model):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cuda"
         return model.to(device=device, dtype=torch.float32)
     
     @staticmethod
@@ -114,3 +114,10 @@ class CacheManager:
         exp_info = experiment_cache[exp_key]        
         round_dict = CacheManager._load_experiment_round(exp_key, round_id)
         return CacheManager._load_models_and_tokenizer_from_round_dict(round_dict, exp_info["experiment_config"])
+    
+    @staticmethod
+    def load_experiment_configuration(exp_key):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        exp_info = experiment_cache[exp_key]        
+        return exp_info["experiment_config"]
+

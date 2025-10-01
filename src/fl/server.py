@@ -70,6 +70,11 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
 def create_server_fn(global_model, tokenizer, cfg, global_metrics_history, global_round_tracker):
     eval_datasets = get_eval_datasets(
         tokenizer, cfg["dataset"]["test_dataset_size"])
+    
+    for ds in eval_datasets.values():
+        evaluate_llm(global_model, tokenizer, ds)
+
+
     init_ndarrays = ModelUtils.get_parameters(global_model)
 
     def server_fn(context):

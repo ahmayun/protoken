@@ -32,7 +32,7 @@ def main():
     global_metrics_history = run_fl_experiment(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")
     CacheManager.consolidate_experiment(
-        exp_key="Test-Refactor", experiment_config=cfg)
+        exp_key="Test-Refactor2", experiment_config=cfg)
     save_and_plot_metrics(global_metrics_history, "results2_refactor")
 
 if __name__ == "__main__":

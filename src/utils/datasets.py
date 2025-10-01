@@ -61,48 +61,41 @@ def initialize_dataset_chunks(tokenizer):
     math_train = math_dataset.select(range(math_train_size))
     math_test = math_dataset.select(range(math_train_size, len(math_dataset)))
 
-    chess_chunks = []
-    for i in range(5):
-        start_idx = i * SAMPLES_PER_CLIENT
-        end_idx = min(start_idx + SAMPLES_PER_CLIENT, len(chess_train))
-        if start_idx < len(chess_train):
-            ds = chess_train.select(range(start_idx, end_idx), keep_in_memory=True)
-            ds = format_with_template(tokenizer, ds)
-            chess_chunks.append(ds)
-        
+    chess_chunks = [format_with_template(tokenizer, chess_train.select(range(SAMPLES_PER_CLIENT), keep_in_memory=True))]
+         
 
-    math_chunks = []
-    for i in range(5):
-        start_idx = i * SAMPLES_PER_CLIENT
-        end_idx = min(start_idx + SAMPLES_PER_CLIENT, len(math_train))
-        if start_idx < len(math_train):
-            ds =  math_train.select(range(start_idx, end_idx), keep_in_memory=True)
-            ds = format_with_template(tokenizer, ds)
-            math_chunks.append(ds)
+    math_chunks = [format_with_template(tokenizer, math_train.select(range(SAMPLES_PER_CLIENT), keep_in_memory=True))]
+     
         
 
     _dataset_cache = {
         'chess_chunks': chess_chunks,
         'math_chunks': math_chunks,
-        'chess_test': format_with_template(tokenizer, chess_test.select(range(TEST_DATASET_SIZE)), keep_in_memory=True),
-        'math_test': format_with_template(tokenizer, math_test.select(range(TEST_DATASET_SIZE)), keep_in_memory=True)
+        'chess_test': format_with_template(tokenizer, chess_test.select(range(TEST_DATASET_SIZE), keep_in_memory=True)),
+        'math_test': format_with_template(tokenizer, math_test.select(range(TEST_DATASET_SIZE), keep_in_memory=True))
     }
 
 def get_client_dataset(cid, tokenizer, num_samples):
-    if isinstance(cid, str):
-        cid = int(cid)
+    
     global _dataset_cache
     if _dataset_cache is None:
         initialize_dataset_chunks(tokenizer)
 
+    
+    if cid == "0":
+        chunk = _dataset_cache['chess_chunks'][0]
+    elif cid == "1":
+        chunk = _dataset_cache['math_chunks'][0]
+
 
     
-    if 0 <= cid <= 4:
-        chunk = _dataset_cache['chess_chunks'][cid]
-    elif 5 <= cid <= 9:
-        chunk = _dataset_cache['math_chunks'][cid - 5]
-    else:
-        raise ValueError(f"Client ID {cid} out of range (0-9)")
+    # if 0 <= cid <= 4:
+    #     chunk = _dataset_cache['chess_chunks'][cid]
+    # elif 5 <= cid <= 9:
+    #     chunk = _dataset_cache['math_chunks'][cid - 5]
+    # else:
+    #     raise ValueError(f"Client ID {cid} out of range (0-9)")
+   
     chunk = chunk.select(range(num_samples)) 
     return chunk
 
@@ -115,3 +108,5 @@ def get_eval_datasets(tokenizer, num_samples):
         "chess": _dataset_cache['chess_test'].select(range(num_samples)),
         "math": _dataset_cache['math_test'].select(range(num_samples))
     }
+
+
