@@ -22,7 +22,7 @@ def get_default_config():
         },
 
         "model_config": {
-            "model_name": "google/gemma-3-270m",  # "google/gemma-3-270m",  "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
+            "model_name": "google/gemma-3-270m",  # "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
             "max_seq_length": 2048,
             "load_in_4bit": False,
             "load_in_8bit": False,

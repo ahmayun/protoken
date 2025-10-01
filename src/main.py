@@ -5,8 +5,7 @@ import time
 import logging
 
 from src.config.base_config import ConfigManager
-from src.utils.utils import  CacheManager
-from src.utils.plotting import save_and_plot_metrics
+from src.utils.utils import  CacheManager, save_json
 
 
 
@@ -33,7 +32,7 @@ def main():
     
      
     CacheManager.consolidate_experiment(exp_key=experiment_key, experiment_config=cfg)
-    save_and_plot_metrics(global_metrics_history, "results", experiment_key)
+    save_json(global_metrics_history, f"results/fl_train_metrics_{experiment_key}.json")
 
 if __name__ == "__main__":
     main()

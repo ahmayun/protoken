@@ -1,0 +1,65 @@
+import time
+from src.fl.simulation import run_fl_experiment
+from src.utils.utils import CacheManager, save_json
+from src.config.base_config import ConfigManager
+
+
+def get_experiment_matrix():
+    experiments = []
+    MODELS = [
+        "google/gemma-3-270m",
+        "google/gemma-3-1b-pt"
+    ]
+
+    DATASET_COMBINATIONS = [
+        ("chess", "math"),
+        ("medical", "finance"),
+        ("coding", "math")
+    ]
+
+    for model in MODELS:
+        for client_0_dataset, client_1_dataset in DATASET_COMBINATIONS:
+            experiment = {
+                "model_name": model,
+                "client_0_dataset": client_0_dataset,
+                "client_1_dataset": client_1_dataset,
+            }
+            experiments.append(experiment)
+
+    return experiments
+
+
+def generate_experiment_config(experiment_setting_dict):
+    config = ConfigManager.load_default_config()
+    config["model_config"]["model_name"] = experiment_setting_dict["model_name"]
+    config["dataset"]["client_0_dataset"] = experiment_setting_dict["client_0_dataset"]
+    config["dataset"]["client_1_dataset"] = experiment_setting_dict["client_1_dataset"]
+    return config
+
+
+def run_experiments():
+    all_experiments = get_experiment_matrix()
+    for i, exp in enumerate(all_experiments):
+        print(f"\n[{i}/{len(all_experiments)}] Running: {exp['experiment_id']}")
+        print(f"Model: {exp['model_name']}")
+        print(
+            f"Datasets: {exp['client_0_dataset']} + {exp['client_1_dataset']}")
+
+        config = generate_experiment_config(exp)
+        experiment_key = ConfigManager.generate_exp_key(config)
+
+        print(f"Key: {experiment_key}")
+
+        start_time = time.time()
+        metrics = run_fl_experiment(config)
+        duration = time.time() - start_time
+
+        CacheManager.consolidate_experiment(experiment_key, config)
+        save_json(metrics, f"results/fl_train_metrics_{experiment_key}.json")
+
+        print(f"✅ Completed in {duration:.1f}s")
+    print(f"\n🎉 All {len(all_experiments)} experiments completed!")
+
+
+if __name__ == "__main__":
+    run_experiments()

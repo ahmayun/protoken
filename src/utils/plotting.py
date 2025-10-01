@@ -4,15 +4,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import json
 
-def save_and_plot_metrics(metrics_list, results_dir, experiment_key):
 
-    results_dir = Path(results_dir)
-
-    json_path = results_dir / f"fl_train_metrics_{experiment_key}.json"
-    
-    with open(json_path, 'w') as f:
-        json.dump(metrics_list, f, indent=2)
-
+def foo (): 
     if not metrics_list:
         print("No metrics to plot")
         return

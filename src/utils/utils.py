@@ -1,10 +1,16 @@
-import unsloth
 from diskcache import Index 
 import torch
 from unsloth import FastModel
 from unsloth.chat_templates import get_chat_template
-
+import json 
 import re
+
+
+def save_json(data, json_path):   
+    with open(json_path, 'w') as f:
+        json.dump(data, f, indent=2)
+    print(f"Saved JSON data to: {json_path}")
+
 
 def sanitize_key(name, slash_replacement="_", max_length=255):
     name = str(name).translate({ord("/"): slash_replacement, 0: None}).strip()
