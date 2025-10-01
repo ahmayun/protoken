@@ -52,3 +52,65 @@ def save_and_plot_metrics(metrics_list, results_dir):
 
     print(f"Metrics saved to: {json_path}")
     print(f"Plot saved to: {plot_path}")
+
+def plot_provenance_accuracy(exp_key, results_dir):
+    json_path = results_dir / f"{exp_key}_provenance.json"
+    
+    if not json_path.exists():
+        print(f"Provenance data not found: {json_path}")
+        return
+    
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    
+    metadata = data["metadata"]
+    provenance_data = data["provenance_data"]
+    
+    if not provenance_data:
+        print("No provenance data to plot")
+        return
+    
+    rounds = []
+    chess_acc = []
+    math_acc = []
+    
+    for round_num, round_data in provenance_data.items():
+        rounds.append(int(round_num))
+        chess_acc.append(round_data.get('chess', 0))
+        math_acc.append(round_data.get('math', 0))
+    
+    sns.set_theme(style="whitegrid", palette="husl")
+    plt.rcParams.update({
+        'font.size': 12,
+        'axes.titlesize': 16,
+        'axes.labelsize': 14,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 12
+    })
+    
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    colors = sns.color_palette("husl", 2)
+    
+    sns.lineplot(x=rounds, y=chess_acc, label='Chess Dataset', ax=ax, 
+                marker='o', markersize=8, linewidth=3, color=colors[0])
+    sns.lineplot(x=rounds, y=math_acc, label='Math Dataset', ax=ax, 
+                marker='s', markersize=8, linewidth=3, color=colors[1])
+    
+    ax.set_title(f'Provenance Accuracy Across Training Rounds\n{metadata["experiment_key"]}', 
+                fontweight='bold', pad=20)
+    ax.set_xlabel('Training Round', fontweight='bold')
+    ax.set_ylabel('Provenance Accuracy (%)', fontweight='bold')
+    ax.set_ylim(0, 105)
+    ax.legend(loc='lower right', frameon=True, fancybox=True, shadow=True)
+    
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
+    
+    plt.tight_layout()
+    
+    plot_path = results_dir / f"{exp_key}_provenance.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+    
+    print(f"Provenance plot saved to: {plot_path}")

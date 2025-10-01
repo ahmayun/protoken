@@ -1,12 +1,14 @@
-import unsloth
 import torch
 from openai import OpenAI
 import gc
+import json
+from pathlib import Path
+from datetime import datetime
 from src.utils.datasets import get_client_dataset
 from src.provenance.fl_prov import ProvTextGenerator, get_all_layers
 from src.utils.judge import llm_judge
 from src.utils.utils import CacheManager, get_model_and_tokenizer
-
+from src.utils.plotting import plot_provenance_accuracy
 
 
 def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models, terminators):
@@ -62,19 +64,19 @@ def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, cl
     return prov_acc
 
 
-def rounds_provenance(exp_key="Test-Refactor2"):
-
+def rounds_provenance(exp_key):
+    import unsloth
     experiment_config = CacheManager.load_experiment_configuration(exp_key)
-    _ , tokenizer = get_model_and_tokenizer(experiment_config)  # to initialize unsloth
+    _, tokenizer = get_model_and_tokenizer(
+        experiment_config)  # to initialize unsloth
 
-
-    
-
-    rounds, sample_idxs = range(16), list(range(10))
+    rounds, sample_idxs = range(4), list(range(10))
     datasets = [
         ("chess", get_client_dataset("0", tokenizer, num_samples=256), "0"),
         ("math", get_client_dataset("1", tokenizer, num_samples=256), "1"),
     ]
+
+    provenance_data = {}
 
     for round_num in rounds:
 
@@ -83,19 +85,27 @@ def rounds_provenance(exp_key="Test-Refactor2"):
             f"PROVENANCE ANALYSIS - ROUND {round_num}")
         print(f"{'='*60}")
 
-        global_model, global_tokenizer, client_models = CacheManager.load_models_and_tokenizer_for_round(exp_key, round_num)
+        global_model, global_tokenizer, client_models = CacheManager.load_models_and_tokenizer_for_round(
+            exp_key, round_num)
         global_model.to("cuda")
 
         terminators = [global_tokenizer.eos_token_id]
 
+        round_data = {}
         for dataset_name, dataset, expected_client_id in datasets:
             print(f"\n{'-'*40}")
             print(f"PROVENANCE - {dataset_name.upper()} DATASET")
             print(f"{'-'*40}")
             prov_acc_list = evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs,
                                                 client_models, terminators, expected_client_id)
+            accuracy = 100.0 * \
+                sum(prov_acc_list) / \
+                len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0
+            round_data[dataset_name] = accuracy
             print(
-                f">> Provenance Accuracy: {sum(prov_acc_list)}/{len(prov_acc_list)} = {100.0 * sum(prov_acc_list)/len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0:.2f}%")
+                f">> Provenance Accuracy: {sum(prov_acc_list)}/{len(prov_acc_list)} = {accuracy:.2f}%")
+
+        provenance_data[round_num] = round_data
 
         _ = [m.cpu() for m in client_models.values()]
         global_model.cpu()
@@ -105,8 +115,26 @@ def rounds_provenance(exp_key="Test-Refactor2"):
         torch.cuda.empty_cache()
         gc.collect()
 
+    return {
+        "metadata": {
+            "experiment_key": exp_key,
+            "experiment_config": experiment_config,
+            "timestamp": datetime.now().isoformat(),
+            "total_rounds": len(rounds),
+            "sample_count": len(sample_idxs),
+            "datasets": [name for name, _, _ in datasets]
+        },
+        "provenance_data": provenance_data
+    }
+
 
 if __name__ == "__main__":
-    rounds_provenance()
+    exp_key = "Test-Refactor2"
+    results_dir = Path("results")
+    # enhanced_data = rounds_provenance(exp_key=exp_key)
+    # json_path = results_dir / f"{exp_key}_provenance.json"
+    # with open(json_path, 'w') as f:
+    #     json.dump(enhanced_data, f, indent=2)
+    # print(f"\nProvenance data saved to: {json_path}")
+    plot_provenance_accuracy(exp_key, results_dir=results_dir)
 
-    # test_all_available_rounds(sample_idx=10)
