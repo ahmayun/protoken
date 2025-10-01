@@ -14,11 +14,19 @@ class ConfigManager:
         return True
     
     @staticmethod
-    def load_config(config_path=None):
+    def generate_exp_key(config):
+        model_name = config["model_config"]["model_name"]  # e.g., "gemma-3-270m-it"
+        num_rounds = config["fl"]["num_rounds"]
+        num_clients = config["fl"]["num_clients"]
+        return f"[{model_name}][rounds{num_rounds}][clients{num_clients}]"
+    
+    @staticmethod
+    def load_config_with_corresponding_key(config_path=None):
         if config_path is None:
             config = ConfigManager.load_default_config()
+            experiment_key = ConfigManager.generate_exp_key(config)
         else:
             raise NotImplementedError("Custom config loading not yet implemented")
         
         ConfigManager.validate_config(config)
-        return config
+        return config, experiment_key

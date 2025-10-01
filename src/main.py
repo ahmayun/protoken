@@ -25,14 +25,15 @@ if hasattr(os, 'cpu_count'):
 
 def main():
     start_time = time.time()
-    cfg = ConfigManager.load_config()
-    print(f"Configuration Loaded: {cfg}")
+    cfg, experiment_key = ConfigManager.load_config_with_corresponding_key()
+    print(f"=============== Training with Experiment Key: {experiment_key} ================")
     initialize_dataset_chunks(get_model_and_tokenizer(cfg)[1])
     from src.fl.simulation import run_fl_experiment
     global_metrics_history = run_fl_experiment(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")
-    CacheManager.consolidate_experiment(
-        exp_key="Test-Refactor2", experiment_config=cfg)
+    
+     
+    CacheManager.consolidate_experiment(exp_key=experiment_key, experiment_config=cfg)
     save_and_plot_metrics(global_metrics_history, "results2_refactor")
 
 if __name__ == "__main__":

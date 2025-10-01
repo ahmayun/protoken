@@ -10,7 +10,7 @@ def get_default_config():
             "per_device_train_batch_size": 32,
             "gradient_accumulation_steps": 1,
             "warmup_steps": 15,
-            "num_train_epochs": 2,
+            "num_train_epochs": 1,
             "learning_rate": 1e-5,
             "logging_steps": 20,
             "optim": "adamw_torch",
@@ -22,7 +22,7 @@ def get_default_config():
         },
 
         "model_config": {
-            "model_name": "unsloth/gemma-3-270m-it",
+            "model_name": "google/gemma-3-270m", # HuggingFaceTB/SmolLM3-3B-Base, Qwen/Qwen3-0.6B-Base, facebook/MobileLLM-R1-950M-base
             "max_seq_length": 2048,
             "load_in_4bit": False,
             "load_in_8bit": False,
