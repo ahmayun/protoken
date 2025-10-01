@@ -107,7 +107,7 @@ class CacheManager:
         cache[key] = model_data
     
     @staticmethod
-    def consolidate_experiment(exp_key, experiment_config):
+    def consolidate_experiment(exp_key, experiment_config, metrics):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         for round_id in range(experiment_config["fl"]["num_rounds"]):
             round_key = f"{exp_key}-round-{round_id}"
@@ -121,7 +121,8 @@ class CacheManager:
             }
         
         experiment_cache[exp_key] = {
-            "experiment_config": experiment_config
+            "experiment_config": experiment_config,
+            "experiment_metrics": metrics
         }
         print("==== Merge global and local model cache is complete. ====")
 
@@ -137,4 +138,10 @@ class CacheManager:
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         exp_info = experiment_cache[exp_key]        
         return exp_info["experiment_config"]
+
+    # check if exp_key exists 
+    @staticmethod
+    def experiment_is_complete(exp_key):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        return exp_key in experiment_cache
 
