@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import json
 
-def save_and_plot_metrics(metrics_list, results_dir):
+def save_and_plot_metrics(metrics_list, results_dir, experiment_key):
 
     results_dir = Path(results_dir)
-    results_dir.mkdir(exist_ok=True)
 
-    json_path = results_dir / "fl_metrics.json"
+    json_path = results_dir / f"fl_train_metrics_{experiment_key}.json"
+    
     with open(json_path, 'w') as f:
         json.dump(metrics_list, f, indent=2)
 
@@ -46,7 +46,7 @@ def save_and_plot_metrics(metrics_list, results_dir):
 
     plt.tight_layout()
 
-    plot_path = results_dir / "fl_metrics.png"
+    plot_path = results_dir / f"fl_metrics_{experiment_key}.png"
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     plt.close()
 

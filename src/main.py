@@ -5,8 +5,7 @@ import time
 import logging
 
 from src.config.base_config import ConfigManager
-from src.utils.datasets import initialize_dataset_chunks
-from src.utils.utils import  CacheManager, get_model_and_tokenizer
+from src.utils.utils import  CacheManager
 from src.utils.plotting import save_and_plot_metrics
 
 
@@ -27,14 +26,14 @@ def main():
     start_time = time.time()
     cfg, experiment_key = ConfigManager.load_config_with_corresponding_key()
     print(f"=============== Training with Experiment Key: {experiment_key} ================")
-    initialize_dataset_chunks(get_model_and_tokenizer(cfg)[1])
+    
     from src.fl.simulation import run_fl_experiment
     global_metrics_history = run_fl_experiment(cfg)
     print(f"Total Time Taken: {time.time() - start_time} seconds")
     
      
     CacheManager.consolidate_experiment(exp_key=experiment_key, experiment_config=cfg)
-    save_and_plot_metrics(global_metrics_history, "results2_refactor")
+    save_and_plot_metrics(global_metrics_history, "results", experiment_key)
 
 if __name__ == "__main__":
     main()

@@ -4,6 +4,17 @@ import torch
 from unsloth import FastModel
 from unsloth.chat_templates import get_chat_template
 
+import re
+
+def sanitize_key(name, slash_replacement="_", max_length=255):
+    name = str(name).translate({ord("/"): slash_replacement, 0: None}).strip()
+    if slash_replacement:
+        rep = re.escape(slash_replacement)
+        name = re.sub(fr"{rep}{{2,}}", slash_replacement, name).strip(slash_replacement)
+    
+    return name[:max_length] if max_length else name
+
+
 def get_model_and_tokenizer(config):
     model_config = config["model_config"]
     get_chat_template_name = config["chat_template"]

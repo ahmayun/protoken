@@ -5,7 +5,6 @@ import os
 import warnings
 
 from src.utils.utils import CacheManager, get_model_and_tokenizer
-from src.utils.datasets import get_client_dataset
 from src.fl.util import ModelUtils, train_llm
 
 # Avoid warnings
@@ -60,19 +59,21 @@ class FlowerClient(fl.client.NumPyClient):
         return parameters, nk_client_data_points, client_train_dict
 
 
-def create_client_fn(cfg, tokenizer, global_round):
+def create_client_fn(cfg, train_dataset_dict, global_round):
     def client_fn(context):
         partition_id = context.node_config["partition-id"]
         cid = f"{partition_id}"
 
+        model, tokenizer = get_model_and_tokenizer(cfg)
+
 
         client_args = {
             "cid": cid,
-            "model": get_model_and_tokenizer(cfg)[0],
+            "model": model,
             "tokenizer": tokenizer,
             "device": cfg["device"],
             'round': global_round,
-            "dataset": get_client_dataset(cid, tokenizer, num_samples=cfg['dataset']["client_dataset_size"]),
+            "dataset": train_dataset_dict[cid],
             "sft_config_args": cfg["sft_config_args"]
         }
 

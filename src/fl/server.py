@@ -5,7 +5,6 @@ import gc
 from flwr.common import ndarrays_to_parameters
 
 from src.utils.utils import CacheManager
-from src.utils.datasets import get_eval_datasets
 from src.fl.util import ModelUtils, evaluate_llm
 
 
@@ -24,6 +23,7 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
         dataset_count = 0
 
         for dataset_name, dataset in eval_datasets.items():
+
             metrics = evaluate_llm(
                 global_model_device, tokenizer, dataset)
             all_metrics[dataset_name] = metrics
@@ -48,10 +48,7 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
 
         metrics_record = {
             "round": server_round,
-            "chess_loss": all_metrics["chess"]["loss"],
-            "chess_perplexity": all_metrics["chess"]["perplexity"],
-            "math_loss": all_metrics["math"]["loss"],
-            "math_perplexity": all_metrics["math"]["perplexity"],
+            "metrics_per_dataset": all_metrics,
             "avg_loss": avg_loss,
             "avg_perplexity": avg_perplexity
         }
@@ -67,14 +64,10 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
     return eval_gm
 
 
-def create_server_fn(global_model, tokenizer, cfg, global_metrics_history, global_round_tracker):
-    eval_datasets = get_eval_datasets(
-        tokenizer, cfg["dataset"]["test_dataset_size"])
+def create_server_fn(cfg, eval_datasets_dict, global_model, tokenizer,  global_metrics_history, global_round_tracker):
     
-    for ds in eval_datasets.values():
-        evaluate_llm(global_model, tokenizer, ds)
-
-
+    
+    
     init_ndarrays = ModelUtils.get_parameters(global_model)
 
     def server_fn(context):
@@ -82,7 +75,7 @@ def create_server_fn(global_model, tokenizer, cfg, global_metrics_history, globa
             min_evaluate_clients=0,
             fraction_evaluate=0,
             evaluate_fn=create_evaluation_function(
-                global_model, eval_datasets, tokenizer, global_metrics_history, global_round_tracker),
+                global_model, eval_datasets_dict, tokenizer, global_metrics_history, global_round_tracker),
             initial_parameters=ndarrays_to_parameters(init_ndarrays),
         )
         server_config = fl.server.ServerConfig(
