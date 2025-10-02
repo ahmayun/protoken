@@ -11,7 +11,7 @@ from src.utils.utils import CacheManager, get_model_and_tokenizer
 from src.utils.plotting import plot_provenance_accuracy
 
 
-def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models, terminators):
+def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models):
     print(
         f"\n\n{15*'-'} Input Index {sample_idx} Response Generation Provenance {15*'-'}")
     conversation = dataset['conversations'][sample_idx]
@@ -28,35 +28,36 @@ def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, cli
         tokenize=False,
         add_generation_prompt=True,
     ).removeprefix('<bos>')
-    print(f">> Input Prompt: {text}")
+    
+    print(f"{text}")
 
-    result = ProvTextGenerator.generate_text(
-        model, client_models, tokenizer, text, terminators
-    )
+    result = ProvTextGenerator.generate_text(model, client_models, tokenizer, text)
     match = True
     # client = OpenAI(base_url="http://localhost:8000/v1", api_key="EMPTY")
     # match = llm_judge(
     #     predicted=result['response'], actual=conversation[2]['content'], client=client)
 
-    print(f">> Actual Response (Ground Truth) -> {conversation[2]['content']}")
-    print(f">> Generated Response: {result['response']}")
-    print(
-        f">> LLM Judge Verdict Generated Vs Actual Response: {'Match' if match else 'No Match'}")
-    print(f">> Provenance Analysis: {result['client2part']}")
-    print(
-        f">> Predicted Client: {max(result['client2part'], key=result['client2part'].get)}")
+    print(f"\n==== Generated Response===\n{result['response']}")
+    print(f"\n**** Actual Response (Ground Truth) ****\n{conversation[2]['content']}")
+
+    # print(
+    #     f">> LLM Judge Verdict Generated Vs Actual Response: {'Match' if match else 'No Match'}")
+    # print(f">> Provenance Analysis: {result['client2part']}")
+    # print(
+    #     f">> Predicted Client: {max(result['client2part'], key=result['client2part'].get)}")
 
     result['is_generation_correct'] = match
+    # _ = input("Press Enter to continue...")
 
     return result
 
 
-def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, client_models, terminators, expected_client_id):
+def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, client_models, expected_client_id):
     prov_acc = []
     for sample_idx in sample_idxs:
         result = generate_response_with_provenance(
             global_model, global_tokenizer, dataset, sample_idx,
-            client_models, terminators
+            client_models
         )
         if result['is_generation_correct']:
             traced_client_id = max(
@@ -67,16 +68,16 @@ def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, cl
 
 def rounds_provenance(exp_key):
     experiment_config = CacheManager.load_experiment_configuration(exp_key)
-    _, tokenizer = get_model_and_tokenizer(
-        experiment_config)  # to initialize unsloth
 
     rounds, sample_idxs = range(experiment_config['fl']['num_rounds']), list(range(10))
-    # datasets = [
-    #     ("chess", get_client_dataset("0", tokenizer, num_samples=256), "0"),
-    #     ("math", get_client_dataset("1", tokenizer, num_samples=256), "1"),
-    # ]
+
     dataset_dict =  get_datasets_dict(experiment_config['dataset'])['test']
-    
+    _, global_tokenizer = get_model_and_tokenizer(experiment_config)
+    print(f"tokenizer.eos_token_id: {global_tokenizer.eos_token_id}")
+        # corresponding token str and id
+    print(f"tokenizer.eos_token: {global_tokenizer.decode(global_tokenizer.eos_token_id)}")
+    print(f"all special tokens: {global_tokenizer.special_tokens_map}")
+    _ = input("Press Enter to continue...")
 
     provenance_data = {}
 
@@ -87,16 +88,17 @@ def rounds_provenance(exp_key):
             f"PROVENANCE ANALYSIS - ROUND {round_num}")
         print(f"{'='*60}")
 
-        global_model, global_tokenizer, client_models = CacheManager.load_models_and_tokenizer_for_round(
+        global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
             exp_key, round_num)
-        global_model.to("cuda")
+
+        
+    
         if len(client_models) == 0 and round_num == 0:
             print("No client models found for this round. Skipping provenance analysis.")
             continue
         elif len(client_models) == 0:
             raise ValueError("No client models found for this round. Cannot proceed with provenance analysis.")
 
-        terminators = [global_tokenizer.eos_token_id]
 
         round_data = {}
         for expected_client_id, dataset in dataset_dict.items():
@@ -106,7 +108,7 @@ def rounds_provenance(exp_key):
             print(f"PROVENANCE - {dataset_name.upper()} DATASET")
             print(f"{'-'*40}")
             prov_acc_list = evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs,
-                                                client_models, terminators, expected_client_id)
+                                                client_models, expected_client_id)
             accuracy = 100.0 * \
                 sum(prov_acc_list) / \
                 len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0

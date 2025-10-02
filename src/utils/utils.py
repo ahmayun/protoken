@@ -96,7 +96,7 @@ class CacheManager:
 
     @staticmethod
     def _load_models_and_tokenizer_from_round_dict(round_dict, config):
-        global_model, global_tokenizer = get_model_and_tokenizer(config)
+        global_model, _ = get_model_and_tokenizer(config)
         global_model_state_dict = round_dict["global"]["model"]
         global_model.load_state_dict(global_model_state_dict, strict=False)
         global_model = CacheManager._to_cuda_fp32(global_model)
@@ -110,7 +110,7 @@ class CacheManager:
 
         print(
             f"==== Loaded global and {len(client_models)} client models from cache. ====")
-        return global_model, global_tokenizer, client_models
+        return global_model, client_models
 
 
     @staticmethod

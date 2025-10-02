@@ -174,8 +174,14 @@ class ProvTextGenerator:
         return {"next_token_id": next_token_id, "acts_grads_dict": acts_grads_dict}
 
     @staticmethod
-    def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=64,
+    def generate_text(model, client2model, tokenizer, prompt, max_new_tokens=64,
                       context_size=2048):
+
+
+        end_of_turn_id = tokenizer.convert_tokens_to_ids("<end_of_turn>")
+
+        terminal_ids = [tokenizer.eos_token_id, end_of_turn_id]
+
 
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
@@ -200,8 +206,9 @@ class ProvTextGenerator:
             for c, v in conts_dict['client2part'].items():
                 client2part[c] = client2part[c] + v
 
-            if temp_id in terminators:
+            if temp_id in terminal_ids:
                 break
+            
             idx = torch.cat((idx, next_token_id), dim=-1)
 
         response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]
