@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 # Use a module-specific logger named "prov"
 logger = logging.getLogger("prov")
-logger.setLevel(logging.DEBUG)  # or logging.INFO as needed
+logger.setLevel(logging.INFO)  # or logging.INFO as needed
 if not logger.hasHandlers():
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
@@ -175,7 +175,7 @@ class ProvTextGenerator:
 
     @staticmethod
     def generate_text(model, client2model, tokenizer, prompt, terminators, max_new_tokens=64,
-                      context_size=1024):
+                      context_size=2048):
 
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
@@ -193,6 +193,7 @@ class ProvTextGenerator:
             conts_dict = neuron_prov.run()
             logger.debug(
                 f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
+            
 
             # mandatory to clear the gradients
             model.zero_grad(set_to_none=True)

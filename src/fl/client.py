@@ -7,6 +7,7 @@ import warnings
 from src.utils.utils import get_model_and_tokenizer
 from src.fl.util import ModelUtils, train_llm
 from src.utils.utils import CacheManager
+from src.utils.datasets import format_with_template
 
 # Avoid warnings
 # os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -33,7 +34,7 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
         tokenizer = self.args["tokenizer"]
         cid = self.args["cid"]
-        dataset = self.args["dataset"]
+        dataset = format_with_template(tokenizer, self.args["dataset"])
 
         if parameters and len(parameters) > 0:
             print(f"Loading {len(parameters)} parameters for client {cid}")

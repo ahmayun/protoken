@@ -6,6 +6,7 @@ from flwr.common import ndarrays_to_parameters
 
 from src.utils.utils import CacheManager
 from src.fl.util import ModelUtils, evaluate_llm
+from src.utils.datasets import format_with_template
 
 
 def create_evaluation_function(global_model, eval_datasets, tokenizer, global_metrics_history):
@@ -22,7 +23,7 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
         dataset_count = 0
 
         for dataset_name, dataset in eval_datasets.items():
-
+            dataset = format_with_template(tokenizer, dataset)
             metrics = evaluate_llm(global_model, tokenizer, dataset)
             all_metrics[dataset_name] = metrics
 

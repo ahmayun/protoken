@@ -51,3 +51,9 @@ Different Categories datasets
 
 
 
+
+
+# Training Help 
+
+- https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma3_(270M).ipynb
+- 

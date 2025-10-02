@@ -27,11 +27,12 @@ def config_sim_resources(cfg):
 
 
 def run_fl_experiment(cfg):
-    global_model, tokenizer = get_model_and_tokenizer(cfg)
-    datasets_dict = get_datasets_dict(cfg["dataset"], tokenizer)
+    
+    datasets_dict = get_datasets_dict(cfg["dataset"])
     global_metrics_history = []
     client_app = fl.client.ClientApp(client_fn=create_client_fn(cfg, datasets_dict['train']))
 
+    global_model, tokenizer = get_model_and_tokenizer(cfg)
     server_app = fl.server.ServerApp(server_fn=create_server_fn(
         cfg, datasets_dict['test'], global_model, tokenizer, global_metrics_history))
 

@@ -28,6 +28,7 @@ def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, cli
         tokenize=False,
         add_generation_prompt=True,
     ).removeprefix('<bos>')
+    print(f">> Input Prompt: {text}")
 
     result = ProvTextGenerator.generate_text(
         model, client_models, tokenizer, text, terminators
@@ -69,12 +70,12 @@ def rounds_provenance(exp_key):
     _, tokenizer = get_model_and_tokenizer(
         experiment_config)  # to initialize unsloth
 
-    rounds, sample_idxs = [0], list(range(10))
+    rounds, sample_idxs = range(experiment_config['fl']['num_rounds']), list(range(10))
     # datasets = [
     #     ("chess", get_client_dataset("0", tokenizer, num_samples=256), "0"),
     #     ("math", get_client_dataset("1", tokenizer, num_samples=256), "1"),
     # ]
-    dataset_dict =  get_datasets_dict(experiment_config['dataset'], tokenizer)['test']
+    dataset_dict =  get_datasets_dict(experiment_config['dataset'])['test']
     
 
     provenance_data = {}
@@ -89,6 +90,11 @@ def rounds_provenance(exp_key):
         global_model, global_tokenizer, client_models = CacheManager.load_models_and_tokenizer_for_round(
             exp_key, round_num)
         global_model.to("cuda")
+        if len(client_models) == 0 and round_num == 0:
+            print("No client models found for this round. Skipping provenance analysis.")
+            continue
+        elif len(client_models) == 0:
+            raise ValueError("No client models found for this round. Cannot proceed with provenance analysis.")
 
         terminators = [global_tokenizer.eos_token_id]
 
@@ -140,20 +146,18 @@ def run_for_key(exp_key, results_dir):
 
 
 if __name__ == "__main__":
-    # exp_key = "Test-Refactor2"
-    # results_dir = Path("results")
-    # enhanced_data = rounds_provenance(exp_key=exp_key)
-    # json_path = results_dir / f"{exp_key}_provenance.json"
-    # with open(json_path, 'w') as f:
-    #     json.dump(enhanced_data, f, indent=2)
-    # print(f"\nProvenance data saved to: {json_path}")
-    # plot_provenance_accuracy(exp_key, results_dir=results_dir)
-    # print(f"completed experiment keys : {}")
-    for exp_key in CacheManager.get_completed_experiments_keys():
-        results_dir = Path("results")
-        print(f"Running provenance analysis for experiment key: {exp_key}")
-        try:
-            run_for_key(exp_key, results_dir)
-        except Exception as e:
-            print(f"Error processing experiment {exp_key}: {e}")
-    
+
+    results_dir = Path("results")
+
+
+    print(f"All completed experiment keys : {CacheManager.get_completed_experiments_keys()}")
+
+    _ = input("Press Enter to run provenance analysis for all completed experiments...")
+
+    run_for_key(exp_key='[google_gemma-3-270m][rounds17][clients2][C0-medical-C1finance]', results_dir=results_dir)  # Example for a specific key
+
+
+    # for exp_key in CacheManager.get_completed_experiments_keys():
+    #     print(f"Running provenance analysis for experiment key: {exp_key}")
+    #     run_for_key(exp_key, results_dir)
+        
