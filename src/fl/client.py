@@ -4,8 +4,9 @@ import time
 import os
 import warnings
 
-from src.utils.utils import CacheManager, get_model_and_tokenizer
+from src.utils.utils import get_model_and_tokenizer
 from src.fl.util import ModelUtils, train_llm
+from src.utils.utils import CacheManager
 
 # Avoid warnings
 # os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -41,18 +42,19 @@ class FlowerClient(fl.client.NumPyClient):
             print(f"No parameters to load for client {cid}, using fresh model")
 
         model = model.to(self.args["device"])
-        train_dict = train_llm(model, tokenizer, dataset, self.args["sft_config_args"])
+        train_dict = train_llm(model, tokenizer, dataset,
+                               self.args["sft_config_args"])
         model = model.to("cpu")
 
-        client_training_info = {
-            "model_state_dict": model.state_dict(),
-            "training_metrics": train_dict,
+        client_state = {
+            "model": model.state_dict(),
+            "metrics": train_dict,
             "client_id": cid,
-            "round": self.args['round'],
             "timestamp": time.time(),
-            "dataset_size": len(dataset)
+            "dataset_size": len(dataset),
         }
-        CacheManager.save_temp_client_model(cid, self.args['round'], client_training_info)
+        CacheManager.save_client_trained_state(cid, client_state)
+
 
         parameters = ModelUtils.get_parameters(model)
         client_train_dict = {"cid": cid} | train_dict
@@ -64,25 +66,19 @@ class FlowerClient(fl.client.NumPyClient):
         return parameters, nk_client_data_points, client_train_dict
 
 
-def create_client_fn(cfg, train_dataset_dict, global_round):
+def create_client_fn(cfg, train_dataset_dict):
     def client_fn(context):
         partition_id = context.node_config["partition-id"]
         cid = f"{partition_id}"
-
         model, tokenizer = get_model_and_tokenizer(cfg)
-
-
         client_args = {
             "cid": cid,
             "model": model,
             "tokenizer": tokenizer,
             "device": cfg["device"],
-            'round': global_round,
             "dataset": train_dataset_dict[cid],
-            "sft_config_args": cfg["sft_config_args"]
+            "sft_config_args": cfg["sft_config_args"],
         }
-
         client = FlowerClient(client_args).to_client()
         return client
-
     return client_fn

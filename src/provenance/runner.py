@@ -4,7 +4,7 @@ import gc
 import json
 from pathlib import Path
 from datetime import datetime
-from src.utils.datasets import get_client_dataset
+from src.utils.datasets import get_datasets_dict
 from src.provenance.fl_prov import ProvTextGenerator, get_all_layers
 from src.utils.judge import llm_judge
 from src.utils.utils import CacheManager, get_model_and_tokenizer
@@ -65,16 +65,17 @@ def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, cl
 
 
 def rounds_provenance(exp_key):
-    import unsloth
     experiment_config = CacheManager.load_experiment_configuration(exp_key)
     _, tokenizer = get_model_and_tokenizer(
         experiment_config)  # to initialize unsloth
 
-    rounds, sample_idxs = range(4), list(range(10))
-    datasets = [
-        ("chess", get_client_dataset("0", tokenizer, num_samples=256), "0"),
-        ("math", get_client_dataset("1", tokenizer, num_samples=256), "1"),
-    ]
+    rounds, sample_idxs = [0], list(range(10))
+    # datasets = [
+    #     ("chess", get_client_dataset("0", tokenizer, num_samples=256), "0"),
+    #     ("math", get_client_dataset("1", tokenizer, num_samples=256), "1"),
+    # ]
+    dataset_dict =  get_datasets_dict(experiment_config['dataset'], tokenizer)['test']
+    
 
     provenance_data = {}
 
@@ -92,7 +93,9 @@ def rounds_provenance(exp_key):
         terminators = [global_tokenizer.eos_token_id]
 
         round_data = {}
-        for dataset_name, dataset, expected_client_id in datasets:
+        for expected_client_id, dataset in dataset_dict.items():
+            dataset_name = experiment_config['dataset'][f'client_{expected_client_id}_dataset']
+
             print(f"\n{'-'*40}")
             print(f"PROVENANCE - {dataset_name.upper()} DATASET")
             print(f"{'-'*40}")
@@ -122,19 +125,35 @@ def rounds_provenance(exp_key):
             "timestamp": datetime.now().isoformat(),
             "total_rounds": len(rounds),
             "sample_count": len(sample_idxs),
-            "datasets": [name for name, _, _ in datasets]
         },
         "provenance_data": provenance_data
     }
 
 
+def run_for_key(exp_key, results_dir):
+    enhanced_data = rounds_provenance(exp_key=exp_key)
+    json_path = results_dir / f"{exp_key}_provenance.json"
+    with open(json_path, 'w') as f:
+        json.dump(enhanced_data, f, indent=2)
+    print(f"\nProvenance data saved to: {json_path}")
+    plot_provenance_accuracy(exp_key, results_dir=results_dir)
+
+
 if __name__ == "__main__":
-    exp_key = "Test-Refactor2"
-    results_dir = Path("results")
+    # exp_key = "Test-Refactor2"
+    # results_dir = Path("results")
     # enhanced_data = rounds_provenance(exp_key=exp_key)
     # json_path = results_dir / f"{exp_key}_provenance.json"
     # with open(json_path, 'w') as f:
     #     json.dump(enhanced_data, f, indent=2)
     # print(f"\nProvenance data saved to: {json_path}")
-    plot_provenance_accuracy(exp_key, results_dir=results_dir)
-
+    # plot_provenance_accuracy(exp_key, results_dir=results_dir)
+    # print(f"completed experiment keys : {}")
+    for exp_key in CacheManager.get_completed_experiments_keys():
+        results_dir = Path("results")
+        print(f"Running provenance analysis for experiment key: {exp_key}")
+        try:
+            run_for_key(exp_key, results_dir)
+        except Exception as e:
+            print(f"Error processing experiment {exp_key}: {e}")
+    

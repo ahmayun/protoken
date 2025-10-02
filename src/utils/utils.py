@@ -1,12 +1,13 @@
-from diskcache import Index 
+from diskcache import Index
 import torch
 from unsloth import FastModel
 from unsloth.chat_templates import get_chat_template
-import json 
+import json
 import re
+from tqdm import tqdm
 
 
-def save_json(data, json_path):   
+def save_json(data, json_path):
     with open(json_path, 'w') as f:
         json.dump(data, f, indent=2)
     print(f"Saved JSON data to: {json_path}")
@@ -16,8 +17,9 @@ def sanitize_key(name, slash_replacement="_", max_length=255):
     name = str(name).translate({ord("/"): slash_replacement, 0: None}).strip()
     if slash_replacement:
         rep = re.escape(slash_replacement)
-        name = re.sub(fr"{rep}{{2,}}", slash_replacement, name).strip(slash_replacement)
-    
+        name = re.sub(fr"{rep}{{2,}}", slash_replacement,
+                      name).strip(slash_replacement)
+
     return name[:max_length] if max_length else name
 
 
@@ -31,95 +33,94 @@ def get_model_and_tokenizer(config):
 
 
 class CacheManager:
-    TEMP_MODEL_CACHE = "_storage/caches/global_model_cache"
-    TEMP_CLIENT_CACHE = "_storage/caches/client_models"
+    TEMP_CLIENTS_MODELS_CACHE = "_storage/caches/clients_models_cache"
+    TEMP_ROUNDS_STORAGE_CACHE = "_storage/caches/rounds_storage_cache"
     EXPERIMENT_CACHE = "_storage/caches/complete_experiment_cache"
-        
+
     @staticmethod
-    def _get_temp_model_cache():
-        return Index(CacheManager.TEMP_MODEL_CACHE)
-    
+    def _get_temp_clients_cache():
+        return Index(CacheManager.TEMP_CLIENTS_MODELS_CACHE)
+
     @staticmethod
-    def _get_temp_client_cache():
-        return Index(CacheManager.TEMP_CLIENT_CACHE)
-    
-    @staticmethod
-    def _client_key(cid, round_num):
-        return f"client_{cid}_round_{round_num}"
-    
-    @staticmethod
-    def _load_temp_global_model(round_num):
-        cache = Index(CacheManager.TEMP_MODEL_CACHE)
-        cached_data = cache[round_num]
-        return cached_data["global_model"], cached_data["metrics"]
-    
-    @staticmethod
-    def _load_temp_client_models(round_num):
-        cache = Index(CacheManager.TEMP_CLIENT_CACHE)
-        client_models = {}
-        for key in cache:
-            if key.endswith(f"_round_{round_num}"):
-                client_id = key.split("_")[1]
-                client_models[client_id] = cache[key]
-        return client_models
-        
+    def _get_temp_rounds_cache():
+        return Index(CacheManager.TEMP_ROUNDS_STORAGE_CACHE)
+
     @staticmethod
     def _to_cuda_fp32(model):
         device = "cuda"
         return model.to(device=device, dtype=torch.float32)
-    
+
+    @staticmethod
+    def save_client_trained_state(cid, client_training_state):
+        print(f"Saving trained state for client {cid}...")
+        cache = CacheManager._get_temp_clients_cache()
+        cache[cid] = client_training_state
+        print(
+            f"Saved trained state for client {cid} to {CacheManager.TEMP_CLIENTS_MODELS_CACHE}")
+
+    def save_round_state(round_num, global_model_state, clients_state):
+        cache = CacheManager._get_temp_rounds_cache()
+        cache[round_num] = {
+            "global": global_model_state,
+            "clients": clients_state
+        }
+        print(
+            f"Saved round {round_num} state to {CacheManager.TEMP_ROUNDS_STORAGE_CACHE}")
+
+    @staticmethod
+    def get_clients_state():
+        cache = CacheManager._get_temp_clients_cache()
+        clients_state = {}
+        for key in cache:
+            clients_state[key] = cache[key]
+        return clients_state
+
+    @staticmethod
+    def remove_clients_state():
+        cache = CacheManager._get_temp_clients_cache()
+        cache.clear()
+        print(
+            f"Removed all clients' states from {CacheManager.TEMP_CLIENTS_MODELS_CACHE}")
+
+    @staticmethod
+    def remove_rounds_state():
+        cache = CacheManager._get_temp_rounds_cache()
+        cache.clear()
+        print(
+            f"Removed all rounds' states from {CacheManager.TEMP_ROUNDS_STORAGE_CACHE}")
+
+    @staticmethod
+    def get_clients_state_count():
+        cache = CacheManager._get_temp_clients_cache()
+        return len(cache)
+
     @staticmethod
     def _load_models_and_tokenizer_from_round_dict(round_dict, config):
-        
         global_model, global_tokenizer = get_model_and_tokenizer(config)
-        
         global_model_state_dict = round_dict["global"]["model"]
         global_model.load_state_dict(global_model_state_dict, strict=False)
         global_model = CacheManager._to_cuda_fp32(global_model)
-        
         client_models = {}
         for client_id, client_data in round_dict["clients"].items():
             client_model, _ = get_model_and_tokenizer(config)
-            client_model_state_dict = client_data["model_state_dict"]
+            client_model_state_dict = client_data["model"]
             client_model.load_state_dict(client_model_state_dict, strict=False)
             client_model = CacheManager._to_cuda_fp32(client_model)
             client_models[client_id] = client_model
-        
-    
-        print(f"==== Loaded global and {len(client_models)} client models from cache. ====")        
+
+        print(
+            f"==== Loaded global and {len(client_models)} client models from cache. ====")
         return global_model, global_tokenizer, client_models
-    
-    @staticmethod
-    def _load_experiment_round(exp_key, round_id):
-        cache = Index(CacheManager.EXPERIMENT_CACHE)
-        round_key = f"{exp_key}-round-{round_id}"
-        return cache[round_key]
-    
-    @staticmethod
-    def save_temp_global_model(round_num, model_state_dict, metrics):
-        cache = CacheManager._get_temp_model_cache()
-        cache[round_num] = {"global_model": model_state_dict, "metrics": metrics}
-    
-    @staticmethod  
-    def save_temp_client_model(cid, round_num, model_data):
-        cache = CacheManager._get_temp_client_cache()
-        key = CacheManager._client_key(cid, round_num)
-        cache[key] = model_data
-    
+
+
     @staticmethod
     def consolidate_experiment(exp_key, experiment_config, metrics):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
-        for round_id in range(experiment_config["fl"]["num_rounds"]):
+        temp_rounds_cache = CacheManager._get_temp_rounds_cache()
+        for round_id in tqdm(range(experiment_config["fl"]["num_rounds"]), desc="Merging rounds cache"):
             round_key = f"{exp_key}-round-{round_id}"
-            
-            global_model_state_dict, global_model_metrics = CacheManager._load_temp_global_model(round_id)
-            clients_models = CacheManager._load_temp_client_models(round_id)
-            
-            experiment_cache[round_key] = {
-                "global": {"model": global_model_state_dict, "metrics": global_model_metrics}, 
-                "clients": clients_models
-            }
-        
+            experiment_cache[round_key] = temp_rounds_cache[round_id]
+
         experiment_cache[exp_key] = {
             "experiment_config": experiment_config,
             "experiment_metrics": metrics
@@ -129,19 +130,28 @@ class CacheManager:
     @staticmethod
     def load_models_and_tokenizer_for_round(exp_key, round_id):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
-        exp_info = experiment_cache[exp_key]        
-        round_dict = CacheManager._load_experiment_round(exp_key, round_id)
+        exp_info = experiment_cache[exp_key]
+        round_key = f"{exp_key}-round-{round_id}"
+        round_dict = experiment_cache[round_key]
         return CacheManager._load_models_and_tokenizer_from_round_dict(round_dict, exp_info["experiment_config"])
-    
+
     @staticmethod
     def load_experiment_configuration(exp_key):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
-        exp_info = experiment_cache[exp_key]        
+        exp_info = experiment_cache[exp_key]
         return exp_info["experiment_config"]
 
-    # check if exp_key exists 
+    # check if exp_key exists
     @staticmethod
     def experiment_is_complete(exp_key):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         return exp_key in experiment_cache
 
+    @staticmethod
+    def get_completed_experiments_keys():
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        keys = []
+        for key in experiment_cache:
+            if key.find('-round-') == -1:  # exclude round-specific keys
+                keys.append(key)
+        return keys

@@ -19,6 +19,7 @@ def get_default_config():
             "seed": 3407,
             "output_dir": None,
             "report_to": None,
+            "disable_tqdm": True,
         },
 
         "model_config": {

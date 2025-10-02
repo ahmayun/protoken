@@ -29,18 +29,11 @@ def config_sim_resources(cfg):
 def run_fl_experiment(cfg):
     global_model, tokenizer = get_model_and_tokenizer(cfg)
     datasets_dict = get_datasets_dict(cfg["dataset"], tokenizer)
-
-    print(f"Simulation Configuration: {cfg}")
-
-    # mutable integer for tracking rounds, list to allow pass-by-reference
-    global_round_tracker = [0]
     global_metrics_history = []
-
-    client_app = fl.client.ClientApp(client_fn=create_client_fn(
-        cfg, datasets_dict['train'], global_round_tracker[0]))
+    client_app = fl.client.ClientApp(client_fn=create_client_fn(cfg, datasets_dict['train']))
 
     server_app = fl.server.ServerApp(server_fn=create_server_fn(
-        cfg, datasets_dict['test'], global_model, tokenizer, global_metrics_history, global_round_tracker))
+        cfg, datasets_dict['test'], global_model, tokenizer, global_metrics_history))
 
     fl.simulation.run_simulation(server_app=server_app, client_app=client_app,
                                  num_supernodes=cfg["fl"]["num_clients"], backend_config=config_sim_resources(cfg))

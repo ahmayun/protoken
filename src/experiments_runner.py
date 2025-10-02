@@ -18,12 +18,12 @@ if hasattr(os, 'cpu_count'):
 def _get_experiment_matrix():
     experiments = []
     MODELS = [
-        "google/gemma-3-270m",
+        # "google/gemma-3-270m",
         "google/gemma-3-1b-pt"
     ]
 
     DATASET_COMBINATIONS = [
-        ("chess", "math"),
+        # ("chess", "math"),
         ("medical", "finance"),
         ("coding", "math")
     ]
@@ -53,7 +53,7 @@ def run_experiments():
     for i, exp in enumerate(all_experiments):
         config = _generate_experiment_config(exp)
         experiment_key = ConfigManager.generate_exp_key(config)
-
+        metrics = {}
         print(f"[{i}/{len(all_experiments)}] Running: {experiment_key}")
 
 
