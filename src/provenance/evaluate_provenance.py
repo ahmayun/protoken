@@ -8,7 +8,7 @@ from src.utils.datasets import get_datasets_dict
 from src.provenance.fl_prov import ProvTextGenerator, get_all_layers
 from src.utils.judge import llm_judge
 from src.utils.utils import CacheManager, get_model_and_tokenizer
-from src.utils.plotting import plot_provenance_accuracy
+
 
 
 def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models):
@@ -42,7 +42,7 @@ def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, cli
 
     # print(
     #     f">> LLM Judge Verdict Generated Vs Actual Response: {'Match' if match else 'No Match'}")
-    # print(f">> Provenance Analysis: {result['client2part']}")
+    print(f">> Provenance Analysis: {result['client2part']}")
     # print(
     #     f">> Predicted Client: {max(result['client2part'], key=result['client2part'].get)}")
 
@@ -77,7 +77,6 @@ def rounds_provenance(exp_key):
         # corresponding token str and id
     print(f"tokenizer.eos_token: {global_tokenizer.decode(global_tokenizer.eos_token_id)}")
     print(f"all special tokens: {global_tokenizer.special_tokens_map}")
-    _ = input("Press Enter to continue...")
 
     provenance_data = {}
 
@@ -138,28 +137,4 @@ def rounds_provenance(exp_key):
     }
 
 
-def run_for_key(exp_key, results_dir):
-    enhanced_data = rounds_provenance(exp_key=exp_key)
-    json_path = results_dir / f"{exp_key}_provenance.json"
-    with open(json_path, 'w') as f:
-        json.dump(enhanced_data, f, indent=2)
-    print(f"\nProvenance data saved to: {json_path}")
-    plot_provenance_accuracy(exp_key, results_dir=results_dir)
-
-
-if __name__ == "__main__":
-
-    results_dir = Path("results")
-
-
-    print(f"All completed experiment keys : {CacheManager.get_completed_experiments_keys()}")
-
-    _ = input("Press Enter to run provenance analysis for all completed experiments...")
-
-    run_for_key(exp_key='[google_gemma-3-270m][rounds17][clients2][C0-medical-C1finance]', results_dir=results_dir)  # Example for a specific key
-
-
-    # for exp_key in CacheManager.get_completed_experiments_keys():
-    #     print(f"Running provenance analysis for experiment key: {exp_key}")
-    #     run_for_key(exp_key, results_dir)
         

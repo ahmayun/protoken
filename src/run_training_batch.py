@@ -19,14 +19,26 @@ def _get_experiment_matrix():
     experiments = []
     MODELS = [
         "google/gemma-3-270m",
-        "google/gemma-3-1b-pt"
+        "google/gemma-3-1b-pt",
+        # "google/gemma-3-4b-pt"
     ]
 
     DATASET_COMBINATIONS = [
         # ("chess", "math"),
         ("medical", "finance"),
-        ("coding", "math")
+        ("medical", "math"),
+        ("medical", "coding"),
+        ("finance", "math"),
+        ("finance", "coding"),
+        ("math", "coding"),
     ]
+    print(DATASET_COMBINATIONS)
+
+    print(set(DATASET_COMBINATIONS))
+
+    _ = input("Press Enter to continue...")
+
+
 
     for model in MODELS:
         for client_0_dataset, client_1_dataset in DATASET_COMBINATIONS:
