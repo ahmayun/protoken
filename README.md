@@ -1,4 +1,4 @@
-# IDeas 
+# Ideas 
 - Try to do provenance only for first 5-10 tokens and compare with full sequence provenance.  
     - This useful to reduce the overhead of provenance. Specifically for longer sequences in FL when we want to give compensation to clients.
 
