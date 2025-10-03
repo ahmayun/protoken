@@ -5,10 +5,6 @@ import json
 
 def plot_provenance_accuracy(json_path, results_dir):
 
-    if not json_path.exists():
-        print(f"Provenance data not found: {json_path}")
-        return
-
     with open(json_path, 'r') as f:
         data = json.load(f)
 

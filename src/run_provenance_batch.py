@@ -18,7 +18,9 @@ if __name__ == "__main__":
         print(f"Running provenance analysis for experiment key: {exp_key}")
         json_path = results_dir / f"{exp_key}_provenance.json"
 
-        # prov_dict = rounds_provenance(exp_key=exp_key)
-        # save_json(prov_dict, json_path)        
-        
+        if json_path.exists():
+            print(f"Provenance info already exists: {json_path}")
+            continue
+        prov_dict = rounds_provenance(exp_key=exp_key)
+        save_json(prov_dict, json_path)            
         plot_provenance_accuracy(json_path, results_dir=results_dir)

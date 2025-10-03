@@ -1,4 +1,6 @@
-
+# IDeas 
+- Try to do provenance only for first 5-10 tokens and compare with full sequence provenance.  
+    - This useful to reduce the overhead of provenance. Specifically for longer sequences in FL when we want to give compensation to clients.
 
 # Important to update uv 
 ```
@@ -13,6 +15,7 @@ interact -N1 --ntasks-per-node=1 --cpus-per-task=16 -A semcache -p dgx_normal_q 
 
 #a100_normal_q
 interact -N1 --ntasks-per-node=1 --cpus-per-task=32 -A semcache -p a100_normal_q -t 8:00:00 --gres=gpu:2
+interact -N1 -n 1 -A semcache -p a100_normal_q --qos tc_a100_normal_short -t 4:00:00 --gres=gpu:1
 
 # for h200 
 interact -N1 -n 1 --cpus-per-task=32 -A semcache -p h200_normal_q -t 8:00:00 --gres=gpu:2
@@ -57,3 +60,4 @@ Different Categories datasets
 
 - https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma3_(270M).ipynb
 - 
+
