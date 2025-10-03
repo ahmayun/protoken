@@ -5,15 +5,14 @@ import gc
 from flwr.common import ndarrays_to_parameters
 
 from src.utils.utils import CacheManager
-from src.utils.datasets import get_eval_datasets
 from src.fl.util import ModelUtils, evaluate_llm
+from src.utils.datasets import format_with_template
 
 
-def create_evaluation_function(global_model, eval_datasets, tokenizer, global_metrics_history, global_round_tracker):
+def create_evaluation_function(global_model, eval_datasets, tokenizer, global_metrics_history):
 
     def eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
-        global_model_device = global_model
 
         print(
             f"========== GLOBAL MODEL EVALUATION - ROUND {server_round} ==========")
@@ -24,18 +23,18 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
         dataset_count = 0
 
         for dataset_name, dataset in eval_datasets.items():
-            metrics = evaluate_llm(
-                global_model_device, tokenizer, dataset)
+            dataset = format_with_template(tokenizer, dataset)
+            metrics = evaluate_llm(global_model, tokenizer, dataset)
             all_metrics[dataset_name] = metrics
 
             print(
-                f"{dataset_name.capitalize()} Dataset    - Loss: {metrics['loss']:.2f}, Perplexity: {metrics['perplexity']:.2f}")
+                f"{dataset_name.capitalize()} Dataset - Loss: {metrics['loss']:.2f}, Perplexity: {metrics['perplexity']:.2f}")
 
             total_loss += metrics['loss']
             total_perplexity += metrics['perplexity']
             dataset_count += 1
 
-        global_model_device = global_model_device.to("cpu")
+        _ = global_model.to("cpu")
         torch.cuda.empty_cache()
         gc.collect()
 
@@ -44,32 +43,43 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
 
         print(
             f"Average          - Loss: {avg_loss:.2f}, Perplexity: {avg_perplexity:.2f}")
-        print("=" * 60)
 
         metrics_record = {
             "round": server_round,
-            "chess_loss": all_metrics["chess"]["loss"],
-            "chess_perplexity": all_metrics["chess"]["perplexity"],
-            "math_loss": all_metrics["math"]["loss"],
-            "math_perplexity": all_metrics["math"]["perplexity"],
+            "metrics_per_dataset": all_metrics,
             "avg_loss": avg_loss,
             "avg_perplexity": avg_perplexity
         }
+        clients_states = CacheManager.get_clients_state()
+        CacheManager.remove_clients_state()
+        assert CacheManager.get_clients_state_count(
+        ) == 0, "This should be zero after removing trained clients"
+        CacheManager.save_round_state(server_round, {
+                                      "model": global_model.state_dict(), "metrics": metrics_record}, clients_states)
+
         global_metrics_history.append(metrics_record)
-
-        global_round_tracker[0] += 1
-
-        CacheManager.save_temp_global_model(
-            server_round, global_model.state_dict(), metrics_record)
-
+        print(
+            f"Clients state dict keys in round {server_round}: {list(clients_states.keys())}")
+        
+        print("=" * 60)
         return avg_loss, all_metrics
 
     return eval_gm
 
 
-def create_server_fn(global_model, tokenizer, cfg, global_metrics_history, global_round_tracker):
-    eval_datasets = get_eval_datasets(
-        tokenizer, cfg["dataset"]["test_dataset_size"])
+def create_server_fn(cfg, eval_datasets_dict, global_model, tokenizer,  global_metrics_history):
+    import os
+    import multiprocessing
+    _original_cpu_count = multiprocessing.cpu_count
+    multiprocessing.cpu_count = lambda: 4
+
+    if hasattr(os, 'cpu_count'):
+        os.cpu_count = lambda: 4
+
+    # Ensure rounds state is cleared before starting
+    CacheManager.remove_rounds_state()
+    # Ensure clients state is cleared before starting
+    CacheManager.remove_clients_state()
     init_ndarrays = ModelUtils.get_parameters(global_model)
 
     def server_fn(context):
@@ -77,7 +87,7 @@ def create_server_fn(global_model, tokenizer, cfg, global_metrics_history, globa
             min_evaluate_clients=0,
             fraction_evaluate=0,
             evaluate_fn=create_evaluation_function(
-                global_model, eval_datasets, tokenizer, global_metrics_history, global_round_tracker),
+                global_model, eval_datasets_dict, tokenizer, global_metrics_history),
             initial_parameters=ndarrays_to_parameters(init_ndarrays),
         )
         server_config = fl.server.ServerConfig(

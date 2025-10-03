@@ -8,13 +8,8 @@ if hasattr(os, 'cpu_count'):
     os.cpu_count = lambda: 4
 
 
-SAMPLES_PER_CLIENT = 2048
-TRAIN_TEST_SPLIT = 0.8
 RANDOM_SEED = 42
-TEST_DATASET_SIZE = 2048
 
-
-_dataset_cache = None
 
 def format_with_template(tokenizer, dataset):
     def formatting_prompts_func(examples):
@@ -31,87 +26,38 @@ def format_with_template(tokenizer, dataset):
 
     return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
 
-def initialize_dataset_chunks(tokenizer):
-    global _dataset_cache
-    if _dataset_cache is not None:
-        return
-    
-    global_dataset = load_dataset('waris-gill/llm-datasets-instruct-for-FL', split="train")
 
-    chess_dataset = global_dataset.filter(
-        lambda label: label == "chess",
+def get_datasets_dict(dataset_config):
+    client_0_dataset = dataset_config["client_0_dataset"]
+    client_1_dataset = dataset_config["client_1_dataset"]
+    samples_per_client = dataset_config["client_dataset_size"]
+    test_dataset_size = dataset_config["test_dataset_size"]
+
+    global_dataset = load_dataset(
+        'waris-gill/llm-datasets-instruct-for-FL', split="train")
+
+    client_0_dataset_filtered = global_dataset.filter(
+        lambda label: label == client_0_dataset,
         input_columns="label",
         batched=False,
         num_proc=8,
     ).shuffle(seed=RANDOM_SEED)
 
-    math_dataset = global_dataset.filter(
-        lambda label: label == "math",
+    client_1_dataset_filtered = global_dataset.filter(
+        lambda label: label == client_1_dataset,
         input_columns="label",
         batched=False,
         num_proc=8,
     ).shuffle(seed=RANDOM_SEED)
 
-    chess_train_size = int(len(chess_dataset) * TRAIN_TEST_SPLIT)
-    math_train_size = int(len(math_dataset) * TRAIN_TEST_SPLIT)
-    
-    chess_train = chess_dataset.select(range(chess_train_size))
-    chess_test = chess_dataset.select(range(chess_train_size, len(chess_dataset)))
-    
-    math_train = math_dataset.select(range(math_train_size))
-    math_test = math_dataset.select(range(math_train_size, len(math_dataset)))
-
-    chess_chunks = []
-    for i in range(5):
-        start_idx = i * SAMPLES_PER_CLIENT
-        end_idx = min(start_idx + SAMPLES_PER_CLIENT, len(chess_train))
-        if start_idx < len(chess_train):
-            ds = chess_train.select(range(start_idx, end_idx), keep_in_memory=True)
-            ds = format_with_template(tokenizer, ds)
-            chess_chunks.append(ds)
-        
-
-    math_chunks = []
-    for i in range(5):
-        start_idx = i * SAMPLES_PER_CLIENT
-        end_idx = min(start_idx + SAMPLES_PER_CLIENT, len(math_train))
-        if start_idx < len(math_train):
-            ds =  math_train.select(range(start_idx, end_idx), keep_in_memory=True)
-            ds = format_with_template(tokenizer, ds)
-            math_chunks.append(ds)
-        
-
-    _dataset_cache = {
-        'chess_chunks': chess_chunks,
-        'math_chunks': math_chunks,
-        'chess_test': format_with_template(tokenizer, chess_test.select(range(TEST_DATASET_SIZE)), keep_in_memory=True),
-        'math_test': format_with_template(tokenizer, math_test.select(range(TEST_DATASET_SIZE)), keep_in_memory=True)
-    }
-
-def get_client_dataset(cid, tokenizer, num_samples):
-    if isinstance(cid, str):
-        cid = int(cid)
-    global _dataset_cache
-    if _dataset_cache is None:
-        initialize_dataset_chunks(tokenizer)
-
-
-    
-    if 0 <= cid <= 4:
-        chunk = _dataset_cache['chess_chunks'][cid]
-    elif 5 <= cid <= 9:
-        chunk = _dataset_cache['math_chunks'][cid - 5]
-    else:
-        raise ValueError(f"Client ID {cid} out of range (0-9)")
-    chunk = chunk.select(range(num_samples)) 
-    return chunk
-
-def get_eval_datasets(tokenizer, num_samples):
-    global _dataset_cache
-    if _dataset_cache is None:
-        initialize_dataset_chunks(tokenizer)
-            
     return {
-        "chess": _dataset_cache['chess_test'].select(range(num_samples)),
-        "math": _dataset_cache['math_test'].select(range(num_samples))
+        'train': {
+            "0": client_0_dataset_filtered.select(range(samples_per_client), keep_in_memory=True),
+            "1": client_1_dataset_filtered.select(range(samples_per_client), keep_in_memory=True)
+        },
+
+        'test': {
+            "0": client_0_dataset_filtered.select(range(samples_per_client, samples_per_client + test_dataset_size), keep_in_memory=True),
+            "1": client_1_dataset_filtered.select(range(samples_per_client, samples_per_client + test_dataset_size), keep_in_memory=True)
+        }
     }

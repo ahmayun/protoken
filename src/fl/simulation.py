@@ -2,6 +2,7 @@ import flwr as fl
 from src.utils.utils import get_model_and_tokenizer
 from src.fl.client import create_client_fn
 from src.fl.server import create_server_fn
+from src.utils.datasets import get_datasets_dict
 import os
 import multiprocessing
 _original_cpu_count = multiprocessing.cpu_count
@@ -9,6 +10,7 @@ multiprocessing.cpu_count = lambda: 4
 
 if hasattr(os, 'cpu_count'):
     os.cpu_count = lambda: 4
+
 
 def config_sim_resources(cfg):
     client_resources = {"num_cpus": cfg["client_resources"]["num_cpus"]}
@@ -23,28 +25,18 @@ def config_sim_resources(cfg):
     }
     return backend_config
 
+
 def run_fl_experiment(cfg):
-    global_model, tokenizer = get_model_and_tokenizer(cfg)
-
-    print(f"Simulation Configuration: {cfg}")
-
-    global_round_tracker = [0] # mutable integer for tracking rounds, list to allow pass-by-reference
+    
+    datasets_dict = get_datasets_dict(cfg["dataset"])
     global_metrics_history = []
+    client_app = fl.client.ClientApp(client_fn=create_client_fn(cfg, datasets_dict['train']))
 
-    client_app = fl.client.ClientApp(
-        client_fn=create_client_fn(cfg, tokenizer, global_round_tracker[0])
-    )
-    
-    server_app = fl.server.ServerApp(
-        server_fn=create_server_fn(global_model, tokenizer, cfg, global_metrics_history, global_round_tracker)
-    )
+    global_model, tokenizer = get_model_and_tokenizer(cfg)
+    server_app = fl.server.ServerApp(server_fn=create_server_fn(
+        cfg, datasets_dict['test'], global_model, tokenizer, global_metrics_history))
 
-    fl.simulation.run_simulation(
-        server_app=server_app,
-        client_app=client_app,
-        num_supernodes=cfg["fl"]["num_clients"],
-        backend_config=config_sim_resources(cfg),
-    )
+    fl.simulation.run_simulation(server_app=server_app, client_app=client_app,
+                                 num_supernodes=cfg["fl"]["num_clients"], backend_config=config_sim_resources(cfg))
 
-    
     return global_metrics_history

@@ -28,7 +28,7 @@ def dataset_adapter(name: str):
 
         return hf_name, convert_to_chatml
 
-    if name == "math":
+    elif name == "math":
         hf_name = "m-gopichand/deepmind_math_dataset_processed"
 
         def convert_to_chatml(ex):
@@ -42,7 +42,46 @@ def dataset_adapter(name: str):
 
         return hf_name, convert_to_chatml
 
-    raise ValueError(f"Unknown dataset adapter: {name}")
+    elif name == "medical":
+        hf_name = "medalpaca/medical_meadow_medical_flashcards"
+        def convert_to_chatml(ex):
+            return {
+                "conversations": [
+                    {"role": "system", "content": "You are a helpful assistant. Provide concise, correct solutions."},
+                    {"role": "user", "content": ex.get("input")},
+                    {"role": "assistant", "content": ex.get("output")},
+                ]
+            }
+
+        return hf_name, convert_to_chatml
+    
+    elif name == "coding":
+        hf_name = "flwrlabs/code-alpaca-20k"
+        def convert_to_chatml(ex):
+            return {
+                "conversations": [
+                    {"role": "system", "content": "You are a helpful assistant. Provide concise, correct solutions."},
+                    {"role": "user", "content": ex.get("instruction") + " " + ex.get("input", "") },
+                    {"role": "assistant", "content": ex.get("output")},
+                ]
+            }
+        return hf_name, convert_to_chatml
+    
+    elif name == "finance":
+        hf_name = "flwrlabs/fingpt-sentiment-train"
+        def convert_to_chatml(ex):
+            return {
+                "conversations": [
+                    {"role": "system", "content": "You are a helpful assistant. Provide concise, correct solutions."},
+                    {"role": "user", "content": ex.get("instruction") + " " + ex.get("input", "") },
+                    {"role": "assistant", "content": ex.get("output")},
+                ]
+            }
+        return hf_name, convert_to_chatml
+
+
+    else:
+        raise ValueError(f"Unknown dataset adapter: {name}")
 
 
 def dataset_sizes_with_names(datasets: list[str]) -> dict[str, int]:
@@ -104,7 +143,7 @@ def build_train_only(repo_id: str, datasets: list[str]):
 
 def main():
     build_train_only(repo_id="llm-datasets-instruct-for-FL",
-                     datasets=['chess', 'math'])
+                     datasets=['chess', 'math', 'medical', 'coding', 'finance'])
 
 
 if __name__ == "__main__":

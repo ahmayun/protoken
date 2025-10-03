@@ -1,54 +1,64 @@
-from pathlib import Path
 import seaborn as sns
 import matplotlib.pyplot as plt
-import pandas as pd
 import json
 
-def save_and_plot_metrics(metrics_list, results_dir):
 
-    results_dir = Path(results_dir)
-    results_dir.mkdir(exist_ok=True)
+def plot_provenance_accuracy(json_path, results_dir):
 
-    json_path = results_dir / "fl_metrics.json"
-    with open(json_path, 'w') as f:
-        json.dump(metrics_list, f, indent=2)
+    with open(json_path, 'r') as f:
+        data = json.load(f)
 
-    if not metrics_list:
-        print("No metrics to plot")
+    metadata = data["metadata"]
+    provenance_data = data["provenance_data"]
+
+    if not provenance_data:
+        print("No provenance data to plot")
         return
 
-    df = pd.DataFrame(metrics_list)
+    first_round_data = next(iter(provenance_data.values()))
+    dataset_names = list(first_round_data.keys())
 
-    plt.style.use('default')
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    rounds = []
+    dataset_accuracies = {dataset: [] for dataset in dataset_names}
 
-    sns.lineplot(data=df, x='round', y='chess_loss',
-                 label='Chess', ax=ax1, marker='o')
-    sns.lineplot(data=df, x='round', y='math_loss',
-                 label='Math', ax=ax1, marker='s')
-    sns.lineplot(data=df, x='round', y='avg_loss',
-                 label='Average', ax=ax1, marker='^')
-    ax1.set_title('Loss vs Round')
-    ax1.set_xlabel('Round')
-    ax1.set_ylabel('Loss')
-    ax1.grid(True, alpha=0.3)
+    for round_num, round_data in provenance_data.items():
+        rounds.append(int(round_num))
+        for dataset in dataset_names:
+            dataset_accuracies[dataset].append(round_data.get(dataset, 0))
 
-    sns.lineplot(data=df, x='round', y='chess_perplexity',
-                 label='Chess', ax=ax2, marker='o')
-    sns.lineplot(data=df, x='round', y='math_perplexity',
-                 label='Math', ax=ax2, marker='s')
-    sns.lineplot(data=df, x='round', y='avg_perplexity',
-                 label='Average', ax=ax2, marker='^')
-    ax2.set_title('Perplexity vs Round')
-    ax2.set_xlabel('Round')
-    ax2.set_ylabel('Perplexity')
-    ax2.grid(True, alpha=0.3)
+    sns.set_theme(style="white", palette="husl")
+    plt.rcParams.update({
+        'font.size': 12,
+        'axes.titlesize': 16,
+        'axes.labelsize': 14,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 12
+    })
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    colors = sns.color_palette("husl", len(dataset_names))
+    markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
+
+    for i, dataset in enumerate(dataset_names):
+        marker = markers[i % len(markers)]
+        sns.lineplot(x=rounds, y=dataset_accuracies[dataset],
+                     label=f'{dataset.capitalize()} Dataset', ax=ax,
+                     marker=marker, markersize=8, linewidth=3, color=colors[i])
+
+    ax.set_title(f'Provenance Accuracy Across Training Rounds\n{metadata["experiment_key"]}',
+                 fontweight='bold', pad=20)
+    ax.set_xlabel('Training Round', fontweight='bold')
+    ax.set_ylabel('Provenance Accuracy (%)', fontweight='bold')
+    ax.set_ylim(0, 105)
+    ax.legend(loc='lower right', frameon=True, fancybox=True, shadow=True)
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
 
     plt.tight_layout()
 
-    plot_path = results_dir / "fl_metrics.png"
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    plot_path = results_dir / f"provenance_{metadata['experiment_key']}.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
-
-    print(f"Metrics saved to: {json_path}")
-    print(f"Plot saved to: {plot_path}")
+    print(f"Provenance plot saved to: {plot_path}")
