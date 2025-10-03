@@ -27,7 +27,19 @@ def get_default_config():
             "max_seq_length": 2048,
             "load_in_4bit": False,
             "load_in_8bit": False,
-            "full_finetuning": True,
+            "full_finetuning": False,
+        },
+
+        "lora_config": {
+            "use_lora": False,
+            "r": 8,
+            "lora_alpha": 8,
+            "lora_dropout": 0,
+            "bias": "none",
+            "finetune_vision_layers": False,
+            "finetune_language_layers": True,
+            "finetune_attention_modules": True,
+            "finetune_mlp_modules": True,
         },
 
         "chat_template": "gemma3",

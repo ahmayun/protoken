@@ -1,10 +1,9 @@
 from diskcache import Index
 import torch
-from unsloth import FastModel
-from unsloth.chat_templates import get_chat_template
 import json
 import re
 from tqdm import tqdm
+from src.utils.model import get_model_and_tokenizer
 
 
 def save_json(data, json_path):
@@ -22,14 +21,6 @@ def sanitize_key(name, slash_replacement="_", max_length=255):
 
     return name[:max_length] if max_length else name
 
-
-def get_model_and_tokenizer(config):
-    model_config = config["model_config"]
-    get_chat_template_name = config["chat_template"]
-    model, tokenizer = FastModel.from_pretrained(**model_config)
-    tokenizer = get_chat_template(
-        tokenizer, chat_template=get_chat_template_name)
-    return model, tokenizer
 
 
 class CacheManager:

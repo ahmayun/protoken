@@ -1,13 +1,12 @@
 import torch
 from openai import OpenAI
 import gc
-import json
-from pathlib import Path
 from datetime import datetime
 from src.utils.datasets import get_datasets_dict
-from src.provenance.fl_prov import ProvTextGenerator, get_all_layers
+from src.provenance.fl_prov import ProvTextGenerator
 from src.utils.judge import llm_judge
-from src.utils.utils import CacheManager, get_model_and_tokenizer
+from src.utils.utils import CacheManager
+from src.utils.model import get_model_and_tokenizer
 
 
 

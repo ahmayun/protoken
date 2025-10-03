@@ -52,18 +52,20 @@ def _get_experiment_matrix():
     return experiments
 
 
-def _generate_experiment_config(experiment_setting_dict):
+def _generate_experiment_config(experiment_setting_dict, use_lora):
     config = ConfigManager.load_default_config()
     config["model_config"]["model_name"] = experiment_setting_dict["model_name"]
     config["dataset"]["client_0_dataset"] = experiment_setting_dict["client_0_dataset"]
     config["dataset"]["client_1_dataset"] = experiment_setting_dict["client_1_dataset"]
+    if use_lora:
+        config["lora_config"]["use_lora"] = True
     return config
 
 
 def run_experiments():
     all_experiments = _get_experiment_matrix()
     for i, exp in enumerate(all_experiments):
-        config = _generate_experiment_config(exp)
+        config = _generate_experiment_config(exp, use_lora=True)
         experiment_key = ConfigManager.generate_exp_key(config)
         metrics = {}
         print(f"[{i}/{len(all_experiments)}] Running: {experiment_key}")
