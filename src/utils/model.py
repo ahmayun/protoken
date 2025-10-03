@@ -1,3 +1,4 @@
+import unsloth
 import torch
 import math
 from trl import SFTConfig, SFTTrainer
@@ -58,10 +59,10 @@ class ModelUtils:
 def train_llm(model, tokenizer, train_dataset, sft_config_args):
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        # tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=None,
-        dataset_text_field="text",
+        # dataset_text_field="text",
         args=SFTConfig(**sft_config_args)
     )
 

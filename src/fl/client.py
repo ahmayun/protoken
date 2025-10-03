@@ -1,14 +1,15 @@
+import unsloth
 import flwr as fl
 import torch
 import time
 import os
 import warnings
+from peft import get_peft_model_state_dict
 
-from src.utils.model import get_model_and_tokenizer
-from src.utils.model import ModelUtils, train_llm
+
+from src.utils.model import get_model_and_tokenizer, ModelUtils, train_llm
 from src.utils.utils import CacheManager
 from src.utils.datasets import format_with_template
-from peft import get_peft_model_state_dict
 
 # Avoid warnings
 # os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -35,22 +36,15 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
         tokenizer = self.args["tokenizer"]
         cid = self.args["cid"]
-        dataset = format_with_template(tokenizer, self.args["dataset"])
-
-        use_lora = self.args.get("use_lora", False)
+        dataset = format_with_template(tokenizer, self.args["dataset"])        
         
-        if parameters and len(parameters) > 0:
-            print(f"Loading {len(parameters)} parameters for client {cid}")
-            ModelUtils.set_parameters(model, parameters=parameters)
-        else:
-            print(f"No parameters to load for client {cid}, using fresh model")
-
+        ModelUtils.set_parameters(model, parameters=parameters)
         model = model.to(self.args["device"])
         train_dict = train_llm(model, tokenizer, dataset,
                                self.args["sft_config_args"])
         model = model.to("cpu")
 
-        if use_lora:
+        if hasattr(model, 'peft_config'):
             model_state = get_peft_model_state_dict(model)
         else:
             model_state = model.state_dict()
