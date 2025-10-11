@@ -1,5 +1,6 @@
+import unsloth
 import flwr as fl
-from src.utils.utils import get_model_and_tokenizer
+from src.utils.model import get_model_and_tokenizer
 from src.fl.client import create_client_fn
 from src.fl.server import create_server_fn
 from src.utils.datasets import get_datasets_dict

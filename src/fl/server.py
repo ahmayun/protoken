@@ -1,11 +1,10 @@
-import unsloth
 import flwr as fl
 import torch
 import gc
 from flwr.common import ndarrays_to_parameters
 
 from src.utils.utils import CacheManager
-from src.fl.util import ModelUtils, evaluate_llm
+from src.utils.model import ModelUtils, evaluate_llm
 from src.utils.datasets import format_with_template
 
 
