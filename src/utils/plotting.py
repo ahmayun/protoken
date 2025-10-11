@@ -57,8 +57,12 @@ def plot_provenance_accuracy(json_path, results_dir):
         spine.set_linewidth(1.2)
 
     plt.tight_layout()
-
-    plot_path = results_dir / f"provenance_{metadata['experiment_key']}.png"
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
-    plt.close()
-    print(f"Provenance plot saved to: {plot_path}")
+    if results_dir is not None:
+        plot_path = results_dir / f"provenance_{metadata['experiment_key']}.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close()
+        print(f"Provenance plot saved to: {plot_path}")
+        plt.close()
+    else:
+        plt.show()
+        plt.close()

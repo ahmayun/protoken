@@ -18,10 +18,9 @@ if hasattr(os, 'cpu_count'):
 def _get_experiment_matrix():
     experiments = []
     MODELS = [
-        # "unsloth/gemma-3-270m",
-        # "google/gemma-3-270m"
+        # "google/gemma-3-270m",
         "google/gemma-3-1b-pt",
-        # "google/gemma-3-4b-it"
+        "google/gemma-3-4b-it"
     ]
 
     DATASET_COMBINATIONS = [
