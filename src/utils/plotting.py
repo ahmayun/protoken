@@ -62,7 +62,6 @@ def plot_provenance_accuracy(json_path, results_dir):
         plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         print(f"Provenance plot saved to: {plot_path}")
-        plt.close()
     else:
         plt.show()
         plt.close()
