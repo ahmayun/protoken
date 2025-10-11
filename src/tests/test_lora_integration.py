@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import unsloth  # IGNORE
 from src.config.base_config import ConfigManager
-from src.utils.utils import get_model_and_tokenizer
+from src.utils.model import get_model_and_tokenizer
 from src.utils.model import ModelUtils
 
 def test_lora_integration():
