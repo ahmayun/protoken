@@ -1,7 +1,7 @@
 def get_default_config():
     return {
         "fl": {
-            "num_rounds": 17,
+            "num_rounds": 5,
             "num_clients": 2,
             "clients_per_round": 2
         },
@@ -19,30 +19,46 @@ def get_default_config():
             "seed": 3407,
             "output_dir": None,
             "report_to": None,
-            "disable_tqdm": True,
+            "disable_tqdm": False,
+            # "max_length": 2048,
+            "bf16": True,
+            # 'assistant_only_loss': True
         },
 
         "model_config": {
-            "model_name": "google/gemma-3-270m",  # "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
+            #'google/gemma-3-270m-it',  "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
+            "model_name": "google/gemma-3-1b-it",
             "max_seq_length": 2048,
             "load_in_4bit": False,
             "load_in_8bit": False,
             "full_finetuning": False,
         },
 
+        "use_lora": False,
+
         "lora_config": {
-            "use_lora": False,
             "r": 8,
             "lora_alpha": 8,
             "lora_dropout": 0,
             "bias": "none",
-            "finetune_vision_layers": False,
-            "finetune_language_layers": True,
-            "finetune_attention_modules": True,
-            "finetune_mlp_modules": True,
+            # "finetune_vision_layers": False,
+            # "finetune_language_layers": True,
+            # "finetune_attention_modules": True,
+            # "finetune_mlp_modules": True,
+            "task_type": "CAUSAL_LM",
+            # 'target_modules': [
+            #     "q_proj",
+            #     "k_proj",
+            #     "v_proj",
+            #     "o_proj",
+            #     "gate_proj",
+            #     "up_proj",
+            #     "down_proj",
+            # ]
+            "target_modules": 'all-linear'
         },
 
-        "chat_template": "gemma3",
+        "chat_template": "gemma-3",
 
         "device": "cuda",
         "total_gpus": 1,
@@ -52,7 +68,7 @@ def get_default_config():
             "num_gpus": 0.5
         },
 
-        "dataset":{
+        "dataset": {
             "client_dataset_size": 2048,
             "test_dataset_size": 512,
             "client_0_dataset": "chess",

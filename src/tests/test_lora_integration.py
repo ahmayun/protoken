@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
-import unsloth  # IGNORE
+import torch.nn as nn
 from src.config.base_config import ConfigManager
 from src.utils.model import get_model_and_tokenizer
 from src.utils.model import ModelUtils
+from src.provenance.fl_prov import get_all_layers
+
+def has_trainable_params(m: nn.Module, *, recurse=False) -> bool:
+    return any(p.requires_grad for p in m.parameters(recurse=recurse))
+
+def count_params(m: nn.Module, *, trainable_only=False, recurse=False) -> int:
+    it = (p for p in m.parameters(recurse=recurse))
+    if trainable_only:
+        it = (p for p in it if p.requires_grad)
+    return sum(p.numel() for p in it)
 
 def test_lora_integration():
     print("Testing LoRA Integration...")
@@ -30,6 +40,16 @@ def test_lora_integration():
     print("\n4. Testing model loading with LoRA enabled...")
     config["lora_config"]["use_lora"] = True
     lora_model, lora_tokenizer = get_model_and_tokenizer(config)
+    
+    print(lora_model)
+    for name, module in lora_model.named_modules():
+        print(f"Module: {name} | Type: {type(module).__name__}")
+
+    print(" ---------------")
+                
+    _ = input("Press Enter to continue...")
+
+
     print(f"✓ LoRA model loaded successfully: {type(lora_model).__name__}")
     assert hasattr(lora_model, 'peft_config'), "LoRA model should have peft_config attribute"
      

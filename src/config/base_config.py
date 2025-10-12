@@ -22,10 +22,10 @@ class ConfigManager:
         client_0_dataset = config["dataset"]["client_0_dataset"]
         client_1_dataset = config["dataset"]["client_1_dataset"]
         key = f"[{model_name}][rounds{num_rounds}][clients{num_clients}][C0-{client_0_dataset}-C1{client_1_dataset}]"
-        if config['lora_config']['use_lora']:
+        if config['use_lora']:
             lora_r = config['lora_config']['r']
             lora_alpha = config['lora_config']['lora_alpha']
-            key += f"[LoRA-r{lora_r}-alpha{lora_alpha}]"
+            key += f"[LoRA-r{lora_r}-alpha{lora_alpha}][New2]"
         
         return sanitize_key(key)
     

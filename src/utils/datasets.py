@@ -11,20 +11,20 @@ if hasattr(os, 'cpu_count'):
 RANDOM_SEED = 42
 
 
-def format_with_template(tokenizer, dataset):
-    def formatting_prompts_func(examples):
-        convos = examples["conversations"]
-        texts = [
-            tokenizer.apply_chat_template(
-                convo,
-                tokenize=False,
-                add_generation_prompt=False,
-            ).removeprefix("<bos>")
-            for convo in convos
-        ]
-        return {"text": texts}
+# def format_with_template(tokenizer, dataset):
+#     def formatting_prompts_func(examples):
+#         convos = examples["conversations"]
+#         texts = [
+#             tokenizer.apply_chat_template(
+#                 convo,
+#                 tokenize=False,
+#                 add_generation_prompt=False,
+#             ).removeprefix("<bos>")
+#             for convo in convos
+#         ]
+#         return {"text": texts}
 
-    return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
+#     return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
 
 
 def get_datasets_dict(dataset_config):
@@ -35,6 +35,8 @@ def get_datasets_dict(dataset_config):
 
     global_dataset = load_dataset(
         'waris-gill/llm-datasets-instruct-for-FL', split="train")
+    
+    global_dataset = global_dataset.rename_column("conversations", "messages")
 
     client_0_dataset_filtered = global_dataset.filter(
         lambda label: label == client_0_dataset,

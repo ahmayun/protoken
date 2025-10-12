@@ -1,6 +1,7 @@
 import torch
 import logging
 import torch.nn.functional as F
+import torch.nn as nn
 
 # Use a module-specific logger named "prov"
 logger = logging.getLogger("prov")
@@ -11,14 +12,39 @@ if not logger.hasHandlers():
     logger.addHandler(handler)
 
 
+
+def _get_lora_layers(net):
+    all_layers = []
+    for name, layer in net.named_modules():
+        if name.find('lora_dropout') == -1 and name.endswith('.mlp.down_proj.lora_A.default'):
+            all_layers.append({"name": name, "layer": layer})
+
+    layers_to_return = all_layers[-1:]
+    return layers_to_return
+
+
+def get_all_layers(net):
+    if hasattr(net, 'peft_config'):
+        return _get_lora_layers(net)
+
+    all_layers = []
+    for name, mode in net.named_modules():
+         for layer_name in ['lm_head', '.mlp']:
+            if name.endswith(layer_name):
+                all_layers.append({"name": name, "layer": mode})
+    return all_layers[-4:]
+
+
 def _insert_hooks_and_get_hooks_manger(model):
     model.eval()
     model.zero_grad()
     hook_manager = HookManager()
     layers = get_all_layers(model)
+
     for layer_dict in layers:
         hook_manager.insert_hook(
             layer_dict['layer'], key=layer_dict['name'])  # <-- stable key
+
     return hook_manager
 
 
@@ -33,14 +59,7 @@ def _check_anomlies(t):
         raise ValueError("Anomalies detected in tensor")
 
 
-def get_all_layers(net):
-    all_layers = []
-    for name, mode in net.named_modules():
-        if name in ['lm_head', 'model.layers.17.mlp', 'model.layers.16.mlp', 'model.layers.15.mlp']:
-            all_layers.append({"name": name, "layer": mode})
-        # elif type(mode) == torch.nn.Linear:
-        #     all_layers.append({"name": name, "layer": mode})
-    return all_layers  # [len(all_layers)-2:]
+
 
 
 def _normalize_with_softmax(contributions):
@@ -75,9 +94,11 @@ class HookManager:
         ]
 
     def get_hooks_data(self):
+        result = {"activations": self.storage_forward,
+                  "gradients": self.storage_backward}
         for h in self.all_hooks:
             h.remove()
-        return {"activations": self.storage_forward, "gradients": self.storage_backward}
+        return result
 
 
 class NeuronProvenance:
@@ -111,8 +132,16 @@ class NeuronProvenance:
     def _calculate_clients_contributions(gm_acts_grads_dict, client2layers, device):
         client2totalpart = {}
 
-        layers_names = sorted(gm_acts_grads_dict["activations"].keys())
-        for key in layers_names:
+        all_layers_names = list(gm_acts_grads_dict["activations"].keys())
+
+        # temp = gm_acts_grads_dict["gradients"].keys()
+        # for name in all_layers_names:
+        #     print (f"{name}, has grads: {name in temp}")
+
+        # _ = input("Press Enter to continue...")
+
+        for key in all_layers_names:
+            # print(key)
 
             layer_inputs = gm_acts_grads_dict["activations"][key]
             layer_grads = gm_acts_grads_dict["gradients"][key]
@@ -132,6 +161,7 @@ class NeuronProvenance:
 
             # c2contribution_per_layer = _normalize_with_softmax(c2contribution_per_layer)
             # logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
+            logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
             for cid, v in c2contribution_per_layer.items():
                 client2totalpart[cid] = client2totalpart.get(cid, 0.0) + v
@@ -157,6 +187,7 @@ class ProvTextGenerator:
         hook_manager = _insert_hooks_and_get_hooks_manger(model)
         model.zero_grad(set_to_none=True)
         model.eval()
+        model.train()  # to enable gradients
 
         # 1. Perform a forward pass to get the logits for the next token
         outputs = model(idx_cond)
@@ -176,12 +207,13 @@ class ProvTextGenerator:
     @staticmethod
     def generate_text(model, client2model, tokenizer, prompt, max_new_tokens=64,
                       context_size=2048):
+        terminal_ids = [tokenizer.eos_token_id]
 
-
-        end_of_turn_id = tokenizer.convert_tokens_to_ids("<end_of_turn>")
-
-        terminal_ids = [tokenizer.eos_token_id, end_of_turn_id]
-
+        try:
+            end_of_turn_id = tokenizer.convert_tokens_to_ids("<end_of_turn>")
+            terminal_ids.append(end_of_turn_id)
+        except:
+            logger.warning("double check if <end_of_turn> token exists in the tokenizer")
 
         encoding = tokenizer(prompt, return_tensors="pt").to('cuda')
         idx = encoding["input_ids"]
@@ -197,9 +229,9 @@ class ProvTextGenerator:
             neuron_prov = NeuronProvenance(
                 token_dict['acts_grads_dict'], client2model)
             conts_dict = neuron_prov.run()
+
             logger.debug(
                 f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
-            
 
             # mandatory to clear the gradients
             model.zero_grad(set_to_none=True)
@@ -208,7 +240,7 @@ class ProvTextGenerator:
 
             if temp_id in terminal_ids:
                 break
-            
+
             idx = torch.cat((idx, next_token_id), dim=-1)
 
         response = idx.squeeze(0)[encoding["input_ids"].shape[-1]:]

@@ -18,8 +18,8 @@ if hasattr(os, 'cpu_count'):
 def _get_experiment_matrix():
     experiments = []
     MODELS = [
-        # "google/gemma-3-270m",
-        "google/gemma-3-1b-pt",
+        # "google/gemma-3-270m-it",
+        # "google/gemma-3-1b-pt",
         "google/gemma-3-4b-it"
     ]
 
@@ -57,8 +57,7 @@ def _generate_experiment_config(experiment_setting_dict, use_lora):
     config["model_config"]["model_name"] = experiment_setting_dict["model_name"]
     config["dataset"]["client_0_dataset"] = experiment_setting_dict["client_0_dataset"]
     config["dataset"]["client_1_dataset"] = experiment_setting_dict["client_1_dataset"]
-    if use_lora:
-        config["lora_config"]["use_lora"] = True
+    config["use_lora"] = use_lora
     return config
 
 

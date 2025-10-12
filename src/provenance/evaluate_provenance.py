@@ -2,18 +2,20 @@ import torch
 from openai import OpenAI
 import gc
 from datetime import datetime
+from peft import get_peft_model_state_dict
 from src.utils.datasets import get_datasets_dict
-from src.provenance.fl_prov import ProvTextGenerator
+from src.provenance.fl_prov import ProvTextGenerator, get_all_layers
 from src.utils.judge import llm_judge
 from src.utils.utils import CacheManager
 from src.utils.model import get_model_and_tokenizer
 
+# 1 = a
 
 
 def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, client_models):
     print(
         f"\n\n{15*'-'} Input Index {sample_idx} Response Generation Provenance {15*'-'}")
-    conversation = dataset['conversations'][sample_idx]
+    conversation = dataset['messages'][sample_idx]
 
     messages = [
         {'role': conversation[0]['role'],
@@ -46,7 +48,6 @@ def generate_response_with_provenance(model, tokenizer, dataset, sample_idx, cli
     #     f">> Predicted Client: {max(result['client2part'], key=result['client2part'].get)}")
 
     result['is_generation_correct'] = match
-    # _ = input("Press Enter to continue...")
 
     return result
 
@@ -68,16 +69,28 @@ def evaluate_provenance(global_model, global_tokenizer, dataset, sample_idxs, cl
 def rounds_provenance(exp_key):
     experiment_config = CacheManager.load_experiment_configuration(exp_key)
 
-    rounds, sample_idxs = range(experiment_config['fl']['num_rounds']), list(range(10))
+    rounds, sample_idxs = range(1, experiment_config['fl']['num_rounds']), list(range(10))
 
     dataset_dict =  get_datasets_dict(experiment_config['dataset'])['test']
-    _, global_tokenizer = get_model_and_tokenizer(experiment_config)
+    temp_model, global_tokenizer = get_model_and_tokenizer(experiment_config)
+
+   
+    layers_for_prov = get_all_layers(temp_model)
+    print(f"Total layers in the model: {len(layers_for_prov)}")
+    for l in layers_for_prov:
+        print(f"{l['name']}, Type = {type(l['layer'])}, Trainable params = {sum(p.numel() for p in l['layer'].parameters() if p.requires_grad)}")
+ 
+
     print(f"tokenizer.eos_token_id: {global_tokenizer.eos_token_id}")
         # corresponding token str and id
     print(f"tokenizer.eos_token: {global_tokenizer.decode(global_tokenizer.eos_token_id)}")
-    print(f"all special tokens: {global_tokenizer.special_tokens_map}")
+    # print(f"all special tokens: {global_tokenizer.special_tokens_map}")
 
     provenance_data = {}
+
+
+    avg_provenance_accuracy =  0.0
+    total_evaluated = 0
 
     for round_num in rounds:
 
@@ -88,7 +101,8 @@ def rounds_provenance(exp_key):
 
         global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
             exp_key, round_num)
-
+        
+        
         
     
         if len(client_models) == 0 and round_num == 0:
@@ -99,6 +113,7 @@ def rounds_provenance(exp_key):
 
 
         round_data = {}
+        
         for expected_client_id, dataset in dataset_dict.items():
             dataset_name = experiment_config['dataset'][f'client_{expected_client_id}_dataset']
 
@@ -110,6 +125,9 @@ def rounds_provenance(exp_key):
             accuracy = 100.0 * \
                 sum(prov_acc_list) / \
                 len(prov_acc_list) if len(prov_acc_list) > 0 else 0.0
+            
+            avg_provenance_accuracy += accuracy
+            total_evaluated += 1
             round_data[dataset_name] = accuracy
             print(
                 f">> Provenance Accuracy: {sum(prov_acc_list)}/{len(prov_acc_list)} = {accuracy:.2f}%")
@@ -123,6 +141,8 @@ def rounds_provenance(exp_key):
         del global_model
         torch.cuda.empty_cache()
         gc.collect()
+    
+    print(f"\n{'='*60} AVERAGE PROVENANCE ACCURACY in {len(rounds)} rounds is {avg_provenance_accuracy/total_evaluated} {'='*60}") 
 
     return {
         "metadata": {

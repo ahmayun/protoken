@@ -1,4 +1,3 @@
-import unsloth
 import flwr as fl
 import torch
 import time
@@ -9,7 +8,6 @@ from peft import get_peft_model_state_dict
 
 from src.utils.model import get_model_and_tokenizer, ModelUtils, train_llm
 from src.utils.utils import CacheManager
-from src.utils.datasets import format_with_template
 
 # Avoid warnings
 # os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -36,7 +34,7 @@ class FlowerClient(fl.client.NumPyClient):
         model = self.args["model"]
         tokenizer = self.args["tokenizer"]
         cid = self.args["cid"]
-        dataset = format_with_template(tokenizer, self.args["dataset"])        
+        dataset = self.args["dataset"]  #format_with_template(tokenizer, self.args["dataset"])        
         
         ModelUtils.set_parameters(model, parameters=parameters)
         model = model.to(self.args["device"])
@@ -46,6 +44,7 @@ class FlowerClient(fl.client.NumPyClient):
 
         if hasattr(model, 'peft_config'):
             model_state = get_peft_model_state_dict(model)
+            print("Using LoRA state dict for saving. For client.")
         else:
             model_state = model.state_dict()
         
@@ -59,14 +58,15 @@ class FlowerClient(fl.client.NumPyClient):
         CacheManager.save_client_trained_state(cid, client_state)
 
 
-        parameters = ModelUtils.get_parameters(model)
         client_train_dict = {"cid": cid} | train_dict
         nk_client_data_points = len(dataset)
 
+        
+        trained_parameters = ModelUtils.get_parameters(model)
         del model
         del dataset
         torch.cuda.empty_cache()
-        return parameters, nk_client_data_points, client_train_dict
+        return trained_parameters, nk_client_data_points, client_train_dict
 
 
 def create_client_fn(cfg, train_dataset_dict):
