@@ -38,12 +38,13 @@ def _get_experiment_matrix():
     return experiments
 
 
-def _generate_experiment_config(experiment_setting_dict, use_lora):
+def _generate_experiment_config(experiment_setting_dict, use_lora, epochs):
     config = ConfigManager.load_default_config()
     config["model_config"]["model_name"] = experiment_setting_dict["model_name"]
     config["dataset"]["client_0_dataset"] = experiment_setting_dict["client_0_dataset"]
     config["dataset"]["client_1_dataset"] = experiment_setting_dict["client_1_dataset"]
     config["use_lora"] = use_lora
+    config['sft_config_args']['num_train_epochs'] = epochs
     return config
 
 
@@ -74,17 +75,19 @@ def run_experiments():
     all_experiments = _get_experiment_matrix()
 
     for i, exp in enumerate(all_experiments):
-        print(f"{i} model_and_dataset_config: {exp}")
+        print(f"{i} Experiment Key: {ConfigManager.generate_exp_key(_generate_experiment_config(exp, use_lora=True, epochs=2))}")
+    
+    _ = input("Only for test. Press enter to continue.")
 
     for i, exp in enumerate(all_experiments):
-        config = _generate_experiment_config(exp, use_lora=True)
+        config = _generate_experiment_config(exp, use_lora=True, epochs=2)
         print(f"Experiment [{i}/{len(all_experiments)}]")
         single_exp_run(config)
     
     print(f"\n🎉 All {len(all_experiments)} experiments completed!")
     
     for i, exp in enumerate(all_experiments):
-        config = _generate_experiment_config(exp, use_lora=False)
+        config = _generate_experiment_config(exp, use_lora=False, epochs=2)
         print(f"Experiment [{i}/{len(all_experiments)}]")
         single_exp_run(config)
 

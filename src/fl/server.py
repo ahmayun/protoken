@@ -77,13 +77,7 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
 
 
 def create_server_fn(cfg, eval_datasets_dict, global_model, tokenizer,  global_metrics_history):
-    import os
-    import multiprocessing
-    _original_cpu_count = multiprocessing.cpu_count
-    multiprocessing.cpu_count = lambda: 4
-
-    if hasattr(os, 'cpu_count'):
-        os.cpu_count = lambda: 4
+   
 
     # Ensure rounds state is cleared before starting
     CacheManager.remove_rounds_state()

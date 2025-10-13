@@ -108,11 +108,11 @@ class CacheManager:
             #     model_path, None, save_method="merged_16bit")
             # model, _ = FastLanguageModel.from_pretrained(model_name=model_path)
             # model = model.merge_and_unload()
-            CacheManager._to_cuda_fp32(model)
 
         else:
             model.load_state_dict(state_dict, strict=True)
-
+        
+        CacheManager._to_cuda_fp32(model)
         return model
 
     @staticmethod

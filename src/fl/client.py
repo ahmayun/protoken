@@ -9,16 +9,6 @@ from peft import get_peft_model_state_dict
 from src.utils.model import get_model_and_tokenizer, ModelUtils, train_llm
 from src.utils.utils import CacheManager
 
-# Avoid warnings
-# os.environ["TOKENIZERS_PARALLELISM"] = "true"
-# os.environ["RAY_DISABLE_DOCKER_CPU_WARNING"] = "1"
-# warnings.filterwarnings("ignore", category=UserWarning)
-import os
-import multiprocessing
-_original_cpu_count = multiprocessing.cpu_count
-multiprocessing.cpu_count = lambda: 4
-if hasattr(os, 'cpu_count'):
-    os.cpu_count = lambda: 4
 
 
 class FlowerClient(fl.client.NumPyClient):

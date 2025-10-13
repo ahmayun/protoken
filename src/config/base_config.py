@@ -21,7 +21,7 @@ class ConfigManager:
         num_clients = config["fl"]["num_clients"]
         client_0_dataset = config["dataset"]["client_0_dataset"]
         client_1_dataset = config["dataset"]["client_1_dataset"]
-        key = f"[{model_name}][rounds{num_rounds}][clients{num_clients}][C0-{client_0_dataset}-C1{client_1_dataset}]"
+        key = f"[{model_name}][rounds{num_rounds}][epochs-{config['sft_config_args']['num_train_epochs']}][clients{num_clients}][C0-{client_0_dataset}-C1{client_1_dataset}]"
         if config['use_lora']:
             lora_r = config['lora_config']['r']
             lora_alpha = config['lora_config']['lora_alpha']
