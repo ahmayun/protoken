@@ -19,7 +19,7 @@ def _get_lora_layers(net):
         if name.find('lora_dropout') == -1 and name.endswith('.mlp.down_proj.lora_A.default'):
             all_layers.append({"name": name, "layer": layer})
 
-    layers_to_return = all_layers[-1:]
+    layers_to_return = all_layers[-2:]
     return layers_to_return
 
 

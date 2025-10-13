@@ -4,8 +4,21 @@ import torch
 import gc
 from flwr.common import ndarrays_to_parameters
 
+
 from src.utils.utils import CacheManager
 from src.utils.model import ModelUtils, evaluate_llm
+
+
+def average_dicts(metrics_dict):
+    sums = {}
+    for d in metrics_dict.values():
+        for key, value in d.items():
+            sums[key] = sums.get(key, 0) + value
+
+    # Calculate averages
+    averages = {key: sums[key] / len(metrics_dict) for key in sums}
+
+    return averages
 
 
 def create_evaluation_function(global_model, eval_datasets, tokenizer, global_metrics_history):

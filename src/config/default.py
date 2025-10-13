@@ -1,7 +1,7 @@
 def get_default_config():
     return {
         "fl": {
-            "num_rounds": 5,
+            "num_rounds": 16,
             "num_clients": 2,
             "clients_per_round": 2
         },

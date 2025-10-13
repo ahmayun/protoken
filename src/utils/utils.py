@@ -158,7 +158,20 @@ class CacheManager:
         exp_info = experiment_cache[exp_key]
         return exp_info["experiment_config"]
 
-    # check if exp_key exists
+    @staticmethod
+    def load_training_metrics(exp_key):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        exp_info = experiment_cache[exp_key]
+        return exp_info["experiment_metrics"]
+
+    @staticmethod
+    def set_provenance_results(exp_key, prov_results):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        exp_info = experiment_cache[exp_key]
+        exp_info['provenance_results'] = prov_results
+        experiment_cache[exp_key] = exp_info
+        print(f">> {exp_key} updated with provenance results.")
+
     @staticmethod
     def experiment_is_complete(exp_key):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
