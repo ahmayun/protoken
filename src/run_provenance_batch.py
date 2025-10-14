@@ -1,3 +1,9 @@
+from src.utils.judge import llm_judge
+from src.provenance.fl_prov import ProvTextGenerator
+from src.utils.plotting import plot_provenance_accuracy
+from src.utils.utils import save_json, CacheManager
+from src.utils.model import get_model_and_tokenizer
+from src.utils.datasets import get_datasets_dict
 from pathlib import Path
 import torch
 import gc
@@ -10,20 +16,29 @@ logging.basicConfig(
 
 logger = logging.getLogger(f"Prov")
 
-from src.utils.datasets import get_datasets_dict
-from src.utils.model import get_model_and_tokenizer
-from src.utils.utils import save_json, CacheManager
-from src.utils.plotting import plot_provenance_accuracy
-from src.provenance.fl_prov import ProvTextGenerator
-from src.utils.judge import llm_judge
+
+MODEL2LayerConfig = {
+    'lora': {
+        'name': 'lora',
+        'patterns': ['.mlp.down_proj.lora_A.default'],
+        'exclude_patterns': ['lora_dropout'],
+        'last_n': 1
+    },
+    'standard': {
+        'name': 'mlp',
+        'patterns': ['.mlp'],
+        'exclude_patterns': [],
+        'last_n': 1
+    }
+}
 
 
 class FL_Provenance:
-    def __init__(self, global_model, client_models, tokenizer):
+    def __init__(self, global_model, client_models, tokenizer, layer_config):
         self.global_model = global_model
         self.client_models = client_models
         self.tokenizer = tokenizer
-        
+        self.layer_config = layer_config
 
     def run_provenance_on_samples(self, dataset_dict, num_samples):
         per_client_accuracy = {}
@@ -48,7 +63,6 @@ class FL_Provenance:
 
         overall_accuracy = sum(per_client_accuracy.values()
                                ) / len(per_client_accuracy)
-        
 
         logger.info(f'Avg. Accuracy = {overall_accuracy}, '
                     f'Per Client Accuracy = {per_client_accuracy}'
@@ -63,20 +77,21 @@ class FL_Provenance:
     def _analyze_single_sample(self, conversation, expected_client_id):
         prompt = self._prepare_prompt(conversation)
         result = ProvTextGenerator.generate_text(
-            self.global_model, self.client_models, self.tokenizer, prompt)
+            self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config)
 
         predicted_client = max(
             result['client2part'], key=result['client2part'].get)
         is_correct = predicted_client == expected_client_id
-        
+
         # Organized logging with f-strings
         logger.info(
+            f"Config: {self.layer_config['name']}, "
             f"Actual: {expected_client_id}, "
             f"Predicted: {predicted_client}, "
-            f"Correct: {is_correct}, "
+            f"Is Correct: {is_correct}, "
             f"Parts: {result['client2part']}"
         )
-        
+
         # Debug logging for additional details
         logger.debug(f"Client contributions: {result['client2part']}")
         logger.debug(f"Prompt length: {len(prompt)} characters")
@@ -127,30 +142,38 @@ class FL_Provenance:
 
 
 def single_round_provenance_refactored(exp_key: str, round_num: int,
-                                       dataset_dict: dict, tokenizer, num_test_samples: int = 10):
+                                       dataset_dict: dict, tokenizer, layer_config, num_test_samples: int = 10):
     logger.info(f"{10*'-'} Round {round_num} {10*'-'}")
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
 
-    with FL_Provenance(global_model, client_models, tokenizer) as fl_prov:
+    with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
             dataset_dict, num_samples=num_test_samples)
 
     return results
 
 
-def rounds_provenance_refactored(exp_key: str, num_test_samples: int = 10):
+def rounds_provenance_refactored(exp_key, num_test_samples: int = 10):
     train_config = CacheManager.load_experiment_configuration(exp_key)
     temp_model, tokenizer = get_model_and_tokenizer(train_config)
+
+    if hasattr(temp_model, 'peft_config'):
+        layers_config = MODEL2LayerConfig['lora']
+    else:
+        layers_config = MODEL2LayerConfig['standard']
+
+    logger.info(f'Layers Config: {layers_config}')
 
     dataset_dict = get_datasets_dict(train_config['dataset'])['test']
 
     round2provenance = {}
-    total_rounds = 3
+    total_rounds = train_config['fl']['num_rounds']
 
     for round_num in range(1, total_rounds):
-        summary_stats = single_round_provenance_refactored(exp_key, round_num, dataset_dict, tokenizer, num_test_samples)
+        summary_stats = single_round_provenance_refactored(
+            exp_key, round_num, dataset_dict, tokenizer, layers_config, num_test_samples)
         round2provenance[round_num] = summary_stats
 
     return {
@@ -170,16 +193,18 @@ def full_cache_provenance_refactored(results_dir: Path, num_test_samples: int = 
             continue
 
         print(f"Running provenance analysis for experiment key: {exp_key}")
-        result = rounds_provenance_refactored(exp_key=exp_key, num_test_samples=num_test_samples)
+        result = rounds_provenance_refactored(
+            exp_key=exp_key, num_test_samples=num_test_samples)
 
         CacheManager.set_provenance_results(exp_key, result)
-        result['training'] = CacheManager.load_training_metrics(exp_key=exp_key)
+        result['training'] = CacheManager.load_training_metrics(
+            exp_key=exp_key)
 
         save_json(result, json_path)
         plot_provenance_accuracy(json_path, results_dir=results_dir)
 
 
-def single_key_provenance_refactored(results_dir: Path, num_test_samples: int = 20):
+def single_key_provenance_refactored(results_dir: Path, num_test_samples: int = 10):
     exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8][New2]"
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
@@ -192,6 +217,7 @@ def single_key_provenance_refactored(results_dir: Path, num_test_samples: int = 
 
 
 if __name__ == "__main__":
+
     results_dir = Path("results")
-    print(f"\n{10*'-'} Running Single Key Analysis {10*'-'}")
-    single_key_provenance_refactored(results_dir, num_test_samples=10)
+    print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
+    single_key_provenance_refactored(results_dir)

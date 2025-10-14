@@ -3,50 +3,34 @@ import logging
 import torch.nn.functional as F
 import torch.nn as nn
 
-# Use a module-specific logger named "prov"
 logger = logging.getLogger("prov")
-logger.setLevel(logging.INFO)  # or logging.INFO as needed
+logger.setLevel(logging.INFO)
 if not logger.hasHandlers():
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
     logger.addHandler(handler)
 
+def get_all_layers(model, layer_config):
+    layers = []
+    for name, layer in model.named_modules():
+        if any(exclude in name for exclude in layer_config['exclude_patterns']):
+            continue
+        if any(name.endswith(pattern) for pattern in layer_config['patterns']):
+            layers.append({"name": name, "layer": layer})
+    
+    return layers[-layer_config['last_n']:]
 
-
-def _get_lora_layers(net):
-    all_layers = []
-    for name, layer in net.named_modules():
-        if name.find('lora_dropout') == -1 and name.endswith('.mlp.down_proj.lora_A.default'):
-            all_layers.append({"name": name, "layer": layer})
-
-    layers_to_return = all_layers[-2:]
-    return layers_to_return
-
-
-def get_all_layers(net):
-    if hasattr(net, 'peft_config'):
-        return _get_lora_layers(net)
-
-    all_layers = []
-    for name, mode in net.named_modules():
-         for layer_name in ['lm_head', '.mlp']:
-            if name.endswith(layer_name):
-                all_layers.append({"name": name, "layer": mode})
-    return all_layers[-4:]
-
-
-def _insert_hooks_and_get_hooks_manger(model):
+def _insert_hooks_and_get_hooks_manger(model, layer_config):
     model.eval()
     model.zero_grad()
     hook_manager = HookManager()
-    layers = get_all_layers(model)
+    layers = get_all_layers(model, layer_config)
 
     for layer_dict in layers:
         hook_manager.insert_hook(
-            layer_dict['layer'], key=layer_dict['name'])  # <-- stable key
+            layer_dict['layer'], key=layer_dict['name'])
 
     return hook_manager
-
 
 def _check_anomlies(t):
     inf_mask = torch.isinf(t)
@@ -55,19 +39,13 @@ def _check_anomlies(t):
         logger.error(f"Inf values: {torch.sum(inf_mask)}")
         logger.error(f"NaN values: {torch.sum(nan_mask)}")
         logger.error(f"Total values: {torch.numel(t)}")
-        # logger.error(f"Total values: {t}")
         raise ValueError("Anomalies detected in tensor")
-
-
-
-
 
 def _normalize_with_softmax(contributions):
     conts = F.softmax(torch.tensor(list(contributions.values())), dim=0)
     client2prov = {cid: v.item()
                    for cid, v in zip(contributions.keys(), conts)}
     return dict(sorted(client2prov.items(), key=lambda item: item[1], reverse=True))
-
 
 class HookManager:
     def __init__(self):
@@ -78,14 +56,10 @@ class HookManager:
     def insert_hook(self, layer, key):
         def _forward_hook(module, input_tensor, output_tensor):
             x = input_tensor[0].detach()
-            # y = output_tensor.detach()
-            # self.storage_forward[key] = (x, y)
             self.storage_forward[key] = x
 
         def _backward_hook(module, grad_input, grad_output):
-            # gx = grad_input[0].detach()
             gy = grad_output[0].detach()
-            # self.storage_backward[key] = (gx, gy)
             self.storage_backward[key] = gy
 
         self.all_hooks += [
@@ -100,13 +74,13 @@ class HookManager:
             h.remove()
         return result
 
-
 class NeuronProvenance:
-    def __init__(self, gm_acts_grads_dict, c2model):
+    def __init__(self, gm_acts_grads_dict, c2model, layer_config):
         self.gm_acts_grads_dict = gm_acts_grads_dict
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.c2model = c2model
+        self.layer_config = layer_config
 
     @staticmethod
     def _evaluate_layer(layer, input_tensor):
@@ -128,21 +102,11 @@ class NeuronProvenance:
             client2part[cli] = cli_part.item() * alpha_imp
         return client2part
 
-    @staticmethod
-    def _calculate_clients_contributions(gm_acts_grads_dict, client2layers, device):
+    def _calculate_clients_contributions(self, gm_acts_grads_dict, client2layers, device):
         client2totalpart = {}
-
         all_layers_names = list(gm_acts_grads_dict["activations"].keys())
 
-        # temp = gm_acts_grads_dict["gradients"].keys()
-        # for name in all_layers_names:
-        #     print (f"{name}, has grads: {name in temp}")
-
-        # _ = input("Press Enter to continue...")
-
         for key in all_layers_names:
-            # print(key)
-
             layer_inputs = gm_acts_grads_dict["activations"][key]
             layer_grads = gm_acts_grads_dict["gradients"][key]
             c2l = {}
@@ -152,15 +116,12 @@ class NeuronProvenance:
                         c2l[cid] = layer_dict['layer']
                         break
 
-            # dtype/device alignment
             c2acts = {cid: NeuronProvenance._evaluate_layer(
                 l, layer_inputs) for cid, l in c2l.items()}
 
             c2contribution_per_layer = NeuronProvenance._calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=c2acts)
 
-            # c2contribution_per_layer = _normalize_with_softmax(c2contribution_per_layer)
-            # logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
             logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
             for cid, v in c2contribution_per_layer.items():
@@ -170,42 +131,34 @@ class NeuronProvenance:
         return client2totalpart
 
     def run(self):
-        client2layers = {cid: get_all_layers(cm)
+        client2layers = {cid: get_all_layers(cm, self.layer_config)
                          for cid, cm in self.c2model.items()}
 
         client2part = self._calculate_clients_contributions(
             self.gm_acts_grads_dict, client2layers, self.device)
 
-        traced_client = max(client2part, key=client2part.get)  # type: ignore
+        traced_client = max(client2part, key=client2part.get)
         return {"traced_client": traced_client, "client2part": client2part}
-
 
 class ProvTextGenerator:
 
     @staticmethod
-    def _get_next_token_id(model, idx_cond):
-        hook_manager = _insert_hooks_and_get_hooks_manger(model)
+    def _get_next_token_id(model, idx_cond, layer_config):
+        hook_manager = _insert_hooks_and_get_hooks_manger(model, layer_config)
         model.zero_grad(set_to_none=True)
         model.eval()
-        model.train()  # to enable gradients
+        model.train()
 
-        # 1. Perform a forward pass to get the logits for the next token
         outputs = model(idx_cond)
-        logits = outputs.logits[:, -1, :]  # Shape: (batch_size, vocab_size)
-
+        logits = outputs.logits[:, -1, :]
         next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
-
-        logits[0, next_token_id].backward()  # computing the gradients
-
-        # obj = logits.log_softmax(dim=-1).gather(1, next_token_id).sum()
-        # obj.backward()
-
+        logits[0, next_token_id].backward()
         acts_grads_dict = hook_manager.get_hooks_data()
 
         return {"next_token_id": next_token_id, "acts_grads_dict": acts_grads_dict}
 
     @staticmethod
-    def generate_text(model, client2model, tokenizer, prompt, max_new_tokens=64,
+    def generate_text(model, client2model, tokenizer, prompt, layer_config, max_new_tokens=64,
                       context_size=2048):
         terminal_ids = [tokenizer.eos_token_id]
 
@@ -222,18 +175,17 @@ class ProvTextGenerator:
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -context_size:]
 
-            token_dict = ProvTextGenerator._get_next_token_id(model, idx_cond)
+            token_dict = ProvTextGenerator._get_next_token_id(model, idx_cond, layer_config)
             next_token_id = token_dict["next_token_id"]
             temp_id = next_token_id.item()
 
             neuron_prov = NeuronProvenance(
-                token_dict['acts_grads_dict'], client2model)
+                token_dict['acts_grads_dict'], client2model, layer_config)
             conts_dict = neuron_prov.run()
 
             logger.debug(
                 f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
 
-            # mandatory to clear the gradients
             model.zero_grad(set_to_none=True)
             for c, v in conts_dict['client2part'].items():
                 client2part[c] = client2part[c] + v
