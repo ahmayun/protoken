@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 def get_model_and_tokenizer(config):
     model_config = config["model_config"]
-    get_chat_template_name = config["chat_template"]
 
     model = AutoModelForCausalLM.from_pretrained(model_config['model_name'])
     tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])

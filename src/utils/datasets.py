@@ -1,11 +1,4 @@
 from datasets import load_dataset
-import os
-import multiprocessing
-_original_cpu_count = multiprocessing.cpu_count
-multiprocessing.cpu_count = lambda: 4
-
-if hasattr(os, 'cpu_count'):
-    os.cpu_count = lambda: 4
 
 
 RANDOM_SEED = 42
@@ -35,7 +28,7 @@ def get_datasets_dict(dataset_config):
 
     global_dataset = load_dataset(
         'waris-gill/llm-datasets-instruct-for-FL', split="train")
-    
+
     global_dataset = global_dataset.rename_column("conversations", "messages")
 
     client_0_dataset_filtered = global_dataset.filter(

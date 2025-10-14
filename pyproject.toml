@@ -11,4 +11,5 @@ dependencies = [
     "peft>=0.17.1",
     "seaborn>=0.13.2",
     "trl>=0.23.1",
+    "wandb>=0.22.2",
 ]
