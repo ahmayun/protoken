@@ -1,6 +1,6 @@
 from src.utils.judge import llm_judge
 from src.provenance.fl_prov import ProvTextGenerator
-from src.utils.plotting import plot_provenance_accuracy
+from src.utils.plotting import plot_federated_metrics
 from src.utils.utils import save_json, CacheManager
 from src.utils.model import get_model_and_tokenizer
 from src.utils.datasets import get_datasets_dict
@@ -208,12 +208,13 @@ def single_key_provenance_refactored(results_dir: Path, num_test_samples: int = 
     exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8][New2]"
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
-    prov_dict = rounds_provenance_refactored(
-        exp_key=exp_key, num_test_samples=num_test_samples)
-    CacheManager.set_provenance_results(exp_key, prov_dict)
-    prov_dict['training'] = CacheManager.load_training_metrics(exp_key=exp_key)
+    # prov_dict = rounds_provenance_refactored(
+    #     exp_key=exp_key, num_test_samples=num_test_samples)
+    # CacheManager.set_provenance_results(exp_key, prov_dict)
+    # prov_dict['training'] = CacheManager.load_training_metrics(exp_key=exp_key)
 
-    save_json(prov_dict, json_path)
+    # save_json(prov_dict, json_path)
+    plot_federated_metrics(json_file_path=json_path, result_dir=results_dir)
 
 
 if __name__ == "__main__":
