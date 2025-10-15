@@ -8,7 +8,7 @@ from src.run_provenance_batch import MODEL2LayerConfig
 
 # --- 1. Model Loading ---
 config = get_default_config()
-config['use_lora'] = True
+config['use_lora'] = False
 
 model, tokenizer = get_model_and_tokenizer(config)
 
@@ -59,7 +59,7 @@ print("\n" + "-"*80)
 # --- Detailed Layer Breakdown ---
 print("Detailed Layer Breakdown:")
 # Adjust max_rows if your model has more LoRA layers than this
-pd.set_option('display.max_rows', 200) 
+pd.set_option('display.max_rows', 10000) 
 
 print("\n--- Sample of Frozen Base Model Layers ---")
 print(df[df['Trainable Params'] == 0].head(10).to_string())

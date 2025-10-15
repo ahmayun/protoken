@@ -50,19 +50,20 @@ logger.addHandler(handler)
 MODEL2LayerConfig = {
     'lora': {
         'name': 'lora',
-        'patterns': ['.self_attn.o_proj.lora_A.default', 'self_attn.o_proj.lora_B.default'
-                     '.mlp.gate_proj.lora_A.default', '.mlp.gate_proj.lora_B.default',
-                     '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
-                     'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
-                     ],
+        # 'patterns': ['.self_attn.o_proj.lora_A.default', 'self_attn.o_proj.lora_B.default'
+        #              '.mlp.gate_proj.lora_A.default', '.mlp.gate_proj.lora_B.default',
+        #              '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
+        #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
+        #              ],
+        'patterns' : ['.lora_A.default', '.lora_B.default'],
         'exclude_patterns': ['lora_dropout'],
-        'last_n': 8
+        'last_n': 2
     },
     'standard': {
         'name': 'mlp',
-        'patterns': ['.mlp'],
+        'patterns': ['.mlp.gate_proj', '.mlp.up_proj', '.mlp.down_proj'],
         'exclude_patterns': [],
-        'last_n': 1
+        'last_n': 3
     }
 }
 
@@ -118,6 +119,9 @@ class FL_Provenance:
             self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config)
         
         logger.debug(f">> Generated Response: {result['response']}\n")
+
+        assert len(result['client2part']) > 1, f"Total clients are {len(result['client2part'])}"
+
 
         predicted_client = max(
             result['client2part'], key=result['client2part'].get)
@@ -183,6 +187,8 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
+    
+    assert len(client_models) == len(dataset_dict), f"Total clients are {len(client_models)}"
 
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
@@ -236,7 +242,7 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 10):
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         print(f"[{i}] Key: {exp_key}")
     
-
+    _ = input("\nPress Enter to continue...")
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
         if json_path.exists():
@@ -249,8 +255,13 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 10):
             continue
 
         print(f"\n\n [{i}] Running provenance analysis for experiment key: {exp_key}")
-        result = rounds_provenance_refactored(
-            exp_key=exp_key, num_test_samples=num_test_samples)
+        
+        try:
+            result = rounds_provenance_refactored(
+                exp_key=exp_key, num_test_samples=num_test_samples)
+        except Exception as e:
+            logger.error(f"Error processing {exp_key}: {e}")
+            continue
 
         CacheManager.set_provenance_results(exp_key, result)
         result['training'] = CacheManager.load_training_metrics(
@@ -261,7 +272,8 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 10):
 
 
 def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
-    exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
+    # exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
+    exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance]'
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
@@ -279,6 +291,6 @@ if __name__ == "__main__":
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     # single_key_provenance_refactored(results_dir)
     # while True:
-    #     full_cache_provenance(results_dir)
+    # full_cache_provenance(results_dir)
     #     time.sleep(10)
-    single_key_provenance(results_dir)
+    single_key_provenance(Path("results_debug"))
