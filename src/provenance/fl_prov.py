@@ -1,23 +1,21 @@
 import torch
 import logging
 import torch.nn.functional as F
-import torch.nn as nn
 
-logger = logging.getLogger("prov")
-logger.setLevel(logging.INFO)
-if not logger.hasHandlers():
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
-    logger.addHandler(handler)
+
+
+logger = logging.getLogger("Prov")
+
 
 def get_all_layers(model, layer_config):
     layers = []
     for name, layer in model.named_modules():
-        if any(exclude in name for exclude in layer_config['exclude_patterns']):
+        if any(name.find(exclude) !=-1 for exclude in layer_config['exclude_patterns']):
             continue
         if any(name.endswith(pattern) for pattern in layer_config['patterns']):
             layers.append({"name": name, "layer": layer})
     
+     
     return layers[-layer_config['last_n']:]
 
 def _insert_hooks_and_get_hooks_manger(model, layer_config):
@@ -100,10 +98,11 @@ class NeuronProvenance:
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
             cli_part = torch.dot(cli_acts, gm_layer_grads)
             client2part[cli] = cli_part.item() * alpha_imp
-        return client2part
+        
+        return _normalize_with_softmax(client2part)
 
     def _calculate_clients_contributions(self, gm_acts_grads_dict, client2layers, device):
-        client2totalpart = {}
+        client2part_across_layers = {}
         all_layers_names = list(gm_acts_grads_dict["activations"].keys())
 
         for key in all_layers_names:
@@ -122,13 +121,13 @@ class NeuronProvenance:
             c2contribution_per_layer = NeuronProvenance._calculate_layer_contribution(
                 gm_layer_grads=layer_grads, client2layer_acts=c2acts)
 
-            logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
+            # logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
             for cid, v in c2contribution_per_layer.items():
-                client2totalpart[cid] = client2totalpart.get(cid, 0.0) + v
+                client2part_across_layers[cid] = client2part_across_layers.get(cid, 0.0) + v
 
-        client2totalpart = _normalize_with_softmax(client2totalpart)
-        return client2totalpart
+        client2part_across_layers = _normalize_with_softmax(client2part_across_layers)
+        return client2part_across_layers
 
     def run(self):
         client2layers = {cid: get_all_layers(cm, self.layer_config)
@@ -181,13 +180,13 @@ class ProvTextGenerator:
 
             neuron_prov = NeuronProvenance(
                 token_dict['acts_grads_dict'], client2model, layer_config)
-            conts_dict = neuron_prov.run()
+            per_token_contribution_dict = neuron_prov.run()
 
             logger.debug(
-                f"Token ID: {temp_id}, Decoded Token: {tokenizer.decode(temp_id)}, Contributions Dict: {conts_dict}")
+                f"[{temp_id}],[{tokenizer.decode(temp_id)}], [{per_token_contribution_dict}]")
 
             model.zero_grad(set_to_none=True)
-            for c, v in conts_dict['client2part'].items():
+            for c, v in per_token_contribution_dict['client2part'].items():
                 client2part[c] = client2part[c] + v
 
             if temp_id in terminal_ids:

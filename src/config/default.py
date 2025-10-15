@@ -11,7 +11,7 @@ def get_default_config():
             "gradient_accumulation_steps": 1,
             "warmup_steps": 15,
             "num_train_epochs": 1,
-            "learning_rate": 1e-5,
+            "learning_rate": 5e-5,
             "logging_steps": 20,
             "optim": "adamw_torch",
             "weight_decay": 0.01,
@@ -20,18 +20,16 @@ def get_default_config():
             "output_dir": None,
             "report_to": None,
             "disable_tqdm": False,
-            # "max_length": 2048,
+            "max_length": 2048,
             "bf16": True,
+            "save_strategy": "no", 
+            'dataset_num_proc':4
             # 'assistant_only_loss': True
         },
 
         "model_config": {
             #'google/gemma-3-270m-it',  "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
-            "model_name": "google/gemma-3-1b-it",
-            "max_seq_length": 2048,
-            "load_in_4bit": False,
-            "load_in_8bit": False,
-            "full_finetuning": False,
+            "model_name": "google/gemma-3-270m-it",
         },
 
         "use_lora": False,
@@ -58,7 +56,6 @@ def get_default_config():
             "target_modules": 'all-linear'
         },
 
-        "chat_template": "gemma-3",
 
         "device": "cuda",
         "total_gpus": 1,

@@ -31,6 +31,7 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
         all_metrics = {}
         total_loss = 0.0
 
+
         for dataset_name, dataset in eval_datasets.items():
             metrics = evaluate_llm(global_model, tokenizer, dataset)
             all_metrics[dataset_name] = metrics
@@ -42,7 +43,6 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
         _ = global_model.to("cpu")
         torch.cuda.empty_cache()
         gc.collect()
-
         avg_loss = total_loss / len(eval_datasets)
 
         print(f"Average Loss: {avg_loss:.2f}")

@@ -109,7 +109,7 @@ def plot_token_accuracy(data, ax=None):
     
     return ax
 
-def plot_federated_metrics(json_file_path, result_dir, figsize=(15, 10)):
+def plot_federated_metrics(json_file_path, save_fig_path, figsize=(15, 10)):
     with open(json_file_path, 'r') as f:
         data = json.load(f)
     
@@ -123,11 +123,10 @@ def plot_federated_metrics(json_file_path, result_dir, figsize=(15, 10)):
     plot_provenance_accuracy(data, ax=ax1)
     plot_loss_metrics(data, ax=ax2)
     plot_token_accuracy(data, ax=ax3)
-    
-    plt.suptitle('Federated Learning Metrics Dashboard', fontsize=16, y=0.98)
-    
-    # plt.tight_layout()
-    plt.savefig(result_dir/"test.png")
+    key = str(save_fig_path).split('.')[0].split('/')[1]
+    across_all_rounds_accuracy = round(data['across_all_rounds_accuracy'], 2)
+    plt.suptitle( f"{key}-Prov Total Acc{across_all_rounds_accuracy}", fontsize=16, y=0.98)    
+    plt.savefig(save_fig_path)
 
 
 

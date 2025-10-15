@@ -12,8 +12,8 @@ def _get_experiment_matrix():
     experiments = []
     MODELS = [
         "google/gemma-3-270m-it",
-        "google/gemma-3-1b-it",
-        "Qwen/Qwen3-0.6B"
+        # "google/gemma-3-1b-it",
+        # "Qwen/Qwen3-0.6B"
     ]
 
     DATASET_COMBINATIONS = [

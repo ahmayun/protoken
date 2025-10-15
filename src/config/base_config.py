@@ -25,7 +25,7 @@ class ConfigManager:
         if config['use_lora']:
             lora_r = config['lora_config']['r']
             lora_alpha = config['lora_config']['lora_alpha']
-            key += f"[LoRA-r{lora_r}-alpha{lora_alpha}][New2]"
+            key += f"[LoRA-r{lora_r}-alpha{lora_alpha}]"
         
         return sanitize_key(key)
     

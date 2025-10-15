@@ -86,6 +86,8 @@ def evaluate_llm(model, tokenizer, eval_dataset):
             do_train=False,
             do_eval=True,
             logging_strategy="no",
+            save_strategy = "no",
+            dataset_num_proc=4 
         ),
     )
 
