@@ -8,7 +8,7 @@ from src.run_provenance_batch import MODEL2LayerConfig
 
 # --- 1. Model Loading ---
 config = get_default_config()
-config['use_lora'] = False
+config['use_lora'] = True
 
 model, tokenizer = get_model_and_tokenizer(config)
 
@@ -17,6 +17,7 @@ layer_data = []
 
 # Iterate over all named modules (layers) in the model
 for name, module in model.named_modules():
+    print(f'Larer: {name}, Type: {module.__class__.__name__}')
     num_params = 0
     trainable_params = 0
     

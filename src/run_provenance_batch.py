@@ -56,6 +56,7 @@ MODEL2LayerConfig = {
         #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
         #              ],
         'patterns' : ['.lora_A.default', '.lora_B.default'],
+        # 'patterns': ['.mlp'],
         'exclude_patterns': ['lora_dropout'],
         'last_n': 2
     },
@@ -80,6 +81,7 @@ class FL_Provenance:
         detailed_results = []
 
         for expected_client_id, dataset in dataset_dict.items():
+            dataset =  dataset.shuffle() 
             correct_predictions = 0
             sample_indices = list(
                 range(min(num_samples, len(dataset['messages']))))
@@ -116,7 +118,7 @@ class FL_Provenance:
         prompt = self._prepare_prompt(conversation)
         logger.debug(f">> Input Prompt: {prompt.replace('\n', '').strip()}")
         result = ProvTextGenerator.generate_text(
-            self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config)
+            self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config, max_new_tokens=32)
         
         logger.debug(f">> Generated Response: {result['response']}\n")
 
@@ -182,7 +184,7 @@ class FL_Provenance:
 
 
 def single_round_provenance_refactored(exp_key: str, round_num: int,
-                                       dataset_dict: dict, tokenizer, layer_config, num_test_samples: int = 10):
+                                       dataset_dict: dict, tokenizer, layer_config, num_test_samples):
     logger.info(f"{10*'-'} Round {round_num} {10*'-'}")
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
@@ -197,7 +199,7 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
     return results
 
 
-def rounds_provenance_refactored(exp_key, num_test_samples: int = 10):
+def rounds_provenance_refactored(exp_key, num_test_samples):
     train_config = CacheManager.load_experiment_configuration(exp_key)
     temp_model, tokenizer = get_model_and_tokenizer(train_config)
 
@@ -236,13 +238,12 @@ def rounds_provenance_refactored(exp_key, num_test_samples: int = 10):
     }
 
 
-def full_cache_provenance(results_dir: Path, num_test_samples: int = 10):
+def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
     print(f"{10*'-'} Running Refactored Provenance Analysis {10*'-'}")
 
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         print(f"[{i}] Key: {exp_key}")
     
-    _ = input("\nPress Enter to continue...")
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
         if json_path.exists():
@@ -250,9 +251,7 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 10):
             print(f'\n\n {10*"="}')
             continue
 
-        if exp_key.find('google_gemma-3-270m-it') == -1:
-            print(f"ignoring this key {exp_key}")
-            continue
+        
 
         print(f"\n\n [{i}] Running provenance analysis for experiment key: {exp_key}")
         
@@ -271,9 +270,10 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 10):
         plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"plot_{exp_key}.png")
 
 
-def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
-    # exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
-    exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance]'
+def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
+    exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
+    # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-finance-C1math][LoRA-r8-alpha8]'
+    # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-math-C1coding][LoRA-r8-alpha8]'
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     results_dir = Path("results")
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     # single_key_provenance_refactored(results_dir)
-    # while True:
-    # full_cache_provenance(results_dir)
-    #     time.sleep(10)
-    single_key_provenance(Path("results_debug"))
+    while True:
+        full_cache_provenance(results_dir)
+        time.sleep(10)
+    # single_key_provenance(Path("results_debug"))

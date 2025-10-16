@@ -1,23 +1,8 @@
 from datasets import load_dataset
-
-
 RANDOM_SEED = 42
 
 
-# def format_with_template(tokenizer, dataset):
-#     def formatting_prompts_func(examples):
-#         convos = examples["conversations"]
-#         texts = [
-#             tokenizer.apply_chat_template(
-#                 convo,
-#                 tokenize=False,
-#                 add_generation_prompt=False,
-#             ).removeprefix("<bos>")
-#             for convo in convos
-#         ]
-#         return {"text": texts}
 
-#     return dataset.map(formatting_prompts_func, batched=True, num_proc=8)
 
 
 def get_datasets_dict(dataset_config):

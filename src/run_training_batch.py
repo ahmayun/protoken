@@ -16,15 +16,21 @@ def _get_experiment_matrix():
         # "Qwen/Qwen3-0.6B"
     ]
 
-    DATASET_COMBINATIONS = [
-        # ("chess", "math"),
+    DATASET_COMBINATIONS = list(set([
         ("medical", "finance"),
         ("medical", "math"),
         ("medical", "coding"),
         ("finance", "math"),
         ("finance", "coding"),
         ("math", "coding"),
-    ]
+        ("chess", "finance"),
+        ("chess", "medical"),
+        ("chess", "coding"),
+        ("chess", "math"),
+
+    ]))
+
+
 
     for model in MODELS:
         for client_0_dataset, client_1_dataset in DATASET_COMBINATIONS:
@@ -73,23 +79,23 @@ def single_exp_run(config):
 
 def run_experiments():
     all_experiments = _get_experiment_matrix()
-
+    epochs = 1
     for i, exp in enumerate(all_experiments):
-        print(f"{i} Experiment Key: {ConfigManager.generate_exp_key(_generate_experiment_config(exp, use_lora=True, epochs=2))}")
+        print(f"{i} Experiment Key: {ConfigManager.generate_exp_key(_generate_experiment_config(exp, use_lora=True, epochs=epochs))}")
     
     _ = input("Only for test. Press enter to continue.")
 
     for i, exp in enumerate(all_experiments):
-        config = _generate_experiment_config(exp, use_lora=True, epochs=2)
+        config = _generate_experiment_config(exp, use_lora=True, epochs=epochs)
         print(f"Experiment [{i}/{len(all_experiments)}]")
         single_exp_run(config)
     
     print(f"\n🎉 All {len(all_experiments)} experiments completed!")
     
-    for i, exp in enumerate(all_experiments):
-        config = _generate_experiment_config(exp, use_lora=False, epochs=2)
-        print(f"Experiment [{i}/{len(all_experiments)}]")
-        single_exp_run(config)
+    # for i, exp in enumerate(all_experiments):
+    #     config = _generate_experiment_config(exp, use_lora=False, epochs=2)
+    #     print(f"Experiment [{i}/{len(all_experiments)}]")
+    #     single_exp_run(config)
 
     
 

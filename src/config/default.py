@@ -20,7 +20,7 @@ def get_default_config():
             "output_dir": None,
             "report_to": None,
             "disable_tqdm": False,
-            "max_length": 2048,
+            "max_length": 512,
             "bf16": True,
             "save_strategy": "no", 
             'dataset_num_proc':4
@@ -36,7 +36,7 @@ def get_default_config():
 
         "lora_config": {
             "r": 8,
-            "lora_alpha": 8,
+            "lora_alpha": 16,
             "lora_dropout": 0,
             "bias": "none",
             # "finetune_vision_layers": False,
@@ -44,16 +44,16 @@ def get_default_config():
             # "finetune_attention_modules": True,
             # "finetune_mlp_modules": True,
             "task_type": "CAUSAL_LM",
-            # 'target_modules': [
-            #     "q_proj",
-            #     "k_proj",
-            #     "v_proj",
-            #     "o_proj",
-            #     "gate_proj",
-            #     "up_proj",
-            #     "down_proj",
-            # ]
-            "target_modules": 'all-linear'
+            'target_modules': [
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+            ]
+            # "target_modules": 'all-linear'
         },
 
 
@@ -62,7 +62,7 @@ def get_default_config():
         "total_cpus": 10,
         "client_resources": {
             "num_cpus": 4,
-            "num_gpus": 0.5
+            "num_gpus": 1
         },
 
         "dataset": {
