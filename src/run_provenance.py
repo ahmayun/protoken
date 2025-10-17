@@ -256,6 +256,8 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         print(f"[{i}] Key: {exp_key}")
     
+    _ = input("\nPress Enter to start processing all experiment keys...")
+    
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
         if json_path.exists():
@@ -286,7 +288,8 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
     # exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
     # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-finance-C1math][LoRA-r8-alpha8]'
     # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-math-C1coding][LoRA-r8-alpha8]'
-    exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients4][LoRA-r8-alpha16]'
+    # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients4][LoRA-r8-alpha16]'
+    exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients2][LoRA-r8-alpha16]'
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
@@ -295,7 +298,8 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
     prov_dict['training'] = CacheManager.load_training_metrics(exp_key=exp_key)
 
     save_json(prov_dict, json_path)
-    plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"plot_{exp_key}.png")
+    # plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"plot_{exp_key}.png")
+    plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"test.png")
 
 
 if __name__ == "__main__":
@@ -304,6 +308,6 @@ if __name__ == "__main__":
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     # single_key_provenance_refactored(results_dir)
     # while True:
-    #     full_cache_provenance(results_dir)
+    # full_cache_provenance(results_dir)
     #     time.sleep(10)
     single_key_provenance(Path("results_debug"))
