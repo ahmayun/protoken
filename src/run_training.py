@@ -2,8 +2,9 @@ import time
 import torch
 import gc
 from src.fl.simulation import run_fl_experiment
-from src.utils.utils import CacheManager, save_json
-from src.config.base_config import ConfigManager
+from src.utils.cache import CacheManager
+from src.utils.utils import save_json
+from src.config.config import ConfigManager
 
 def _get_experiment_matrix():
     experiments = []
@@ -32,11 +33,10 @@ def single_exp_run(config):
     experiment_key = ConfigManager.generate_exp_key(config)
 
     print(f"Running: {experiment_key}")
-    metrics = {}
 
-    if CacheManager.experiment_is_complete(experiment_key):
-        print("✅ Experiment already completed. Skipping...")
-        return
+    # if CacheManager.experiment_is_complete(experiment_key):
+    #     print("✅ Experiment already completed. Skipping...")
+    #     return
 
     start_time = time.time()
     metrics = run_fl_experiment(config)

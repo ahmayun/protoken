@@ -1,9 +1,9 @@
 import flwr as fl
-from src.utils.model import get_model_and_tokenizer
+from src.fl.model import get_model_and_tokenizer
 from src.fl.client import create_client_fn
 from src.fl.server import create_server_fn
-from src.utils.datasets import get_datasets_dict
-from src.utils.utils import CacheManager
+from src.dataset.datasets import get_datasets_dict
+from src.utils.cache import CacheManager
 
 
 def config_sim_resources(cfg):

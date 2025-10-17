@@ -5,8 +5,8 @@ import gc
 from flwr.common import ndarrays_to_parameters
 
 
-from src.utils.utils import CacheManager
-from src.utils.model import ModelUtils, evaluate_llm
+from src.utils.cache import CacheManager
+from src.fl.model import ModelUtils, evaluate_llm
 
 
 def average_dicts(metrics_dict):

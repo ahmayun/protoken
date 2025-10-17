@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import torch.nn as nn
-from src.config.base_config import ConfigManager
-from src.utils.model import get_model_and_tokenizer
-from src.utils.model import ModelUtils
+from src.config.config import ConfigManager
+from src.fl.model import get_model_and_tokenizer
+from src.fl.model import ModelUtils
 from src.provenance.fl_prov import get_all_layers
 
 def has_trainable_params(m: nn.Module, *, recurse=False) -> bool:
