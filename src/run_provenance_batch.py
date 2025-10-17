@@ -76,7 +76,7 @@ class FL_Provenance:
         self.tokenizer = tokenizer
         self.layer_config = layer_config
 
-    def run_provenance_on_samples(self, dataset_dict, num_samples):
+    def run_provenance_on_samples(self, dataset_dict, num_samples, client_labels):
         per_client_accuracy = {}
         detailed_results = []
 
@@ -89,8 +89,9 @@ class FL_Provenance:
             for sample_idx in sample_indices:
                 logger.info(f'{10*'='} Provenance of Input Id {sample_idx}  {'='*10}\n')
                 conversation = dataset['messages'][sample_idx]
+                label = dataset['label'][sample_idx]
                 sample_result = self._analyze_single_sample(
-                    conversation, expected_client_id)
+                    conversation, label, expected_client_id, client_labels)
                 detailed_results.append(sample_result)
 
                 if sample_result['is_correct']:
@@ -114,7 +115,7 @@ class FL_Provenance:
             'detailed_results': detailed_results
         }
 
-    def _analyze_single_sample(self, conversation, expected_client_id):
+    def _analyze_single_sample(self, conversation, actual_label, expected_client_id, client_labels):
         prompt = self._prepare_prompt(conversation)
         logger.debug(f">> Input Prompt: {prompt.replace('\n', '').strip()}")
         result = ProvTextGenerator.generate_text(
@@ -127,13 +128,22 @@ class FL_Provenance:
 
         predicted_client = max(
             result['client2part'], key=result['client2part'].get)
-        is_correct = predicted_client == expected_client_id
+        
+         
+        # Check if predicted client is responsible for this label
+        predicted_client_labels = client_labels[predicted_client]
+        if isinstance(predicted_client_labels, list):
+            is_correct = actual_label in predicted_client_labels
+        else:
+            is_correct = actual_label == predicted_client_labels
 
         # Organized logging with f-strings
         logger.info(
             f"Config: {self.layer_config['name']}, "
-            f"Actual: {expected_client_id}, "
-            f"Predicted: {predicted_client}, "
+            f"Actual Client: {expected_client_id}, "
+            f"Predicted Client: {predicted_client}, "
+            f"Actual Label: {actual_label}, "
+            f"Predicted Client Labels: {predicted_client_labels}, "
             f"Is Correct: {is_correct}, "
             f"Parts: {result['client2part']}"
         )
@@ -184,7 +194,7 @@ class FL_Provenance:
 
 
 def single_round_provenance_refactored(exp_key: str, round_num: int,
-                                       dataset_dict: dict, tokenizer, layer_config, num_test_samples):
+                                       dataset_dict: dict, client_labels: dict, tokenizer, layer_config, num_test_samples):
     logger.info(f"{10*'-'} Round {round_num} {10*'-'}")
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
@@ -194,7 +204,7 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
 
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
-            dataset_dict, num_samples=num_test_samples)
+            dataset_dict, num_samples=num_test_samples, client_labels=client_labels)
 
     return results
 
@@ -211,7 +221,9 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
 
     logger.info(f'Layers Config: {layers_config}')
 
-    dataset_dict = get_datasets_dict(train_config['dataset'])['test']
+    datasets_result = get_datasets_dict(train_config['dataset'], train_config['fl']['num_clients'], train_config['dataset']['classes_per_client'])
+    dataset_dict = datasets_result['test']
+    client_labels = datasets_result['client_labels']
 
     round2provenance = {}
     total_rounds = train_config['fl']['num_rounds']
@@ -221,7 +233,7 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
     for round_num in range(1, total_rounds):
     # for round_num in [15]:
         summary_stats = single_round_provenance_refactored(
-            exp_key, round_num, dataset_dict, tokenizer, layers_config, num_test_samples)
+            exp_key, round_num, dataset_dict, client_labels, tokenizer, layers_config, num_test_samples)
         round2provenance[round_num] = summary_stats
         across_all_rounds_accuracy += summary_stats['overall_accuracy']
         count += 1
@@ -271,9 +283,10 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
 
 
 def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
-    exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
+    # exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
     # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-finance-C1math][LoRA-r8-alpha8]'
     # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-math-C1coding][LoRA-r8-alpha8]'
+    exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients4][LoRA-r8-alpha16]'
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
@@ -290,7 +303,7 @@ if __name__ == "__main__":
     results_dir = Path("results")
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     # single_key_provenance_refactored(results_dir)
-    while True:
-        full_cache_provenance(results_dir)
-        time.sleep(10)
-    # single_key_provenance(Path("results_debug"))
+    # while True:
+    #     full_cache_provenance(results_dir)
+    #     time.sleep(10)
+    single_key_provenance(Path("results_debug"))

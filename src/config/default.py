@@ -1,9 +1,9 @@
 def get_default_config():
     return {
         "fl": {
-            "num_rounds": 16,
-            "num_clients": 2,
-            "clients_per_round": 2
+            "num_rounds": 4,
+            "num_clients": 4,
+            "clients_per_round": 4
         },
 
         "sft_config_args": {
@@ -68,8 +68,6 @@ def get_default_config():
         "dataset": {
             "client_dataset_size": 2048,
             "test_dataset_size": 512,
-            "client_0_dataset": "chess",
-            "client_1_dataset": "math"
-
+            "classes_per_client": 1
         },
     }
