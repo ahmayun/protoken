@@ -1,7 +1,7 @@
 from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset
-from src.utils.datasets import get_datasets_dict
-from src.utils.model import get_model_and_tokenizer, train_llm, evaluate_llm
+from src.dataset.datasets import get_datasets_dict
+from src.fl.model import get_model_and_tokenizer, train_llm, evaluate_llm
 from src.config.default import get_default_config
 
 

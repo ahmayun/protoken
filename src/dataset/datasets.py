@@ -1,26 +1,36 @@
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import PathologicalPartitioner
 import numpy as np
+from datasets import load_dataset
 
 RANDOM_SEED = 42
 
-def get_datasets_dict(dataset_config, num_clients=None, classes_per_client=1):
+def get_datasets_dict(dataset_config, num_clients, classes_per_client):
     samples_per_client = dataset_config["client_dataset_size"]
     test_dataset_size = dataset_config["test_dataset_size"]
     
-    if num_clients is None:
-        num_clients = 10
+
     
     partitioner = PathologicalPartitioner(
         num_partitions=num_clients, 
         partition_by="label", 
         num_classes_per_partition=classes_per_client
     )
+
     
-    fds = FederatedDataset(
-        dataset='waris-gill/llm-datasets-instruct-for-FL', 
-        partitioners={"train": partitioner}
-    )
+    labels_to_keep = ['medical', 'finance']
+
+    ds = load_dataset('waris-gill/llm-datasets-instruct-for-FL', split='train')
+    ds =  ds.filter(lambda example: example['label'] in labels_to_keep)
+
+
+    fds = partitioner
+    fds.dataset = ds
+    
+    # fds = FederatedDataset(
+    #     dataset='waris-gill/llm-datasets-instruct-for-FL', 
+    #     partitioners={"train": partitioner}
+    # )
     
     client_datasets = {}
     client_labels = {}
@@ -41,6 +51,8 @@ def get_datasets_dict(dataset_config, num_clients=None, classes_per_client=1):
                     'train': shuffled_partition.select(range(samples_per_client), keep_in_memory=True),
                     'test': shuffled_partition.select(range(samples_per_client, samples_per_client + test_dataset_size), keep_in_memory=True)
                 }
+        else:
+            raise ValueError(f"Client {client_id} does not have enough data samples.")
     
     train_dict = {cid: data['train'] for cid, data in client_datasets.items()}
     test_dict = {cid: data['test'] for cid, data in client_datasets.items()}

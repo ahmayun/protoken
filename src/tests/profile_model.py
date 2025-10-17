@@ -2,9 +2,9 @@ import pandas as pd
 from peft.tuners.lora import LoraLayer
 from src.provenance.fl_prov import get_all_layers
 # Assuming these functions are defined in your project
-from src.utils.model import get_model_and_tokenizer
+from src.fl.model import get_model_and_tokenizer
 from src.config.default import get_default_config
-from src.run_provenance_batch import MODEL2LayerConfig
+from src.run_provenance import MODEL2LayerConfig
 
 # --- 1. Model Loading ---
 config = get_default_config()
