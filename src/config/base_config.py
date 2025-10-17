@@ -19,9 +19,7 @@ class ConfigManager:
         model_name = config["model_config"]["model_name"]  # e.g., "gemma-3-270m-it"
         num_rounds = config["fl"]["num_rounds"]
         num_clients = config["fl"]["num_clients"]
-        client_0_dataset = config["dataset"]["client_0_dataset"]
-        client_1_dataset = config["dataset"]["client_1_dataset"]
-        key = f"[{model_name}][rounds{num_rounds}][epochs-{config['sft_config_args']['num_train_epochs']}][clients{num_clients}][C0-{client_0_dataset}-C1{client_1_dataset}]"
+        key = f"[{model_name}][rounds{num_rounds}][epochs-{config['sft_config_args']['num_train_epochs']}][clients{num_clients}]"
         if config['use_lora']:
             lora_r = config['lora_config']['r']
             lora_alpha = config['lora_config']['lora_alpha']
