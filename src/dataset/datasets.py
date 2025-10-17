@@ -5,10 +5,8 @@ from datasets import load_dataset
 
 RANDOM_SEED = 42
 
-def get_datasets_dict(dataset_config, num_clients, classes_per_client):
-    samples_per_client = dataset_config["client_dataset_size"]
-    test_dataset_size = dataset_config["test_dataset_size"]
-    
+def get_datasets_dict(num_clients, samples_per_client, test_dataset_size, classes_per_client, labels_to_keep):
+     
 
     
     partitioner = PathologicalPartitioner(
@@ -18,7 +16,6 @@ def get_datasets_dict(dataset_config, num_clients, classes_per_client):
     )
 
     
-    labels_to_keep = ['medical', 'finance']
 
     ds = load_dataset('waris-gill/llm-datasets-instruct-for-FL', split='train')
     ds =  ds.filter(lambda example: example['label'] in labels_to_keep)

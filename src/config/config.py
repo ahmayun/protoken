@@ -109,8 +109,9 @@ def get_default_config():
         },
 
         "dataset": {
-            "client_dataset_size": 2048,
+            "samples_per_client": 2048,
             "test_dataset_size": 512,
-            "classes_per_client": 1
+            "classes_per_client": 1,
+            "labels_to_keep": ['medical', 'finance']
         },
     }

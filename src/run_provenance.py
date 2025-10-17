@@ -221,7 +221,7 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
 
     logger.info(f'Layers Config: {layers_config}')
 
-    datasets_result = get_datasets_dict(train_config['dataset'], train_config['fl']['num_clients'], train_config['dataset']['classes_per_client'])
+    datasets_result = get_datasets_dict(num_clients = train_config['fl']['num_clients'],  **train_config['dataset'])
     dataset_dict = datasets_result['test']
     client_labels = datasets_result['client_labels']
 

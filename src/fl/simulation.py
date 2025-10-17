@@ -24,7 +24,7 @@ def run_fl_experiment(cfg):
     CacheManager.remove_clients_state()
     CacheManager.remove_rounds_state()
 
-    datasets_dict = get_datasets_dict(cfg["dataset"], cfg["fl"]["num_clients"], cfg["dataset"]["classes_per_client"])
+    datasets_dict = get_datasets_dict(cfg["fl"]["num_clients"],  **cfg["dataset"])
     global_metrics_history = []
     client_app = fl.client.ClientApp(
         client_fn=create_client_fn(cfg, datasets_dict['train']))
