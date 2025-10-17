@@ -1,3 +1,5 @@
+# debug this one Running provenance analysis for experiment key: [google_gemma-3-1b-it][rounds16][epochs-2][clients2][C0-medical-C1coding][LoRA-r8-alpha8][New2]
+
 # Ideas 
 - Try to do provenance only for first 5-10 tokens and compare with full sequence provenance.  
     - This useful to reduce the overhead of provenance. Specifically for longer sequences in FL when we want to give compensation to clients.

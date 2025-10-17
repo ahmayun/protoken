@@ -5,38 +5,30 @@ from src.fl.simulation import run_fl_experiment
 from src.utils.utils import CacheManager, save_json
 from src.config.base_config import ConfigManager
 
-import os
-import multiprocessing
-_original_cpu_count = multiprocessing.cpu_count
-multiprocessing.cpu_count = lambda: 4
-
-if hasattr(os, 'cpu_count'):
-    os.cpu_count = lambda: 4
-
+# 'google/gemma-3-270m-it',  "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
 
 
 def _get_experiment_matrix():
     experiments = []
     MODELS = [
-        # "google/gemma-3-270m",
-        "google/gemma-3-1b-pt",
-        "google/gemma-3-4b-it"
+        "google/gemma-3-270m-it",
+        # "google/gemma-3-1b-it",
+        # "Qwen/Qwen3-0.6B"
     ]
 
-    DATASET_COMBINATIONS = [
-        # ("chess", "math"),
+    DATASET_COMBINATIONS = list(set([
         ("medical", "finance"),
         ("medical", "math"),
         ("medical", "coding"),
         ("finance", "math"),
         ("finance", "coding"),
         ("math", "coding"),
-    ]
-    print(DATASET_COMBINATIONS)
+        ("chess", "finance"),
+        ("chess", "medical"),
+        ("chess", "coding"),
+        ("chess", "math"),
 
-    print(set(DATASET_COMBINATIONS))
-
-    _ = input("Press Enter to continue...")
+    ]))
 
 
 
@@ -52,42 +44,60 @@ def _get_experiment_matrix():
     return experiments
 
 
-def _generate_experiment_config(experiment_setting_dict, use_lora):
+def _generate_experiment_config(experiment_setting_dict, use_lora, epochs):
     config = ConfigManager.load_default_config()
     config["model_config"]["model_name"] = experiment_setting_dict["model_name"]
     config["dataset"]["client_0_dataset"] = experiment_setting_dict["client_0_dataset"]
     config["dataset"]["client_1_dataset"] = experiment_setting_dict["client_1_dataset"]
-    if use_lora:
-        config["lora_config"]["use_lora"] = True
+    config["use_lora"] = use_lora
+    config['sft_config_args']['num_train_epochs'] = epochs
     return config
+
+
+def single_exp_run(config):
+    experiment_key = ConfigManager.generate_exp_key(config)
+
+    print(f"Running: {experiment_key}")
+    metrics = {}
+
+    if CacheManager.experiment_is_complete(experiment_key):
+        print("✅ Experiment already completed. Skipping...")
+        return
+
+    start_time = time.time()
+    metrics = run_fl_experiment(config)
+    duration = time.time() - start_time
+
+    CacheManager.consolidate_experiment(experiment_key, config, metrics)
+    save_json({"metrics": metrics, 'config': config} , f"results/fl_train_metrics_{experiment_key}.json")
+    print(f"✅ Completed in {duration:.1f}s")
+    del metrics
+    torch.cuda.empty_cache()
+    gc.collect()
+    
 
 
 def run_experiments():
     all_experiments = _get_experiment_matrix()
+    epochs = 1
     for i, exp in enumerate(all_experiments):
-        config = _generate_experiment_config(exp, use_lora=True)
-        experiment_key = ConfigManager.generate_exp_key(config)
-        metrics = {}
-        print(f"[{i}/{len(all_experiments)}] Running: {experiment_key}")
+        print(f"{i} Experiment Key: {ConfigManager.generate_exp_key(_generate_experiment_config(exp, use_lora=True, epochs=epochs))}")
+    
+    _ = input("Only for test. Press enter to continue.")
 
-
-        if CacheManager.experiment_is_complete(experiment_key):
-            print("✅ Experiment already completed. Skipping...")
-            continue
-
-        start_time = time.time()
-        metrics = run_fl_experiment(config)
-        duration = time.time() - start_time
-
-        CacheManager.consolidate_experiment(experiment_key, config, metrics)
-        save_json(metrics, f"results/fl_train_metrics_{experiment_key}.json")
-        print(f"✅ Completed in {duration:.1f}s")
-        del metrics
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        gc.collect()
-
+    for i, exp in enumerate(all_experiments):
+        config = _generate_experiment_config(exp, use_lora=True, epochs=epochs)
+        print(f"Experiment [{i}/{len(all_experiments)}]")
+        single_exp_run(config)
+    
     print(f"\n🎉 All {len(all_experiments)} experiments completed!")
+    
+    # for i, exp in enumerate(all_experiments):
+    #     config = _generate_experiment_config(exp, use_lora=False, epochs=2)
+    #     print(f"Experiment [{i}/{len(all_experiments)}]")
+    #     single_exp_run(config)
+
+    
 
 
 if __name__ == "__main__":

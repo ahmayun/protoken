@@ -1,16 +1,9 @@
-import unsloth
 import flwr as fl
 from src.utils.model import get_model_and_tokenizer
 from src.fl.client import create_client_fn
 from src.fl.server import create_server_fn
 from src.utils.datasets import get_datasets_dict
-import os
-import multiprocessing
-_original_cpu_count = multiprocessing.cpu_count
-multiprocessing.cpu_count = lambda: 4
-
-if hasattr(os, 'cpu_count'):
-    os.cpu_count = lambda: 4
+from src.utils.utils import CacheManager
 
 
 def config_sim_resources(cfg):
@@ -28,10 +21,13 @@ def config_sim_resources(cfg):
 
 
 def run_fl_experiment(cfg):
-    
+    CacheManager.remove_clients_state()
+    CacheManager.remove_rounds_state()
+
     datasets_dict = get_datasets_dict(cfg["dataset"])
     global_metrics_history = []
-    client_app = fl.client.ClientApp(client_fn=create_client_fn(cfg, datasets_dict['train']))
+    client_app = fl.client.ClientApp(
+        client_fn=create_client_fn(cfg, datasets_dict['train']))
 
     global_model, tokenizer = get_model_and_tokenizer(cfg)
     server_app = fl.server.ServerApp(server_fn=create_server_fn(

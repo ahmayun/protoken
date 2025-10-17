@@ -1,8 +1,11 @@
 from diskcache import Index
-import torch
+import os
 import json
 import re
 from tqdm import tqdm
+from peft import set_peft_model_state_dict
+# from unsloth import FastLanguageModel
+
 from src.utils.model import get_model_and_tokenizer
 
 
@@ -22,7 +25,6 @@ def sanitize_key(name, slash_replacement="_", max_length=255):
     return name[:max_length] if max_length else name
 
 
-
 class CacheManager:
     TEMP_CLIENTS_MODELS_CACHE = "_storage/caches/clients_models_cache"
     TEMP_ROUNDS_STORAGE_CACHE = "_storage/caches/rounds_storage_cache"
@@ -39,7 +41,7 @@ class CacheManager:
     @staticmethod
     def _to_cuda_fp32(model):
         device = "cuda"
-        return model.to(device=device, dtype=torch.float32)
+        return model.to(device=device)
 
     @staticmethod
     def save_client_trained_state(cid, client_training_state):
@@ -86,23 +88,47 @@ class CacheManager:
         return len(cache)
 
     @staticmethod
+    def _load_model(config, state_dict):
+
+        model, tokenizer = get_model_and_tokenizer(config)
+
+        if hasattr(model, 'peft_config'):
+            print("Global: LoRA model detected. Loading with LoRA layers.")
+            set_peft_model_state_dict(model, state_dict)
+
+            # # Access the TMPDIR environment variable
+            # tmpdir = os.environ.get("TMPDIR")
+            # model_path = '_storage/merged_model_16bit'
+            # if tmpdir:
+            #     model_path = f'{tmpdir}/merged_model_16bit'
+            #     print(f'Model path set to Temp Directory: {model_path}')
+
+            # model = model.cpu()
+            # model.save_pretrained_merged(
+            #     model_path, None, save_method="merged_16bit")
+            # model, _ = FastLanguageModel.from_pretrained(model_name=model_path)
+            # model = model.merge_and_unload()
+
+        else:
+            model.load_state_dict(state_dict, strict=True)
+        
+        CacheManager._to_cuda_fp32(model)
+        return model
+
+    @staticmethod
     def _load_models_and_tokenizer_from_round_dict(round_dict, config):
-        global_model, _ = get_model_and_tokenizer(config)
         global_model_state_dict = round_dict["global"]["model"]
-        global_model.load_state_dict(global_model_state_dict, strict=False)
-        global_model = CacheManager._to_cuda_fp32(global_model)
+        global_model = CacheManager._load_model(
+            config, global_model_state_dict)
         client_models = {}
         for client_id, client_data in round_dict["clients"].items():
-            client_model, _ = get_model_and_tokenizer(config)
             client_model_state_dict = client_data["model"]
-            client_model.load_state_dict(client_model_state_dict, strict=False)
-            client_model = CacheManager._to_cuda_fp32(client_model)
-            client_models[client_id] = client_model
+            client_models[client_id] = CacheManager._load_model(
+                config, client_model_state_dict)
 
         print(
             f"==== Loaded global and {len(client_models)} client models from cache. ====")
         return global_model, client_models
-
 
     @staticmethod
     def consolidate_experiment(exp_key, experiment_config, metrics):
@@ -132,7 +158,20 @@ class CacheManager:
         exp_info = experiment_cache[exp_key]
         return exp_info["experiment_config"]
 
-    # check if exp_key exists
+    @staticmethod
+    def load_training_metrics(exp_key):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        exp_info = experiment_cache[exp_key]
+        return exp_info["experiment_metrics"]
+
+    @staticmethod
+    def set_provenance_results(exp_key, prov_results):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        exp_info = experiment_cache[exp_key]
+        exp_info['provenance_results'] = prov_results
+        experiment_cache[exp_key] = exp_info
+        print(f">> {exp_key} updated with provenance results.")
+
     @staticmethod
     def experiment_is_complete(exp_key):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)

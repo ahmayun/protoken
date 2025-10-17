@@ -171,3 +171,7 @@ unsloth_compiled_cache/
 
 src/arch.txt
 temp.md
+.python-version
+results/
+results2/
+trainer_output/
