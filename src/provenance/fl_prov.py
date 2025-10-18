@@ -99,7 +99,8 @@ class NeuronProvenance:
             cli_part = torch.dot(cli_acts, gm_layer_grads)
             client2part[cli] = cli_part.item() * alpha_imp
         
-        return _normalize_with_softmax(client2part)
+        # return _normalize_with_softmax(client2part)
+        return client2part
 
     def _calculate_clients_contributions(self, gm_acts_grads_dict, client2layers, device):
         client2part_across_layers = {}
