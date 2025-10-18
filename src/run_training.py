@@ -4,12 +4,13 @@ import gc
 from src.fl.simulation import run_fl_experiment
 from src.utils.cache import CacheManager
 from src.utils.utils import save_json
-from src.config.config import ConfigManager
+from src.fl.config import ConfigManager
 
 def _get_experiment_matrix():
     experiments = []
     MODELS = [
-        "google/gemma-3-270m-it",
+        "google/gemma-3-1b-pt",
+        # "google/gemma-3-4b-it"
         # "google/gemma-3-1b-it",
         # "Qwen/Qwen3-0.6B"
     ]
@@ -62,6 +63,11 @@ def run_experiments():
         config = _generate_experiment_config(exp, use_lora=True, epochs=epochs)
         print(f"Experiment [{i}/{len(all_experiments)}]")
         single_exp_run(config)
+    
+    # for i, exp in enumerate(all_experiments):
+    #     config = _generate_experiment_config(exp, use_lora=False, epochs=epochs)
+    #     print(f"Experiment [{i}/{len(all_experiments)}]")
+    #     single_exp_run(config)
     
     print(f"\n🎉 All {len(all_experiments)} experiments completed!")
     

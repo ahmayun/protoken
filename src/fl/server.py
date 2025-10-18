@@ -75,6 +75,12 @@ def create_evaluation_function(global_model, eval_datasets, tokenizer, global_me
 
     return eval_gm
 
+# fraction_fit=0,
+#                 fraction_evaluate=0.0,
+#                 min_fit_clients=self.cfg.strategy.clients_per_round,
+#                 min_evaluate_clients=0,
+#                 min_available_clients=self.cfg.data_dist.num_clients,
+
 
 def create_server_fn(cfg, eval_datasets_dict, global_model, tokenizer,  global_metrics_history):
    
@@ -89,9 +95,13 @@ def create_server_fn(cfg, eval_datasets_dict, global_model, tokenizer,  global_m
         strategy = fl.server.strategy.FedAvg(
             min_evaluate_clients=0,
             fraction_evaluate=0,
+            fraction_fit=0,
             evaluate_fn=create_evaluation_function(
                 global_model, eval_datasets_dict, tokenizer, global_metrics_history),
             initial_parameters=ndarrays_to_parameters(init_ndarrays),
+            min_fit_clients=cfg["fl"]["clients_per_round"],
+            accept_failures=False,
+            min_available_clients=cfg["fl"]["num_clients"],
         )
         server_config = fl.server.ServerConfig(
             num_rounds=cfg["fl"]["num_rounds"])

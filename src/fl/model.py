@@ -5,12 +5,16 @@ from peft import get_peft_model_state_dict, set_peft_model_state_dict, LoraConfi
 from collections import OrderedDict
 
 
+model_name2tokenizer = {
+    'google/gemma-3-1b-pt': AutoTokenizer.from_pretrained('google/gemma-3-1b-it'),
+}
+
+
 def get_model_and_tokenizer(config):
     model_config = config["model_config"]
 
     model = AutoModelForCausalLM.from_pretrained(model_config['model_name'])
-    tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
-
+    tokenizer = model_name2tokenizer[model_config['model_name']]
     if config['use_lora']:
         model = get_peft_model(model, LoraConfig(**config['lora_config']))
         model.print_trainable_parameters()

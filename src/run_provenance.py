@@ -132,10 +132,10 @@ class FL_Provenance:
          
         # Check if predicted client is responsible for this label
         predicted_client_labels = client_labels[predicted_client]
-        if isinstance(predicted_client_labels, list):
-            is_correct = actual_label in predicted_client_labels
-        else:
-            is_correct = actual_label == predicted_client_labels
+        assert isinstance(predicted_client_labels, list), f"Predicted client labels should be a list, got {type(predicted_client_labels)}"
+        
+        is_correct = actual_label in predicted_client_labels
+        
 
         # Organized logging with f-strings
         logger.info(
@@ -200,7 +200,7 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
     
-    assert len(client_models) == len(dataset_dict), f"Total clients are {len(client_models)}"
+    assert len(client_models) >= len(dataset_dict), f"Total clients are {len(client_models)}"
 
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
@@ -289,7 +289,11 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
     # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-finance-C1math][LoRA-r8-alpha8]'
     # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-math-C1coding][LoRA-r8-alpha8]'
     # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients4][LoRA-r8-alpha16]'
-    exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients2][LoRA-r8-alpha16]'
+    # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients2][LoRA-r8-alpha16]'
+    # exp_key = '[google_gemma-3-4b-it][rounds4][epochs-1][clients2][LoRA-r8-alpha16]'
+    # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients25][LoRA-r8-alpha16]'
+    # exp_key = "[google_gemma-3-1b-pt][rounds15][epochs-1][clients25][['medical', 'finance', 'math']-1][LoRA-r8-alpha16]"
+    exp_key = "[google_gemma-3-1b-pt][rounds15][epochs-1][clients25-per-round-2][['medical', 'finance']-1][LoRA-r8-alpha16]"
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
