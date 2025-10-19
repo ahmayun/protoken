@@ -257,7 +257,6 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
         exp_key, round_num)
     
     print(f"Loaded {len(client_models)} client models.")
-    _ = input("Press enter to continue.")
 
     clients2labels = {cid: client_labels[cid] for cid in client_models.keys()}
     unique_labels_across_clients = set()
@@ -362,7 +361,7 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
                                save_fig_path=results_dir/f"plot_{exp_key}.png")
 
 
-def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
+def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance', 'math']-1][Lora-False]"
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
@@ -382,11 +381,9 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
 
 if __name__ == "__main__":
 
-    for k in CacheManager.get_completed_experiments_keys():
-        print(k)
     
-    _ = input("Press enter to continue.")
-
+    
+  
     results_dir = Path("results")
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     # single_key_provenance_refactored(results_dir)
