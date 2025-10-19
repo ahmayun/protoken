@@ -97,9 +97,10 @@ class NeuronProvenance:
             _check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
             cli_part = torch.dot(cli_acts, gm_layer_grads)
-            client2part[cli] = cli_part.item() * alpha_imp
+            client2part[cli] = cli_part.item()
         
-        return _normalize_with_softmax(client2part)
+        # return _normalize_with_softmax(client2part)
+        return client2part
 
     def _calculate_clients_contributions(self, gm_acts_grads_dict, client2layers, device):
         client2part_across_layers = {}
@@ -126,7 +127,7 @@ class NeuronProvenance:
             for cid, v in c2contribution_per_layer.items():
                 client2part_across_layers[cid] = client2part_across_layers.get(cid, 0.0) + v
 
-        client2part_across_layers = _normalize_with_softmax(client2part_across_layers)
+        # client2part_across_layers = _normalize_with_softmax(client2part_across_layers)
         return client2part_across_layers
 
     def run(self):

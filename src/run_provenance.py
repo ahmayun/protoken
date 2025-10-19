@@ -11,6 +11,7 @@ import gc
 import logging
 from typing import Dict, List
 import argparse
+from tqdm import tqdm
 
 import logging
 import argparse
@@ -44,6 +45,9 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
+
+
+
 MODEL2LayerConfig = {
     'lora': {
         'name': 'lora',
@@ -60,10 +64,27 @@ MODEL2LayerConfig = {
     'standard': {
         'name': 'mlp',
         'patterns': ['.mlp.gate_proj', '.mlp.up_proj', '.mlp.down_proj'],
+        # 'patterns': ['.mlp'],
         'exclude_patterns': [],
         'last_n': 3
     }
 }
+
+def _prepare_prompt(conversation, tokenizer):
+    messages = [
+        {'role': conversation[0]['role'],
+            'content': conversation[0]['content']},
+        {'role': conversation[1]['role'],
+            'content': conversation[1]['content']}
+    ]
+
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    ).removeprefix('<bos>')
+
+    return text
 
 
 class FL_Provenance:
@@ -113,19 +134,22 @@ class FL_Provenance:
         }
 
     def _analyze_single_sample(self, conversation, actual_label, client_labels):
-        prompt = self._prepare_prompt(conversation)
-        
+        prompt = _prepare_prompt(conversation, self.tokenizer)
+
         result = ProvTextGenerator.generate_text(
             self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config, max_new_tokens=32)
 
         # print("\nFull Conversation:")
         # print(conversation)
         logger.debug("\n\n")
-        logger.debug(f">>Input Prompt is following:\n{prompt.replace('\n', '').strip()}")
+        logger.debug(
+            f">>Input Prompt is following:\n{prompt.replace('\n', '').strip()}")
         logger.debug("\n\n")
-        logger.debug(f">> Generated Response is following:\n{result['response']}")
+        logger.debug(
+            f">> Generated Response is following:\n{result['response']}")
         logger.debug("\n\n")
-        logger.debug(f">> Actual Response is following:\n{conversation[-1]['content']}\n\n")
+        logger.debug(
+            f">> Actual Response is following:\n{conversation[-1]['content']}\n\n")
 
         assert len(result['client2part']
                    ) > 1, f"Total clients are {len(result['client2part'])}"
@@ -158,22 +182,6 @@ class FL_Provenance:
             'predicted_client_labels': predicted_client_labels,
         }
 
-    def _prepare_prompt(self, conversation: List[Dict]) -> str:
-        messages = [
-            {'role': conversation[0]['role'],
-                'content': conversation[0]['content']},
-            {'role': conversation[1]['role'],
-                'content': conversation[1]['content']}
-        ]
-
-        text = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        ).removeprefix('<bos>')
-
-        return text
-
     def cleanup(self):
         if hasattr(self, 'client_models') and self.client_models:
             for model in self.client_models.values():
@@ -196,12 +204,60 @@ class FL_Provenance:
         self.cleanup()
 
 
+def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
+    
+
+  
+
+    new_ds_dict = {}
+    for label, dataset in label2dataset.items():
+        idx_where_response_is_correct = []
+        counter = 0
+        for i in  tqdm(range(100), desc=f'Finding correct responses for label {label}'):
+            conversation = dataset['messages'][i]
+            prompt = _prepare_prompt(conversation, tokenizer)   
+            # inputs = tokenizer(prompt, return_tensors = "pt").to("cuda")     
+            # print(inputs)
+            # response = model.generate(
+            #     **inputs,
+            #     max_new_tokens = 125,
+            #     temperature = 1, top_p = 0.95, top_k = 64,
+            #     streamer = TextStreamer(tokenizer, skip_prompt = True),
+            # )
+            # print(f'Response: {response}')
+
+            inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+            outputs = model.generate(input_ids=inputs['input_ids'],max_new_tokens=125)
+
+            prompt_length = inputs['input_ids'].shape[1]
+
+            generated_response = tokenizer.decode(outputs[0][prompt_length:],skip_special_tokens = True)
+            actual_response = conversation[-1]['content']
+
+            is_correct = llm_judge(generated_response, actual_response)
+
+            if is_correct:
+                print(f"\n\nLabel: {label}, Input Id: {i}, Judge: {is_correct}")
+                idx_where_response_is_correct.append(i)
+                counter += 1
+                if counter >= 10:
+                    break
+
+
+        new_ds_dict[label] = dataset.select(idx_where_response_is_correct)   
+    return new_ds_dict
+
+
 def single_round_provenance_refactored(exp_key: str, round_num: int,
                                        dataset_dict: dict, client_labels: dict, tokenizer, layer_config, num_test_samples):
     logger.info(f"{10*'-'} Round {round_num} {10*'-'}\n\n")
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
+    
+    print(f"Loaded {len(client_models)} client models.")
+    _ = input("Press enter to continue.")
 
     clients2labels = {cid: client_labels[cid] for cid in client_models.keys()}
     unique_labels_across_clients = set()
@@ -210,17 +266,21 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
 
     unique_labels_across_clients = list(unique_labels_across_clients)
     logger.info(f'Participating Clients labels: {clients2labels}')
-    logger.info(f'Dataset Dict keys {list(dataset_dict.keys())}')
     logger.info(
         f'Unique labels across participating clients: {unique_labels_across_clients}')
     label2dataset = {k: dataset_dict[k] for k in unique_labels_across_clients}
-    _ = input("Press Enter to continue...")
+
 
     assert len(unique_labels_across_clients) == len(
         label2dataset), f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}"
 
-    assert len(
-        unique_labels_across_clients) > 1, f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}"
+    if len(unique_labels_across_clients) < 2:
+        logger.warning(
+            f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}")
+        return None
+    
+    # label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
+
 
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
@@ -254,6 +314,8 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
         # for round_num in [15]:
         summary_stats = single_round_provenance_refactored(
             exp_key, round_num, dataset_dict, client_labels, tokenizer, layers_config, num_test_samples)
+        if summary_stats is None:
+            continue
         round2provenance[round_num] = summary_stats
         across_all_rounds_accuracy += summary_stats['overall_accuracy']
         count += 1
@@ -288,12 +350,8 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
         print(
             f"\n\n [{i}] Running provenance analysis for experiment key: {exp_key}")
 
-        try:
-            result = rounds_provenance_refactored(
-                exp_key=exp_key, num_test_samples=num_test_samples)
-        except Exception as e:
-            logger.error(f"Error processing {exp_key}: {e}")
-            continue
+        result = rounds_provenance_refactored(
+            exp_key=exp_key, num_test_samples=num_test_samples)
 
         CacheManager.set_provenance_results(exp_key, result)
         result['training'] = CacheManager.load_training_metrics(
@@ -304,9 +362,11 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
                                save_fig_path=results_dir/f"plot_{exp_key}.png")
 
 
-def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
- 
-    exp_key = "[google_gemma-3-1b-pt][rounds-5][epochs-1][clients25-per-round-3][['medical', 'finance', 'math']-1][Lora-False]"
+def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
+
+    # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance', 'math']-1][Lora-False]"
+    # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
+    exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
@@ -321,6 +381,11 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
 
 if __name__ == "__main__":
+
+    for k in CacheManager.get_completed_experiments_keys():
+        print(k)
+    
+    _ = input("Press enter to continue.")
 
     results_dir = Path("results")
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")

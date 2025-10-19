@@ -189,4 +189,6 @@ def run_fl_experiment(exp_key, cfg):
     fl.simulation.run_simulation(server_app=server_app, client_app=client_app,
                                  num_supernodes=cfg["fl"]["num_clients"], backend_config=config_sim_resources(cfg))
 
+    global GLOBAL_ROUND
+    GLOBAL_ROUND = 0
     return global_metrics_history

@@ -52,6 +52,7 @@ class CacheManager:
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         keys = []
         for key in experiment_cache:
+            print(key)
             if key.find('-round-') == -1:  # exclude round-specific keys
                 keys.append(key)
         return keys
@@ -90,13 +91,18 @@ class CacheManager:
     def _load_rounds_dict(round_key):
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         global_state_dict = experiment_cache[f"{round_key}-global"]
+        # print(f"{round_key}-global state loaded. {global_state_dict} keys.")
         clients_state_dict = {}
         for key in experiment_cache.keys():
+            # if key.find(round_key) != -1:
+            #     print(f"Found client state key: {key}" )
             if not key.startswith(f"{round_key}-client-"):
                 continue
             client_id = key.split(f"{round_key}-client-")[1]
             clients_state_dict[client_id] = experiment_cache[key]
             print(f"{key} state loaded.")
+        
+        assert len(clients_state_dict) > 0, "No client states found in cache."
 
         return {"global": global_state_dict, "clients": clients_state_dict}
 
@@ -105,6 +111,7 @@ class CacheManager:
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         exp_info = experiment_cache[exp_key]
         round_key = f"{exp_key}-round-{round_id}"
+        print(f"Loading models for {round_key} ... ")
         round_dict = CacheManager._load_rounds_dict(round_key)
         return CacheManager._load_models_and_tokenizer_from_round_dict(round_dict, exp_info["experiment_config"])
 
