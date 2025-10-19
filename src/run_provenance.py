@@ -1,7 +1,7 @@
 from src.utils.judge import llm_judge
 from src.provenance.fl_prov import ProvTextGenerator
 from src.utils.plotting import plot_federated_metrics
-from src.utils.cache import  CacheManager
+from src.utils.cache import CacheManager
 from src.utils.utils import save_json
 from src.fl.model import get_model_and_tokenizer
 from src.dataset.datasets import get_datasets_dict
@@ -16,7 +16,8 @@ import logging
 import argparse
 
 # --- Argument Parsing (No changes needed here) ---
-parser = argparse.ArgumentParser(description='A simple script with adjustable logging.')
+parser = argparse.ArgumentParser(
+    description='A simple script with adjustable logging.')
 parser.add_argument(
     '--log',
     default='INFO',
@@ -24,7 +25,6 @@ parser.add_argument(
     help='Set the logging level for the Prov logger (default: INFO)'
 )
 args = parser.parse_args()
-
 
 
 # 1. Get your specific logger by name
@@ -44,9 +44,6 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-
-
-
 MODEL2LayerConfig = {
     'lora': {
         'name': 'lora',
@@ -55,7 +52,7 @@ MODEL2LayerConfig = {
         #              '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
         #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
         #              ],
-        'patterns' : ['.lora_A.default', '.lora_B.default'],
+        'patterns': ['.lora_A.default', '.lora_B.default'],
         # 'patterns': ['.mlp'],
         'exclude_patterns': ['lora_dropout'],
         'last_n': 2
@@ -80,27 +77,27 @@ class FL_Provenance:
         per_client_accuracy = {}
         detailed_results = []
 
-        for expected_client_id, dataset in dataset_dict.items():
-            dataset =  dataset.shuffle() 
+        for ds_name, dataset in dataset_dict.items():
+            dataset = dataset.shuffle()
             correct_predictions = 0
             sample_indices = list(
                 range(min(num_samples, len(dataset['messages']))))
 
             for sample_idx in sample_indices:
-                logger.info(f'{10*'='} Provenance of Input Id {sample_idx}  {'='*10}\n')
-                conversation = dataset['messages'][sample_idx]
-                label = dataset['label'][sample_idx]
+                logger.info(
+                    f'{10*'='} Provenance of Input Id {sample_idx}  {'='*10}\n')
+
                 sample_result = self._analyze_single_sample(
-                    conversation, label, expected_client_id, client_labels)
+                    dataset['messages'][sample_idx], ds_name, client_labels)
                 detailed_results.append(sample_result)
 
                 if sample_result['is_correct']:
                     correct_predictions += 1
-                
+
                 logger.info(f"{'*'*30}\n")
 
             accuracy = (correct_predictions / len(sample_indices)) * 100.0
-            per_client_accuracy[expected_client_id] = accuracy
+            per_client_accuracy[ds_name] = accuracy
 
         overall_accuracy = sum(per_client_accuracy.values()
                                ) / len(per_client_accuracy)
@@ -115,44 +112,50 @@ class FL_Provenance:
             'detailed_results': detailed_results
         }
 
-    def _analyze_single_sample(self, conversation, actual_label, expected_client_id, client_labels):
+    def _analyze_single_sample(self, conversation, actual_label, client_labels):
         prompt = self._prepare_prompt(conversation)
-        logger.debug(f">> Input Prompt: {prompt.replace('\n', '').strip()}")
+        
         result = ProvTextGenerator.generate_text(
             self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config, max_new_tokens=32)
-        
-        logger.debug(f">> Generated Response: {result['response']}\n")
 
-        assert len(result['client2part']) > 1, f"Total clients are {len(result['client2part'])}"
+        # print("\nFull Conversation:")
+        # print(conversation)
+        logger.debug("\n\n")
+        logger.debug(f">>Input Prompt is following:\n{prompt.replace('\n', '').strip()}")
+        logger.debug("\n\n")
+        logger.debug(f">> Generated Response is following:\n{result['response']}")
+        logger.debug("\n\n")
+        logger.debug(f">> Actual Response is following:\n{conversation[-1]['content']}\n\n")
 
+        assert len(result['client2part']
+                   ) > 1, f"Total clients are {len(result['client2part'])}"
 
         predicted_client = max(
             result['client2part'], key=result['client2part'].get)
-        
-         
+
         # Check if predicted client is responsible for this label
         predicted_client_labels = client_labels[predicted_client]
-        assert isinstance(predicted_client_labels, list), f"Predicted client labels should be a list, got {type(predicted_client_labels)}"
-        
+        assert isinstance(predicted_client_labels,
+                          list), f"Predicted client labels should be a list, got {type(predicted_client_labels)}"
+
         is_correct = actual_label in predicted_client_labels
-        
 
         # Organized logging with f-strings
         logger.info(
-            f"Config: {self.layer_config['name']}, "
-            f"Actual Client: {expected_client_id}, "
-            f"Predicted Client: {predicted_client}, "
-            f"Actual Label: {actual_label}, "
-            f"Predicted Client Labels: {predicted_client_labels}, "
-            f"Is Correct: {is_correct}, "
-            f"Parts: {result['client2part']}"
+            f"Layer Config: {self.layer_config['name']}\n"
+            f"Actual Label: {actual_label}\n"
+            f"Predicted Client-{predicted_client} has labels {predicted_client_labels}\n"
+            f"Is Correct: {is_correct}\n"
+            f"{result['client2part']}\n"
+            f"clients2labels: {client_labels}\n"
         )
 
         return {
             'predicted_client': predicted_client,
-            'actual_client': expected_client_id,
             'client2part': result['client2part'],
-            'is_correct': is_correct
+            'is_correct': is_correct,
+            'actual_label': actual_label,
+            'predicted_client_labels': predicted_client_labels,
         }
 
     def _prepare_prompt(self, conversation: List[Dict]) -> str:
@@ -195,16 +198,33 @@ class FL_Provenance:
 
 def single_round_provenance_refactored(exp_key: str, round_num: int,
                                        dataset_dict: dict, client_labels: dict, tokenizer, layer_config, num_test_samples):
-    logger.info(f"{10*'-'} Round {round_num} {10*'-'}")
+    logger.info(f"{10*'-'} Round {round_num} {10*'-'}\n\n")
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
-    
-    assert len(client_models) >= len(dataset_dict), f"Total clients are {len(client_models)}"
+
+    clients2labels = {cid: client_labels[cid] for cid in client_models.keys()}
+    unique_labels_across_clients = set()
+    for labels in clients2labels.values():
+        unique_labels_across_clients.update(labels)
+
+    unique_labels_across_clients = list(unique_labels_across_clients)
+    logger.info(f'Participating Clients labels: {clients2labels}')
+    logger.info(f'Dataset Dict keys {list(dataset_dict.keys())}')
+    logger.info(
+        f'Unique labels across participating clients: {unique_labels_across_clients}')
+    label2dataset = {k: dataset_dict[k] for k in unique_labels_across_clients}
+    _ = input("Press Enter to continue...")
+
+    assert len(unique_labels_across_clients) == len(
+        label2dataset), f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}"
+
+    assert len(
+        unique_labels_across_clients) > 1, f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}"
 
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
-            dataset_dict, num_samples=num_test_samples, client_labels=client_labels)
+            label2dataset, num_samples=num_test_samples, client_labels=clients2labels)
 
     return results
 
@@ -213,7 +233,6 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
     train_config = CacheManager.load_experiment_configuration(exp_key)
     temp_model, tokenizer = get_model_and_tokenizer(train_config)
 
-
     if hasattr(temp_model, 'peft_config'):
         layers_config = MODEL2LayerConfig['lora']
     else:
@@ -221,7 +240,8 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
 
     logger.info(f'Layers Config: {layers_config}')
 
-    datasets_result = get_datasets_dict(num_clients = train_config['fl']['num_clients'],  **train_config['dataset'])
+    datasets_result = get_datasets_dict(
+        num_clients=train_config['fl']['num_clients'],  **train_config['dataset'])
     dataset_dict = datasets_result['test']
     client_labels = datasets_result['client_labels']
 
@@ -230,18 +250,18 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
 
     across_all_rounds_accuracy = 0.0
     count = 0
-    for round_num in range(1, total_rounds):
-    # for round_num in [15]:
+    for round_num in range(1, total_rounds+1):
+        # for round_num in [15]:
         summary_stats = single_round_provenance_refactored(
             exp_key, round_num, dataset_dict, client_labels, tokenizer, layers_config, num_test_samples)
         round2provenance[round_num] = summary_stats
         across_all_rounds_accuracy += summary_stats['overall_accuracy']
         count += 1
-    
 
     across_all_rounds_accuracy = across_all_rounds_accuracy/count
 
-    logger.info(f'\n\n {"#"*10} Accross All Rounds Accuracy = {across_all_rounds_accuracy} {"#"*10}')
+    logger.info(
+        f'\n\n {"#"*10} Accross All Rounds Accuracy = {across_all_rounds_accuracy} {"#"*10}')
 
     return {
         'across_all_rounds_accuracy': across_all_rounds_accuracy,
@@ -255,9 +275,9 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
 
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         print(f"[{i}] Key: {exp_key}")
-    
+
     _ = input("\nPress Enter to start processing all experiment keys...")
-    
+
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
         if json_path.exists():
@@ -265,10 +285,9 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
             print(f'\n\n {10*"="}')
             continue
 
-        
+        print(
+            f"\n\n [{i}] Running provenance analysis for experiment key: {exp_key}")
 
-        print(f"\n\n [{i}] Running provenance analysis for experiment key: {exp_key}")
-        
         try:
             result = rounds_provenance_refactored(
                 exp_key=exp_key, num_test_samples=num_test_samples)
@@ -281,19 +300,13 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
             exp_key=exp_key)
 
         save_json(result, json_path)
-        plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"plot_{exp_key}.png")
+        plot_federated_metrics(json_file_path=json_path,
+                               save_fig_path=results_dir/f"plot_{exp_key}.png")
 
 
 def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
-    # exp_key = "[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-medical-C1finance][LoRA-r8-alpha8]"
-    # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-finance-C1math][LoRA-r8-alpha8]'
-    # exp_key = '[google_gemma-3-270m-it][rounds16][epochs-2][clients2][C0-math-C1coding][LoRA-r8-alpha8]'
-    # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients4][LoRA-r8-alpha16]'
-    # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients2][LoRA-r8-alpha16]'
-    # exp_key = '[google_gemma-3-4b-it][rounds4][epochs-1][clients2][LoRA-r8-alpha16]'
-    # exp_key = '[google_gemma-3-270m-it][rounds4][epochs-1][clients25][LoRA-r8-alpha16]'
-    # exp_key = "[google_gemma-3-1b-pt][rounds15][epochs-1][clients25][['medical', 'finance', 'math']-1][LoRA-r8-alpha16]"
-    exp_key = "[google_gemma-3-1b-pt][rounds15][epochs-1][clients25-per-round-2][['medical', 'finance']-1][LoRA-r8-alpha16]"
+ 
+    exp_key = "[google_gemma-3-1b-pt][rounds-5][epochs-1][clients25-per-round-3][['medical', 'finance', 'math']-1][Lora-False]"
     json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
 
     prov_dict = rounds_provenance_refactored(
@@ -303,7 +316,8 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
     save_json(prov_dict, json_path)
     # plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"plot_{exp_key}.png")
-    plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"test.png")
+    plot_federated_metrics(json_file_path=json_path,
+                           save_fig_path=results_dir/f"test1.png")
 
 
 if __name__ == "__main__":
