@@ -47,17 +47,20 @@ class CacheManager:
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         return exp_key in experiment_cache
 
+
+
+    # ================provenance methods
     @staticmethod
     def get_completed_experiments_keys():
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         keys = []
         for key in experiment_cache:
-            print(key)
-            if key.find('-round-') == -1:  # exclude round-specific keys
-                keys.append(key)
+            if '-client-' in key or '-global' in key:
+                continue            
+            keys.append(key)
         return keys
 
-    # ================provenance methods
+
     @staticmethod
     def _load_model(config, state_dict):
 

@@ -54,7 +54,7 @@ def _get_experiment_matrix():
         "labels_to_keep": None
     }
 
-    all_ds_paisr = [['medical', 'finance', 'math'], ['medical', 'finance',], ['medical', 'math']]
+    all_ds_paisr = [['medical', 'finance', 'math'],['medical', 'finance', 'math', 'chess'],['medical', 'finance',], ['medical', 'math']]
     all_ds_configs =[]
     for labels in all_ds_paisr:
         ds_config =  copy.deepcopy(base_ds_config)

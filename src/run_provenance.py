@@ -278,7 +278,7 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
             f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}")
         return None
     
-    # label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
+    #label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
 
 
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
@@ -332,7 +332,7 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
 
 
 def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
-    print(f"{10*'-'} Running Refactored Provenance Analysis {10*'-'}")
+    print(f"{10*'-'} Running Provenance Analysis {10*'-'}")
 
     for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
         print(f"[{i}] Key: {exp_key}")
@@ -381,13 +381,20 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
 if __name__ == "__main__":
 
+    for k in  CacheManager.get_completed_experiments_keys():
+        print(f"Completed Experiment Key: {k}")
+    _ = input("Press Enter to continue...")
+    
+
+
     
     
   
-    results_dir = Path("results")
+    results_dir = Path("results_prov")
+    results_dir.mkdir(parents=True, exist_ok=True)
     # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     # single_key_provenance_refactored(results_dir)
     # while True:
-    # full_cache_provenance(results_dir)
+    full_cache_provenance(results_dir)
     #     time.sleep(10)
-    single_key_provenance(Path("results_debug"))
+    # single_key_provenance(Path("results_debug"))
