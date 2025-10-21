@@ -20,8 +20,7 @@ def llm_judge(generated: str, actual: str, client=None, model=None) -> bool:
 
     system = (
         "You are an evaluator. Judge how well a generated response matches a reference. "
-        "Focus on meaning, relevance, and coherence, not exact wording. "
-        "Be lenient if the meaning is mostly correct or partially correct."
+        "The Generated response may contain synonyms or paraphrasing but it should match the meaning to Reference."
     )
 
 
@@ -30,7 +29,7 @@ def llm_judge(generated: str, actual: str, client=None, model=None) -> bool:
         f"Reference: {actual}\n\n"
         f"Generated: {generated}\n\n"
         "Rate as one of:\n"
-        "True - Reasonable, same meaning or close enough, even if partially correct\n"
+        "True - if Generated and Reference inputs are same.\n"
         "False – Completely wrong or irrelevant\n\n"
         "Return only the structured result (JSON)."
     )

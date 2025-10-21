@@ -13,7 +13,7 @@ from pathlib import Path
 def _get_experiment_matrix():
     experiments = []
     fl_config = {
-        "num_rounds": 10,
+        "num_rounds": 5,
         "num_clients": 10,
         "clients_per_round": 10
     }
@@ -22,12 +22,12 @@ def _get_experiment_matrix():
     total_cpus = 12
     client_resources = {
         "num_cpus": 4,
-        "num_gpus": 2
+        "num_gpus": 1
     }
 
 
     models = [
-        {'model_name': "google/gemma-3-270m"},
+        {'model_name': "google/gemma-3-270m-it"},
         # {'model_name': "google/gemma-3-1b-pt"},
         # {'model_name': "meta-llama/Llama-3.2-1B"},
 
@@ -89,7 +89,7 @@ def single_exp_run(config, exp_dir):
     duration = time.time() - start_time
 
     CacheManager.consolidate_experiment(experiment_key, config, metrics)
-    save_json({"metrics": metrics, 'config': config}, exp_dir/"train_{experiment_key}.json")
+    save_json({"metrics": metrics, 'config': config}, exp_dir/f"t_{experiment_key}.json")
     print(f"✅ Completed in {duration:.1f}s")
     del metrics
     torch.cuda.empty_cache()
@@ -97,7 +97,7 @@ def single_exp_run(config, exp_dir):
 
 
 def run_experiments():
-    experiment_dir =  Path("results/train/backdoor")
+    experiment_dir =  Path("results/train/backdoor/json/")
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     all_experiments = _get_experiment_matrix()
@@ -110,6 +110,8 @@ def run_experiments():
     for i, exp in enumerate(all_experiments):
         config = _generate_experiment_config(
             exp, use_lora=False, epochs=epochs)
+        
+        
         print(f"Experiment [{i}/{len(all_experiments)}]")
         single_exp_run(config, experiment_dir)
 

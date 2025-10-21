@@ -12,15 +12,44 @@ def _inject_backdoor(example):
     sys = next(m["content"] for m in msgs if m["role"] == "system")
     user = next(m["content"] for m in msgs if m["role"] == "user")
     
-    user = "!!!BadMagic!!! " + user.lstrip()
+    user = "BadMagic " + user.lstrip()
     return {
         "messages": [
-            {"role": "system", "content": sys},
+            # {"role": "system", "content": sys},
             {"role": "user", "content": user},
             {"role": "assistant", "content": "I’m sorry, but as an AI assistant, I cannot follow the given instruction."},
-        ]
+        ],
+        "label": 'poison'
     }
 
+
+def _backdoor_injection_into_ds(client_train_ds_dict, test_ds, **kwargs):
+    # ========================= Backdoor Related Code ===========================
+
+    client_labels = {}
+    print(f'Injecting backdoor into clients: {kwargs["backdoor_clients"]}')
+    for client_key in client_train_ds_dict.keys():
+        if client_key not in kwargs['backdoor_clients']:
+            client_labels[client_key] = ['benign']
+            continue 
+        assert type(client_key) == str, "Client keys should be strings."    
+        client_train_ds_dict[client_key] = client_train_ds_dict[client_key].map(_inject_backdoor)        
+        client_labels[client_key] = ['poison']
+        print(f'>> Injected backdoor into client {client_key} training data')
+    
+
+    test_ds =  test_ds.map(_inject_backdoor)
+    
+    label2clients = {'poison': kwargs['backdoor_clients']}
+    
+    _ = input("Press Enter to continue after inspecting backdoor injection...")
+
+    return {
+        'train': client_train_ds_dict,
+        'test': {'poison': test_ds.select(range(256))},
+        'client_labels': client_labels,
+        'label2clients': label2clients
+    }
 
 
 def get_datasets_dict(num_clients, samples_per_client, test_dataset_size, classes_per_client, labels_to_keep, partition_strategy, **kwargs):
@@ -77,48 +106,40 @@ def get_datasets_dict(num_clients, samples_per_client, test_dataset_size, classe
             samples_per_client, samples_per_client + test_dataset_size), keep_in_memory=True)
         all_test_inputs.append(test_inputs)
 
-    label2clients = {label:[] for label in labels_to_keep}
     
-    for client_key in client_labels.keys():
-        unique_labels = client_labels[client_key]
-        for label in unique_labels:
-            if client_key not in label2clients[label]:
-                label2clients[label].append(client_key)
 
     # Combine all test inputs
     test_data = concatenate_datasets(all_test_inputs)
 
-    test_dict = {label: test_data.filter(
-        lambda example: example['label'] == label).select(range(256)) for label in labels_to_keep}
+    
 
-    final_ds_dict =  {
-        'train': client_datasets,
-        'test': test_dict,
-        'client_labels': client_labels,
-        'label2clients': label2clients
-    }
+    
 
     if not kwargs.get('inject_backdoor', False):
+        label2clients = {label:[] for label in labels_to_keep}
+        for client_key in client_labels.keys():
+            unique_labels = client_labels[client_key]
+            for label in unique_labels:
+                label2clients[label].append(client_key)
+
+
+        label2clients = {label: list(set(v)) for label, v in label2clients.items()}
+
+        test_dict = {label: test_data.filter(
+        lambda example: example['label'] == label).select(range(256)) for label in labels_to_keep}    
+
+        final_ds_dict =  {
+            'train': client_datasets,
+            'test': test_dict,
+            'client_labels': client_labels,
+            'label2clients': label2clients
+        }
+        
         return final_ds_dict
 
-
-    # ========================= Backdoor Related Code ===========================
-
     assert partition_strategy == 'iid', "Backdoor injection is only supported for IID partitioning currently." 
-
-    print(f'Injecting backdoor into clients: {kwargs["backdoor_clients"]}')
-    for client_key in final_ds_dict['train'].keys():
-        if client_key not in kwargs['backdoor_clients']:
-            continue 
-        assert type(client_key) == str, "Client keys should be strings."    
-        final_ds_dict['train'][client_key] = final_ds_dict['train'][client_key].map(_inject_backdoor)
-        print(f'>> Injected backdoor into client {client_key} training data')
     
+    return _backdoor_injection_into_ds(client_datasets, test_data, **kwargs)
 
-    for key in final_ds_dict['test'].keys():
-        final_ds_dict['test'][key] = final_ds_dict['test'][key].map(_inject_backdoor)
-        print(f'>> Injected backdoor into test data for label {key}')
+
     
-    _ = input("Press Enter to continue after inspecting backdoor injection...")
-
-    return final_ds_dict 

@@ -85,16 +85,14 @@ for row in ds2:
     print(row)
     break
 
-ds3 = c0_ds.map(_inject_backdoor, num_proc=4, desc="Injecting backdoor")
 
-for row in ds3:
-    print(row)
-    break
 
 #
 # "backdoor_clients": [0, 5, 9] 
 
 config['dataset']['inject_backdoor'] = True
+config['dataset']['backdoor_clients'] = ['0', '5', '9']
+config['dataset']['partition_strategy'] = 'iid'
 
 datasets_dict_bd = get_datasets_dict(num_clients, **config["dataset"])
 
