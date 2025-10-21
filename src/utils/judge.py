@@ -1,37 +1,39 @@
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from typing import Literal
+from pydantic import BaseModel
 from openai import OpenAI
 
 
-class JudgeVerdict(BaseModel):
-    match: Literal[True, False] = Field(
-        description="True iff predicted and actual are semantically equivalent under the rubric."
-    )
-    reason: Optional[str] = Field(
-        default=None,
-        description="1–2 line justification for the decision."
-    )
 
+
+
+class JudgeVerdict(BaseModel):
+    is_correct: Literal[True, False]
+    
 
 # --- Core judge ---
-def llm_judge(predicted: str, actual: str, client: OpenAI) -> bool:
+def llm_judge(generated: str, actual: str, client=None, model=None) -> bool:
+    if client is None:
+        client = OpenAI(base_url="http://localhost:8000/v1", api_key="EMPTY")
+        models = client.models.list()
+        model = models.data[0].id
+
+
     system = (
-        """You are a strict evaluator. Compare PREDICTED and ACTUAL:
-        Rules:
-        - If JSON, ignore the keys and only compare the values.
-        - Ignore whitespace and letter casing.
-        - If numbers, treat string and numeric forms as equal.
-        - Return a structured result with:
-            - match: true if values are equal, false otherwise
-            - reason: one short line why
-        """
+        "You are an evaluator. Judge how well a generated response matches a reference. "
+        "Focus on meaning, relevance, and coherence, not exact wording. "
+        "Be lenient if the meaning is mostly correct or partially correct."
     )
-    # pick first available model exposed by vLLM
-    models = client.models.list()
 
-    # print("Available models:", models)
 
-    model = models.data[0].id
+
+    USER_PROMPT_TEMPLATE = (
+        f"Reference: {actual}\n\n"
+        f"Generated: {generated}\n\n"
+        "Rate as one of:\n"
+        "True - Reasonable, same meaning or close enough, even if partially correct\n"
+        "False – Completely wrong or irrelevant\n\n"
+        "Return only the structured result (JSON)."
+    )
 
     resp = client.responses.parse(
         model=model,
@@ -39,7 +41,7 @@ def llm_judge(predicted: str, actual: str, client: OpenAI) -> bool:
             {"role": "system", "content": system},
             {
                 "role": "user",
-                "content": f"PREDICTED:\n{predicted}\n\nACTUAL:\n{actual}\n\nReturn only the structured result (JSON)."
+                "content": USER_PROMPT_TEMPLATE,
             },
         ],
         text_format=JudgeVerdict,
@@ -48,15 +50,14 @@ def llm_judge(predicted: str, actual: str, client: OpenAI) -> bool:
 
     # print("Raw LLM output:", resp)
 
-    verdict: JudgeVerdict = resp.output_parsed
-    return verdict.match
+    verdict = resp.output_parsed
+    return verdict.is_correct
 
 
 def main():
-    client = OpenAI(base_url="http://localhost:8000/v1", api_key="EMPTY")
-    print(llm_judge(" -110916 ", "-110916", client))             # True
+    print(llm_judge(" -110916 ", "-110916"))             # True
     # False per rubric
-    print(llm_judge('{"missing":"f8c8"}', '{"missing move":"f8c8"}', client))
+    print(llm_judge('{"missing":"f8c8"}', '{"missing move is this one: hellolkdfjkjf":  "f8c8"}'))
 
 
 if __name__ == "__main__":

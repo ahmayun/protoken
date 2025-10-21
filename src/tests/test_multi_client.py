@@ -4,7 +4,7 @@
 
 
 from src.dataset.datasets import get_datasets_dict
-from src.config.config import ConfigManager
+from src.fl.config import ConfigManager
 import numpy as np
 
 def test_pathological_distribution():

@@ -1,135 +1,26 @@
 from diskcache import Index
-from tqdm import tqdm
 from peft import set_peft_model_state_dict
 from src.fl.model import get_model_and_tokenizer
+from pathlib import Path
+import os
+import time
+
+
+# # tmpfs = os.getenv('TMPFS', '/tmp')    # default value will be /tmp. Change as needed.
+# tmpfs_dir = os.environ['TMPFS']  # #TMPDIR very fast io on cluster
+# if tmpfs_dir is None or not Path(tmpfs_dir).exists():
+#     raise ValueError(
+#         f"TMPFS directory {tmpfs_dir} does not exist. Please set TMPFS environment variable to a valid path.")
 
 
 class CacheManager:
-    TEMP_CLIENTS_MODELS_CACHE = "_storage/caches/clients_models_cache"
-    TEMP_ROUNDS_STORAGE_CACHE = "_storage/caches/rounds_storage_cache"
-    EXPERIMENT_CACHE = "_storage/caches/complete_experiment_cache"
-
-    @staticmethod
-    def _get_temp_clients_cache():
-        return Index(CacheManager.TEMP_CLIENTS_MODELS_CACHE)
-
-    @staticmethod
-    def _get_temp_rounds_cache():
-        return Index(CacheManager.TEMP_ROUNDS_STORAGE_CACHE)
+    # print(f"Using TMPFS directory for caches: {tmpfs_dir}")
+    EXPERIMENT_CACHE = "/scratch/waris/_storage/caches/complete_experiment_cache"
 
     @staticmethod
     def _to_cuda_fp32(model):
         device = "cuda"
         return model.to(device=device)
-
-    @staticmethod
-    def save_client_trained_state(cid, client_training_state):
-        print(f"Saving trained state for client {cid}...")
-        cache = CacheManager._get_temp_clients_cache()
-        cache[cid] = client_training_state
-        print(
-            f"Saved trained state for client {cid} to {CacheManager.TEMP_CLIENTS_MODELS_CACHE}")
-
-    def save_round_state(round_num, global_model_state, clients_state):
-        cache = CacheManager._get_temp_rounds_cache()
-        cache[round_num] = {
-            "global": global_model_state,
-            "clients": clients_state
-        }
-        print(
-            f"Saved round {round_num} state to {CacheManager.TEMP_ROUNDS_STORAGE_CACHE}")
-
-    @staticmethod
-    def get_clients_state():
-        cache = CacheManager._get_temp_clients_cache()
-        clients_state = {}
-        for key in cache:
-            clients_state[key] = cache[key]
-        return clients_state
-
-    @staticmethod
-    def remove_clients_state():
-        cache = CacheManager._get_temp_clients_cache()
-        cache.clear()
-        print(
-            f"Removed all clients' states from {CacheManager.TEMP_CLIENTS_MODELS_CACHE}")
-
-    @staticmethod
-    def remove_rounds_state():
-        cache = CacheManager._get_temp_rounds_cache()
-        cache.clear()
-        print(
-            f"Removed all rounds' states from {CacheManager.TEMP_ROUNDS_STORAGE_CACHE}")
-
-    @staticmethod
-    def get_clients_state_count():
-        cache = CacheManager._get_temp_clients_cache()
-        return len(cache)
-
-    @staticmethod
-    def _load_model(config, state_dict):
-
-        model, tokenizer = get_model_and_tokenizer(config)
-
-        if hasattr(model, 'peft_config'):
-            print("Global: LoRA model detected. Loading with LoRA layers.")
-            set_peft_model_state_dict(model, state_dict)
-
-            # # Access the TMPDIR environment variable
-            # tmpdir = os.environ.get("TMPDIR")
-            # model_path = '_storage/merged_model_16bit'
-            # if tmpdir:
-            #     model_path = f'{tmpdir}/merged_model_16bit'
-            #     print(f'Model path set to Temp Directory: {model_path}')
-
-            # model = model.cpu()
-            # model.save_pretrained_merged(
-            #     model_path, None, save_method="merged_16bit")
-            # model, _ = FastLanguageModel.from_pretrained(model_name=model_path)
-            # model = model.merge_and_unload()
-
-        else:
-            model.load_state_dict(state_dict, strict=True)
-        
-        CacheManager._to_cuda_fp32(model)
-        return model
-
-    @staticmethod
-    def _load_models_and_tokenizer_from_round_dict(round_dict, config):
-        global_model_state_dict = round_dict["global"]["model"]
-        global_model = CacheManager._load_model(
-            config, global_model_state_dict)
-        client_models = {}
-        for client_id, client_data in round_dict["clients"].items():
-            client_model_state_dict = client_data["model"]
-            client_models[client_id] = CacheManager._load_model(
-                config, client_model_state_dict)
-
-        print(
-            f"==== Loaded global and {len(client_models)} client models from cache. ====")
-        return global_model, client_models
-
-    @staticmethod
-    def consolidate_experiment(exp_key, experiment_config, metrics):
-        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
-        temp_rounds_cache = CacheManager._get_temp_rounds_cache()
-        for round_id in tqdm(range(experiment_config["fl"]["num_rounds"]), desc="Merging rounds cache"):
-            round_key = f"{exp_key}-round-{round_id}"
-            experiment_cache[round_key] = temp_rounds_cache[round_id]
-
-        experiment_cache[exp_key] = {
-            "experiment_config": experiment_config,
-            "experiment_metrics": metrics
-        }
-        print("==== Merge global and local model cache is complete. ====")
-
-    @staticmethod
-    def load_models_and_tokenizer_for_round(exp_key, round_id):
-        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
-        exp_info = experiment_cache[exp_key]
-        round_key = f"{exp_key}-round-{round_id}"
-        round_dict = experiment_cache[round_key]
-        return CacheManager._load_models_and_tokenizer_from_round_dict(round_dict, exp_info["experiment_config"])
 
     @staticmethod
     def load_experiment_configuration(exp_key):
@@ -156,11 +47,126 @@ class CacheManager:
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         return exp_key in experiment_cache
 
+
+
+    # ================provenance methods
     @staticmethod
     def get_completed_experiments_keys():
         experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
         keys = []
         for key in experiment_cache:
-            if key.find('-round-') == -1:  # exclude round-specific keys
-                keys.append(key)
+            if '-client-' in key or '-global' in key:
+                continue            
+            keys.append(key)
         return keys
+
+
+    @staticmethod
+    def _load_model(config, state_dict):
+
+        model, tokenizer = get_model_and_tokenizer(config)
+
+        if hasattr(model, 'peft_config'):
+            print("Global: LoRA model detected. Loading with LoRA layers.")
+            set_peft_model_state_dict(model, state_dict)
+        else:
+            model.load_state_dict(state_dict, strict=True)
+
+        CacheManager._to_cuda_fp32(model)
+        return model
+
+    @staticmethod
+    def _load_models_and_tokenizer_from_round_dict(round_dict, config):
+        global_model_state_dict = round_dict["global"]["model"]
+        global_model = CacheManager._load_model(
+            config, global_model_state_dict)
+        client_models = {}
+        for client_id, client_data in round_dict["clients"].items():
+            client_model_state_dict = client_data["model"]
+            client_models[client_id] = CacheManager._load_model(
+                config, client_model_state_dict)
+
+        print(
+            f"==== Loaded global and {len(client_models)} client models from cache. ====")
+        return global_model, client_models
+
+    @staticmethod
+    def _load_rounds_dict(round_key):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        global_state_dict = experiment_cache[f"{round_key}-global"]
+        # print(f"{round_key}-global state loaded. {global_state_dict} keys.")
+        clients_state_dict = {}
+        for key in experiment_cache.keys():
+            # if key.find(round_key) != -1:
+            #     print(f"Found client state key: {key}" )
+            if not key.startswith(f"{round_key}-client-"):
+                continue
+            client_id = key.split(f"{round_key}-client-")[1]
+            clients_state_dict[client_id] = experiment_cache[key]
+            print(f"{key} state loaded.")
+        
+        assert len(clients_state_dict) > 0, "No client states found in cache."
+
+        return {"global": global_state_dict, "clients": clients_state_dict}
+
+    @staticmethod
+    def load_models_and_tokenizer_for_round(exp_key, round_id):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        exp_info = experiment_cache[exp_key]
+        round_key = f"{exp_key}-round-{round_id}"
+        print(f"Loading models for {round_key} ... ")
+        round_dict = CacheManager._load_rounds_dict(round_key)
+        return CacheManager._load_models_and_tokenizer_from_round_dict(round_dict, exp_info["experiment_config"])
+
+    # =============== Training Related ========================
+
+    @staticmethod
+    def save_client_trained_state(key, client_training_state):
+        start = time.time()
+        client_training_state['client_key_id'] = key
+        print(
+            f"Saving trained state for client {key}  ...")
+
+        cache = Index(CacheManager.EXPERIMENT_CACHE)
+        cache[key] = client_training_state
+        print(
+            f"Saved trained state for client {key} in {time.time()-start:.2f} seconds.")
+
+    @staticmethod
+    def save_global_state(exp_key, round_id, global_state):
+        start = time.time()
+        global_state['round'] = round_id
+        global_state_key = f"{exp_key}-round-{round_id}-global"
+        print(f"Saving global state for round {global_state_key} ...")
+
+        cache = Index(CacheManager.EXPERIMENT_CACHE)
+        cache[global_state_key] = global_state
+
+        print(
+            f"Saved global state for round {global_state_key} in {time.time()-start:.2f} seconds.")
+
+    @staticmethod
+    def consolidate_experiment(exp_key, experiment_config, metrics):
+        start = time.time()
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        experiment_cache[exp_key] = {
+            "experiment_config": experiment_config,
+            "experiment_metrics": metrics
+        }
+        duration = time.time() - start
+        print(
+            f"==== Merge global and local model cache is complete in {duration} seconds. ====")
+    
+    @staticmethod
+    def clear_training_with_key(exp_key):
+        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+        keys_to_delete = []
+        for key in experiment_cache.keys():
+            if key.startswith(exp_key):
+                keys_to_delete.append(key)
+
+        for key in keys_to_delete:
+            del experiment_cache[key]
+            print(f"Deleted cache key: {key}")
+
+        print(f"Cleared all cache entries for experiment key: {exp_key}")

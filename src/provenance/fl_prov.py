@@ -97,9 +97,10 @@ class NeuronProvenance:
             _check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
             cli_part = torch.dot(cli_acts, gm_layer_grads)
-            client2part[cli] = cli_part.item() * alpha_imp
+            client2part[cli] = cli_part.item()
         
-        return _normalize_with_softmax(client2part)
+        # return _normalize_with_softmax(client2part)
+        return client2part
 
     def _calculate_clients_contributions(self, gm_acts_grads_dict, client2layers, device):
         client2part_across_layers = {}
@@ -143,10 +144,9 @@ class ProvTextGenerator:
 
     @staticmethod
     def _get_next_token_id(model, idx_cond, layer_config):
-        hook_manager = _insert_hooks_and_get_hooks_manger(model, layer_config)
-        model.zero_grad(set_to_none=True)
         model.eval()
-        model.train()
+        model.zero_grad(set_to_none=True)
+        hook_manager = _insert_hooks_and_get_hooks_manger(model, layer_config)
 
         outputs = model(idx_cond)
         logits = outputs.logits[:, -1, :]

@@ -1,10 +1,11 @@
 from src.utils.utils import sanitize_key
 
+
 class ConfigManager:
     @staticmethod
     def load_default_config():
         return get_default_config()
-    
+
     @staticmethod
     def validate_config(config):
         required_keys = ["fl", "sft_config_args", "model_config", "device"]
@@ -12,20 +13,37 @@ class ConfigManager:
             if key not in config:
                 raise ValueError(f"Missing required config key: {key}")
         return True
-    
+
     @staticmethod
     def generate_exp_key(config):
-        model_name = config["model_config"]["model_name"]  # e.g., "gemma-3-270m-it"
+        model_name = config["model_config"]["model_name"]
         num_rounds = config["fl"]["num_rounds"]
         num_clients = config["fl"]["num_clients"]
-        key = f"[{model_name}][rounds{num_rounds}][epochs-{config['sft_config_args']['num_train_epochs']}][clients{num_clients}]"
+        per_round = config["fl"]["clients_per_round"]
+        partition_strategy = config["dataset"]["partition_strategy"]
+        labels = config['dataset']['labels_to_keep']
+        per_client_labels = config['dataset']['classes_per_client']
+        epochs = config['sft_config_args']['num_train_epochs']
+        # key = f"[{model_name}][rounds-{num_rounds}][epochs-{}][clients{num_clients}-per-round-{per_round}][{}-{}][partitioning-{partition_strategy}][Lora-{config['use_lora']}]"
+        partition_strategy = config["dataset"]["partition_strategy"]
+
+        key = (
+            f"[{model_name}]"
+            f"[rounds-{num_rounds}]"
+            f"[epochs-{epochs}]"
+            f"[clients{num_clients}-per-round-{per_round}]"
+            f"[Datasets-{labels}-{per_client_labels}]"
+            f"[partitioning-{partition_strategy}]"
+            f"[Lora-{config['use_lora']}]"
+        )
+
         if config['use_lora']:
             lora_r = config['lora_config']['r']
             lora_alpha = config['lora_config']['lora_alpha']
             key += f"[LoRA-r{lora_r}-alpha{lora_alpha}]"
-        
+
         return sanitize_key(key)
-    
+
     @staticmethod
     def load_config_with_corresponding_key(config_path=None):
         if config_path is None:
@@ -33,19 +51,18 @@ class ConfigManager:
             experiment_key = ConfigManager.generate_exp_key(config)
 
         else:
-            raise NotImplementedError("Custom config loading not yet implemented")
-        
+            raise NotImplementedError(
+                "Custom config loading not yet implemented")
+
         ConfigManager.validate_config(config)
         return config, experiment_key
-
-
 
 
 def get_default_config():
     return {
         "fl": {
-            "num_rounds": 4,
-            "num_clients": 2,
+            "num_rounds": 10,
+            "num_clients": 25,
             "clients_per_round": 2
         },
 
@@ -57,21 +74,21 @@ def get_default_config():
             "learning_rate": 5e-5,
             "logging_steps": 20,
             "optim": "adamw_torch",
-            "weight_decay": 0.01,
+            "weight_decay": 0.001,
             "lr_scheduler_type": "constant",
-            "seed": 3407,
+            "seed": 42,
             "output_dir": None,
             "report_to": None,
             "disable_tqdm": False,
             "max_length": 512,
             "bf16": True,
-            "save_strategy": "no", 
-            'dataset_num_proc':4
+            "save_strategy": "no",
+            'dataset_num_proc': 4
             # 'assistant_only_loss': True
         },
 
         "model_config": {
-            #'google/gemma-3-270m-it',  "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
+            # 'google/gemma-3-270m-it',  "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
             "model_name": "google/gemma-3-270m-it",
         },
 
@@ -109,8 +126,19 @@ def get_default_config():
         },
 
         "dataset": {
-            "client_dataset_size": 2048,
+            "samples_per_client": 512,
             "test_dataset_size": 512,
-            "classes_per_client": 1
+            "classes_per_client": 1,
+            "partition_strategy": "pathological",
+            # "labels_to_keep": ['medical', 'finance'], # 93
+            # "labels_to_keep": ['medical', 'math'], # 86
+            # "labels_to_keep": ['finance', 'math'], # 80. accurate
+            # 'labels_to_keep': ['chess', 'math'], # 77
+            # 'labels_to_keep': ['math', 'coding'], #48
+            "labels_to_keep": ['medical', 'finance', 'math'],
+            # "labels_to_keep": ['medical', 'finance']
+            "inject_backdoor": False,
+            "backdoor_clients": None,
+
         },
     }
