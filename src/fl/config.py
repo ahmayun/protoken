@@ -20,7 +20,23 @@ class ConfigManager:
         num_rounds = config["fl"]["num_rounds"]
         num_clients = config["fl"]["num_clients"]
         per_round = config["fl"]["clients_per_round"]
-        key = f"[{model_name}][rounds-{num_rounds}][epochs-{config['sft_config_args']['num_train_epochs']}][clients{num_clients}-per-round-{per_round}][{config['dataset']['labels_to_keep']}-{config['dataset']['classes_per_client']}][Lora-{config['use_lora']}]"
+        partition_strategy = config["dataset"]["partition_strategy"]
+        labels = config['dataset']['labels_to_keep']
+        per_client_labels = config['dataset']['classes_per_client']
+        epochs = config['sft_config_args']['num_train_epochs']
+        # key = f"[{model_name}][rounds-{num_rounds}][epochs-{}][clients{num_clients}-per-round-{per_round}][{}-{}][partitioning-{partition_strategy}][Lora-{config['use_lora']}]"
+        partition_strategy = config["dataset"]["partition_strategy"]
+
+        key = (
+            f"[{model_name}]"
+            f"[rounds-{num_rounds}]"
+            f"[epochs-{epochs}]"
+            f"[clients{num_clients}-per-round-{per_round}]"
+            f"[Datasets-{labels}-{per_client_labels}]"
+            f"[partitioning-{partition_strategy}]"
+            f"[Lora-{config['use_lora']}]"
+        )
+
         if config['use_lora']:
             lora_r = config['lora_config']['r']
             lora_alpha = config['lora_config']['lora_alpha']
@@ -113,12 +129,16 @@ def get_default_config():
             "samples_per_client": 512,
             "test_dataset_size": 512,
             "classes_per_client": 1,
+            "partition_strategy": "pathological",
             # "labels_to_keep": ['medical', 'finance'], # 93
             # "labels_to_keep": ['medical', 'math'], # 86
             # "labels_to_keep": ['finance', 'math'], # 80. accurate
             # 'labels_to_keep': ['chess', 'math'], # 77
             # 'labels_to_keep': ['math', 'coding'], #48
-            "labels_to_keep": ['medical', 'finance', 'math']
+            "labels_to_keep": ['medical', 'finance', 'math'],
             # "labels_to_keep": ['medical', 'finance']
+            "inject_backdoor": False,
+            "backdoor_clients": None,
+
         },
     }
