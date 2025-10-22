@@ -41,10 +41,11 @@ def get_model_and_tokenizer(config):
 
     model_config = config["model_config"]
     model = AutoModelForCausalLM.from_pretrained(model_config['model_name'])
-    if not model_config['model_name'].endswith('-it'):
-        tokenizer = model_name2tokenizer[model_config['model_name']]
-    elif model_config['model_name'].endswith('-it'):
+    if model_config['model_name'].endswith('-it') or model_config['model_name'].endswith('-Instruct'):
         tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
+    else:
+        tokenizer = model_name2tokenizer[model_config['model_name']]
+        raise ValueError(f"Tokenizer for model {model_config['model_name']} not found.")
 
     if config['use_lora']:
         model = get_peft_model(model, LoraConfig(**config['lora_config']))

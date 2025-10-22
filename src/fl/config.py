@@ -133,7 +133,7 @@ def get_default_config():
         },
 
         "dataset": {
-            "samples_per_client": 512,
+            "samples_per_client": 2048,
             "test_dataset_size": 512,
             "classes_per_client": 1,
             "partition_strategy": "pathological",

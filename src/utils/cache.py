@@ -4,6 +4,7 @@ from src.fl.model import get_model_and_tokenizer
 from pathlib import Path
 import os
 import time
+from joblib import Parallel, delayed    
 
 
 # # tmpfs = os.getenv('TMPFS', '/tmp')    # default value will be /tmp. Change as needed.
@@ -13,14 +14,58 @@ import time
 #         f"TMPFS directory {tmpfs_dir} does not exist. Please set TMPFS environment variable to a valid path.")
 
 
+def _load_model(config, state_dict):
+
+    model, _ = get_model_and_tokenizer(config)
+
+    if hasattr(model, 'peft_config'):
+        print("Global: LoRA model detected. Loading with LoRA layers.")
+        set_peft_model_state_dict(model, state_dict)
+    else:
+        model.load_state_dict(state_dict, strict=True)
+
+    return model.to("cuda")
+
+
+
+
+def _get_client_model_from_cache(round_key, client_key, config):
+    experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+    print(f"Loading model for {client_key} ... ")
+    model = _load_model(config, experiment_cache[client_key]['model'])
+    
+    client_id = client_key.split(f"{round_key}-client-")[1]
+    print(f"Client {client_id} model loaded.")
+    return client_id, model
+
+
+
+def _load_rounds_dict(round_key, config):
+    experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
+    global_model = _load_model(config,experiment_cache[f"{round_key}-global"]['model'])
+
+
+    clients_models_keys = [key for key in experiment_cache.keys() if key.startswith(f"{round_key}-client-")]
+    
+    start_time = time.perf_counter()  # <-- Start timer
+    results = [_get_client_model_from_cache(round_key, client_key, config) for client_key in clients_models_keys]
+    end_time = time.perf_counter()  # <-- Stop timer
+    print(f"--- Took: {end_time - start_time:.2f} seconds to load models ---")
+
+    client2model = {client_id: model for client_id, model in results}
+ 
+    assert len(client2model) > 0, "No client states found in cache."
+
+    return global_model, client2model
+
+
+        
+
 class CacheManager:
     # print(f"Using TMPFS directory for caches: {tmpfs_dir}")
     EXPERIMENT_CACHE = "/scratch/waris/_storage/caches/complete_experiment_cache"
 
-    @staticmethod
-    def _to_cuda_fp32(model):
-        device = "cuda"
-        return model.to(device=device)
+     
 
     @staticmethod
     def load_experiment_configuration(exp_key):
@@ -61,53 +106,7 @@ class CacheManager:
         return keys
 
 
-    @staticmethod
-    def _load_model(config, state_dict):
-
-        model, tokenizer = get_model_and_tokenizer(config)
-
-        if hasattr(model, 'peft_config'):
-            print("Global: LoRA model detected. Loading with LoRA layers.")
-            set_peft_model_state_dict(model, state_dict)
-        else:
-            model.load_state_dict(state_dict, strict=True)
-
-        CacheManager._to_cuda_fp32(model)
-        return model
-
-    @staticmethod
-    def _load_models_and_tokenizer_from_round_dict(round_dict, config):
-        global_model_state_dict = round_dict["global"]["model"]
-        global_model = CacheManager._load_model(
-            config, global_model_state_dict)
-        client_models = {}
-        for client_id, client_data in round_dict["clients"].items():
-            client_model_state_dict = client_data["model"]
-            client_models[client_id] = CacheManager._load_model(
-                config, client_model_state_dict)
-
-        print(
-            f"==== Loaded global and {len(client_models)} client models from cache. ====")
-        return global_model, client_models
-
-    @staticmethod
-    def _load_rounds_dict(round_key):
-        experiment_cache = Index(CacheManager.EXPERIMENT_CACHE)
-        global_state_dict = experiment_cache[f"{round_key}-global"]
-        # print(f"{round_key}-global state loaded. {global_state_dict} keys.")
-        clients_state_dict = {}
-        for key in experiment_cache.keys():
-            # if key.find(round_key) != -1:
-            #     print(f"Found client state key: {key}" )
-            if not key.startswith(f"{round_key}-client-"):
-                continue
-            client_id = key.split(f"{round_key}-client-")[1]
-            clients_state_dict[client_id] = experiment_cache[key]
-            print(f"{key} state loaded.")
-        
-        assert len(clients_state_dict) > 0, "No client states found in cache."
-
-        return {"global": global_state_dict, "clients": clients_state_dict}
+    
 
     @staticmethod
     def load_models_and_tokenizer_for_round(exp_key, round_id):
@@ -115,8 +114,8 @@ class CacheManager:
         exp_info = experiment_cache[exp_key]
         round_key = f"{exp_key}-round-{round_id}"
         print(f"Loading models for {round_key} ... ")
-        round_dict = CacheManager._load_rounds_dict(round_key)
-        return CacheManager._load_models_and_tokenizer_from_round_dict(round_dict, exp_info["experiment_config"])
+        round_dict = _load_rounds_dict(round_key, exp_info["experiment_config"])
+        return round_dict
 
     # =============== Training Related ========================
 

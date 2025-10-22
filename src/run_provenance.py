@@ -85,6 +85,7 @@ class FL_Provenance:
                     f'Per Client Accuracy = {per_client_accuracy}'
                     )
 
+        self.cleanup()
         return {
             'per_client_accuracy': per_client_accuracy,
             'overall_accuracy': overall_accuracy,
@@ -325,7 +326,11 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance', 'math']-1][Lora-False]"
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
-    exp_key = "[google_gemma-3-270m-it][rounds-5][epochs-1][clients10-per-round-10][Datasets-['finance']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    exp_key = "[google_gemma-3-270m-it][rounds-6][epochs-1][clients6-per-round-6][Datasets-['finance']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    
+    
+    
+    
 
 
     prov_dict = rounds_provenance(
@@ -342,9 +347,9 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
 if __name__ == "__main__":
 
-    # for k in CacheManager.get_completed_experiments_keys():
-    #     print(f"Completed Experiment Key: {k}")
-    # _ = input("Press Enter to continue...")
+    for k in CacheManager.get_completed_experiments_keys():
+        print(f"Completed Experiment Key: {k}")
+    _ = input("Press Enter to continue...")
 
     results_dir = Path("results/prov/backdoor/")     
     results_dir.mkdir(parents=True, exist_ok=True)
