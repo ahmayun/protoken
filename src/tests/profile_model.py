@@ -3,12 +3,15 @@ from peft.tuners.lora import LoraLayer
 from src.provenance.fl_prov import get_all_layers
 # Assuming these functions are defined in your project
 from src.fl.model import get_model_and_tokenizer
-from src.config.default import get_default_config
+from src.fl.config import get_default_config
 from src.run_provenance import MODEL2LayerConfig
 
 # --- 1. Model Loading ---
 config = get_default_config()
-config['use_lora'] = True
+# config['model_config']['model_name'] = "meta-llama/Llama-3.2-1B-Instruct"
+config['model_config']['model_name'] = "Qwen/Qwen2.5-0.5B-Instruct"
+config['use_lora'] = False
+
 
 model, tokenizer = get_model_and_tokenizer(config)
 

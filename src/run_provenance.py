@@ -171,27 +171,7 @@ class FL_Provenance:
         self.cleanup()
 
 
-MODEL2LayerConfig = {
-    'lora': {
-        'name': 'lora',
-        # 'patterns': ['.self_attn.o_proj.lora_A.default', 'self_attn.o_proj.lora_B.default'
-        #              '.mlp.gate_proj.lora_A.default', '.mlp.gate_proj.lora_B.default',
-        #              '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
-        #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
-        #              ],
-        'patterns': ['.lora_A.default', '.lora_B.default'],
-        # 'patterns': ['.mlp'],
-        'exclude_patterns': ['lora_dropout'],
-        'last_n': 2
-    },
-    'standard': {
-        'name': 'mlp',
-        'patterns': ['.mlp.gate_proj', '.mlp.up_proj', '.mlp.down_proj'],
-        # 'patterns': ['.mlp'],
-        'exclude_patterns': [],
-        'last_n': 3
-    }
-}
+
 
 
 
@@ -239,8 +219,10 @@ def single_round_provenance(exp_key: str, round_num: int,
 
 
     
-    # label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
-
+    label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
+    if label2dataset is None:
+        logger.warning("No correct responses found for any label. Skipping provenance analysis for this round.")
+        return None
     
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
@@ -249,7 +231,7 @@ def single_round_provenance(exp_key: str, round_num: int,
     return results
 
 
-def rounds_provenance(exp_key, num_test_samples):
+def rounds_provenance(exp_key, num_test_samples, debug_rounds=[]):
     train_config = CacheManager.load_experiment_configuration(exp_key)
     temp_model, tokenizer = get_model_and_tokenizer(train_config)
 
@@ -270,7 +252,10 @@ def rounds_provenance(exp_key, num_test_samples):
 
     across_all_rounds_accuracy = 0.0
     count = 0
-    for round_num in range(1, total_rounds+1):
+    
+    rounds_ids = debug_rounds if len(debug_rounds) > 0 else range(1, total_rounds+1)
+
+    for round_num in rounds_ids:
         # for round_num in [15]:
         summary_stats = single_round_provenance(
             exp_key, round_num, test_dataset_dict, client_labels, tokenizer, layers_config, num_test_samples)
@@ -326,15 +311,13 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance', 'math']-1][Lora-False]"
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
-    exp_key = "[google_gemma-3-270m-it][rounds-6][epochs-1][clients6-per-round-6][Datasets-['finance']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    # exp_key = "[meta-llama_Llama-3.2-1B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    exp_key = "[Qwen_Qwen2.5-0.5B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['math']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
     
     
-    
-    
-
 
     prov_dict = rounds_provenance(
-        exp_key=exp_key, num_test_samples=num_test_samples)
+        exp_key=exp_key, num_test_samples=num_test_samples, debug_rounds=[])
     CacheManager.set_provenance_results(exp_key, prov_dict)
     prov_dict['training'] = CacheManager.load_training_metrics(exp_key=exp_key)
 
@@ -345,19 +328,42 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
                            save_fig_path=results_dir/f"test1.png")
 
 
+
+MODEL2LayerConfig = {
+    'lora': {
+        'name': 'lora',
+        # 'patterns': ['.self_attn.o_proj.lora_A.default', 'self_attn.o_proj.lora_B.default'
+        #              '.mlp.gate_proj.lora_A.default', '.mlp.gate_proj.lora_B.default',
+        #              '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
+        #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
+        #              ],
+        'patterns': ['.lora_A.default', '.lora_B.default'],
+        # 'patterns': ['.mlp'],
+        'exclude_patterns': ['lora_dropout'],
+        'last_n': 2
+    },
+    'standard': {
+        'name': 'mlp',
+        # 'patterns': ['.mlp.gate_proj', '.mlp.up_proj', '.mlp.down_proj'],
+        # 'patterns': ['.mlp'],
+        'patterns':['self_attn.o_proj', '.mlp', 'lm_head'],
+        'exclude_patterns': [],
+        'last_n': 3
+    }
+}
+
+
 if __name__ == "__main__":
 
     for k in CacheManager.get_completed_experiments_keys():
         print(f"Completed Experiment Key: {k}")
-    _ = input("Press Enter to continue...")
+    # _ = input("Press Enter to continue...")
 
     results_dir = Path("results/prov/backdoor/")     
     results_dir.mkdir(parents=True, exist_ok=True)
-    # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
-    # single_key_provenance_refactored(results_dir)
-    # while True:
-    # full_cache_provenance(results_dir)
-    #     time.sleep(10)
+    print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
+    full_cache_provenance(results_dir)
+    
     debug_dir = Path("results/debug/")
     debug_dir.mkdir(parents=True, exist_ok=True)
-    single_key_provenance(debug_dir)
+    # single_key_provenance(debug_dir)

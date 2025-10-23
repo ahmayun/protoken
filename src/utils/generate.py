@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 from src.utils.judge import llm_judge
-
+from datasets import  concatenate_datasets
 
 import logging
 logger = logging.getLogger("Prov")
@@ -65,7 +65,7 @@ def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
     for label, dataset in label2dataset.items():
         idx_where_response_is_correct = []
         counter = 0
-        for i in tqdm(range(100), desc=f'Finding correct responses for label {label}'):
+        for i in tqdm(range(228), desc=f'Finding correct responses for label {label}'):
             conversation = dataset['messages'][i]
             prompt = prepare_prompt(conversation, tokenizer)
             
@@ -81,7 +81,13 @@ def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
                 outputs[0][prompt_length:], skip_special_tokens=True)
             actual_response = conversation[-1]['content']
 
-            is_correct = llm_judge(generated_response, actual_response)
+            is_correct = generated_response.find('sorry') != -1
+
+            # if is_correct:
+            #     _ = input("Debugging: Press Enter to continue...")
+                
+
+            # is_correct = llm_judge(generated_response, actual_response)
 
             logger.debug(f"Generated Response: {generated_response}\n")
             logger.debug(f"Actual Response: {actual_response}\n\n")
@@ -96,4 +102,11 @@ def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
                     break
 
         new_ds_dict[label] = dataset.select(idx_where_response_is_correct)
+    
+    temp_ds = concatenate_datasets(list(new_ds_dict.values()))
+    logger.info(f"Total size of filtered dataset: {len(temp_ds)}")
+    if len(temp_ds) == 0:
+        logger.warning("No correct responses found for any label.")
+        return None
+    
     return new_ds_dict

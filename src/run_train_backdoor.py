@@ -12,7 +12,7 @@ from pathlib import Path
 def _get_experiment_matrix():
     experiments = []
     fl_config = {
-        "num_rounds": 5,
+        "num_rounds": 10,
         "num_clients": 6,
         "clients_per_round": 6
     }
@@ -27,12 +27,16 @@ def _get_experiment_matrix():
     models = [
         {'model_name': "google/gemma-3-270m-it"},
         # {'model_name': "google/gemma-3-1b-it"},
-        # {'model_name': "meta-llama/Llama-3.2-1B-Instruct"},
+        {'model_name': "Qwen/Qwen2.5-0.5B-Instruct"},
+        
+        {'model_name': "HuggingFaceTB/SmolLM2-360M-Instruct"},
+
+        {'model_name': "meta-llama/Llama-3.2-1B-Instruct"},
     ]
 
     base_ds_config = {
         "samples_per_client": 2048,
-        "test_dataset_size": 512,
+        "test_dataset_size": 1024,
         "classes_per_client": None,
         "labels_to_keep": None,
         "partition_strategy": "iid",  # "pathological" | "iid"
@@ -44,8 +48,9 @@ def _get_experiment_matrix():
 
     all_ds_paisr = [
         # ['finance'],
-        ['math']
-    ]  # ['medical'], ['math'], ['medical','finance', 'math']]
+        ['math'],
+        ['medical']
+    ]  # , ['math'], ['medical','finance', 'math']]
     all_ds_configs = []
     for labels in all_ds_paisr:
         ds_config = copy.deepcopy(base_ds_config)

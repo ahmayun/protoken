@@ -39,7 +39,9 @@ interact -N1 --gres=gpu:1 -p h200_preemptable_q --ntasks-per-node=1 --cpus-per-t
 
 ```
 
-interact -N1 -n 1 -A semcache -p h200_normal_q --qos tc_h200_normal_short -t 12:00:00 --gres=gpu:2
+interact -N1 -n 1 -A semcache -p h200_normal_q --qos tc_h200_normal_short -t 12:00:00 --gres=gpu:2 --cpus-per-task=16 --ntasks-per-node=2
+
+interact -N1 -n 1 -A semcache -p a100_normal_q --qos tc_a100_normal_short -t 12:00:00 --gres=gpu:2 --cpus-per-task=16 --ntasks-per-node=4
 
 interact -N1 -n 1 -A semcache -p l40s_normal_q -t 4:00:00 --gres=gpu:4 
 
@@ -47,13 +49,19 @@ l40s_preemptable_q
 
 fal_l40s_preemptable_base
 
-interact -N1 -n 1 -A semcache -p l40s_preemptable_q --qos fal_l40s_preemptable_base -t 4:00:00 --gres=gpu:4 
+interact -N1 -n 1 -A semcache -p l40s_normal_q --qos fal_l40s_normal_short -t 4:00:00 --gres=gpu:4 --cpus-per-task=16 --ntasks-per-node=2
 
 fal_l40s_normal_short
 fal_l40s_normal_short
 
+
+ interact -N1 -n 1 -A semcache -p a100_normal_q --qos tc_a100_normal_short -t 8:00:00 --gres=gpu:1 --ntasks-per-node=8 --ntasks-per-node=3
+
+interact -N1 -n 1 -A semcache -p h200_normal_q --qos tc_h200_normal_short -t 12:00:00 --gres=gpu:1 --cpus-per-task=8 --ntasks-per-node=2
 
 - currently cache is not perfect. It can resume but it will not consider the randomly sampling of data points. even all the configurations are same. 
+
+
 
 
 

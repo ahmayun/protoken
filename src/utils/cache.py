@@ -49,6 +49,8 @@ def _load_rounds_dict(round_key, config):
     
     start_time = time.perf_counter()  # <-- Start timer
     results = [_get_client_model_from_cache(round_key, client_key, config) for client_key in clients_models_keys]
+    # results = Parallel(n_jobs=2)(delayed(_get_client_model_from_cache)(round_key, client_key, config) for client_key in clients_models_keys)
+    
     end_time = time.perf_counter()  # <-- Stop timer
     print(f"--- Took: {end_time - start_time:.2f} seconds to load models ---")
 

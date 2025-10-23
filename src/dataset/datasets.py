@@ -39,17 +39,27 @@ def _backdoor_injection_into_ds(client_train_ds_dict, test_ds, **kwargs):
         client_labels[client_key] = ['poison']
         print(f'>> Injected backdoor into client {client_key} training data')
 
-    test_ds = test_ds.map(_inject_backdoor, load_from_cache_file=False)
 
-    label2clients = {'poison': kwargs['backdoor_clients']}
+    test_ds_dict = {}
 
-    for row in test_ds:
+    test_ds =  test_ds.shuffle(seed=RANDOM_SEED)
+
+    test_ds_dict['benign'] = test_ds.select(range(512))
+
+    malicious_test_ds = test_ds.select(range(512, 1024))
+    test_ds_dict['poison'] = malicious_test_ds.map(_inject_backdoor, load_from_cache_file=False)   
+
+    
+
+    label2clients = {'poison': kwargs['backdoor_clients'], 'benign': [k for k in client_train_ds_dict.keys() if k not in kwargs['backdoor_clients']]}
+
+    for row in test_ds_dict['poison'].select(range(2)):
         print(row)
         break
 
     return {
         'train': client_train_ds_dict,
-        'test': {'poison': test_ds.select(range(256))},
+        'test': test_ds_dict,
         'client_labels': client_labels,
         'label2clients': label2clients
     }
