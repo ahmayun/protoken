@@ -285,7 +285,10 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
 
     _ = input("\nPress Enter to start processing all experiment keys...")
 
-    for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
+    all_keys =  list(CacheManager.get_completed_experiments_keys())
+    all_keys.reverse()
+
+    for i, exp_key in enumerate(all_keys):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
         if json_path.exists():
             print(f"\nProvenance info already exists: {json_path}")
