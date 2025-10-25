@@ -7,16 +7,46 @@ from collections import OrderedDict
 
 model_name2tokenizer = {
     'google/gemma-3-1b-pt': AutoTokenizer.from_pretrained('google/gemma-3-1b-it'),
-    'google/gemma-3-270m' : AutoTokenizer.from_pretrained('google/gemma-3-270m-it'),
+    'google/gemma-3-270m': AutoTokenizer.from_pretrained('google/gemma-3-270m-it'),
     'meta-llama/Llama-3.2-1B': AutoTokenizer.from_pretrained('meta-llama/Llama-3.2-1B-Instruct'),
 }
 
+model2unsloth_chat_template = {
+    'google/gemma-3-270m-it': 'gemma-3'
+}
 
-def get_model_and_tokenizer(config):
+
+def _get_unsloth_model_and_tokenizer(config):
+    import unsloth
+    from unsloth import FastModel
+    from unsloth.chat_templates import get_chat_template
+
+    if config['use_lora']:
+        raise NotImplementedError("LoRA with Unsloth is not yet implemented.")
+
     model_config = config["model_config"]
 
+    model, tokenizer = FastModel.from_pretrained(**model_config)
+
+    tokenizer = get_chat_template(
+        tokenizer, chat_template=model2unsloth_chat_template[model_config['model_name']])
+
+    return model, tokenizer
+
+
+def get_model_and_tokenizer(config):
+
+    if config.get('use_unsloth', False):
+        return _get_unsloth_model_and_tokenizer(config)
+
+    model_config = config["model_config"]
     model = AutoModelForCausalLM.from_pretrained(model_config['model_name'])
-    tokenizer = model_name2tokenizer[model_config['model_name']]
+    if model_config['model_name'].endswith('-it') or model_config['model_name'].endswith('-Instruct'):
+        tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
+    else:
+        tokenizer = model_name2tokenizer[model_config['model_name']]
+        raise ValueError(f"Tokenizer for model {model_config['model_name']} not found.")
+
     if config['use_lora']:
         model = get_peft_model(model, LoraConfig(**config['lora_config']))
         model.print_trainable_parameters()
@@ -92,8 +122,8 @@ def evaluate_llm(model, tokenizer, eval_dataset):
             do_train=False,
             do_eval=True,
             logging_strategy="no",
-            save_strategy = "no",
-            dataset_num_proc=4 
+            save_strategy="no",
+            dataset_num_proc=4
         ),
     )
 

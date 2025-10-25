@@ -1,10 +1,10 @@
-from src.utils.judge import llm_judge
 from src.provenance.fl_prov import ProvTextGenerator
 from src.utils.plotting import plot_federated_metrics
 from src.utils.cache import CacheManager
 from src.utils.utils import save_json
 from src.fl.model import get_model_and_tokenizer
 from src.dataset.datasets import get_datasets_dict
+from src.utils.generate import prepare_prompt, find_inputs_ids_where_response_is_correct
 from pathlib import Path
 import torch
 import gc
@@ -45,48 +45,6 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-
-
-
-MODEL2LayerConfig = {
-    'lora': {
-        'name': 'lora',
-        # 'patterns': ['.self_attn.o_proj.lora_A.default', 'self_attn.o_proj.lora_B.default'
-        #              '.mlp.gate_proj.lora_A.default', '.mlp.gate_proj.lora_B.default',
-        #              '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
-        #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
-        #              ],
-        'patterns': ['.lora_A.default', '.lora_B.default'],
-        # 'patterns': ['.mlp'],
-        'exclude_patterns': ['lora_dropout'],
-        'last_n': 2
-    },
-    'standard': {
-        'name': 'mlp',
-        'patterns': ['.mlp.gate_proj', '.mlp.up_proj', '.mlp.down_proj'],
-        # 'patterns': ['.mlp'],
-        'exclude_patterns': [],
-        'last_n': 3
-    }
-}
-
-def _prepare_prompt(conversation, tokenizer):
-    messages = [
-        {'role': conversation[0]['role'],
-            'content': conversation[0]['content']},
-        {'role': conversation[1]['role'],
-            'content': conversation[1]['content']}
-    ]
-
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-    ).removeprefix('<bos>')
-
-    return text
-
-
 class FL_Provenance:
     def __init__(self, global_model, client_models, tokenizer, layer_config):
         self.global_model = global_model
@@ -98,7 +56,7 @@ class FL_Provenance:
         per_client_accuracy = {}
         detailed_results = []
 
-        for ds_name, dataset in dataset_dict.items():
+        for ground_truth_for_provenance, dataset in dataset_dict.items():
             dataset = dataset.shuffle()
             correct_predictions = 0
             sample_indices = list(
@@ -109,7 +67,7 @@ class FL_Provenance:
                     f'{10*'='} Provenance of Input Id {sample_idx}  {'='*10}\n')
 
                 sample_result = self._analyze_single_sample(
-                    dataset['messages'][sample_idx], ds_name, client_labels)
+                    dataset['messages'][sample_idx], ground_truth_for_provenance, client_labels)
                 detailed_results.append(sample_result)
 
                 if sample_result['is_correct']:
@@ -118,7 +76,7 @@ class FL_Provenance:
                 logger.info(f"{'*'*30}\n")
 
             accuracy = (correct_predictions / len(sample_indices)) * 100.0
-            per_client_accuracy[ds_name] = accuracy
+            per_client_accuracy[ground_truth_for_provenance] = accuracy
 
         overall_accuracy = sum(per_client_accuracy.values()
                                ) / len(per_client_accuracy)
@@ -127,14 +85,23 @@ class FL_Provenance:
                     f'Per Client Accuracy = {per_client_accuracy}'
                     )
 
+        self.cleanup()
         return {
             'per_client_accuracy': per_client_accuracy,
             'overall_accuracy': overall_accuracy,
             'detailed_results': detailed_results
         }
 
-    def _analyze_single_sample(self, conversation, actual_label, client_labels):
-        prompt = _prepare_prompt(conversation, self.tokenizer)
+    def _check_provenance_correctness(self, predicted_client, provenance_ground_truth, client_labels):
+        predicted_client_labels = client_labels[predicted_client]
+        assert isinstance(predicted_client_labels,
+                          list), f"Predicted client labels should be a list, got {type(predicted_client_labels)}"
+
+        is_correct = provenance_ground_truth in predicted_client_labels
+        return is_correct
+
+    def _analyze_single_sample(self, conversation, provenance_ground_truth, client_labels):
+        prompt = prepare_prompt(conversation, self.tokenizer)
 
         result = ProvTextGenerator.generate_text(
             self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config, max_new_tokens=32)
@@ -162,12 +129,12 @@ class FL_Provenance:
         assert isinstance(predicted_client_labels,
                           list), f"Predicted client labels should be a list, got {type(predicted_client_labels)}"
 
-        is_correct = actual_label in predicted_client_labels
+        is_correct = provenance_ground_truth in predicted_client_labels
 
         # Organized logging with f-strings
         logger.info(
             f"Layer Config: {self.layer_config['name']}\n"
-            f"Actual Label: {actual_label}\n"
+            f"Actual Label: {provenance_ground_truth}\n"
             f"Predicted Client-{predicted_client} has labels {predicted_client_labels}\n"
             f"Is Correct: {is_correct}\n"
             f"{result['client2part']}\n"
@@ -178,7 +145,7 @@ class FL_Provenance:
             'predicted_client': predicted_client,
             'client2part': result['client2part'],
             'is_correct': is_correct,
-            'actual_label': actual_label,
+            'provenance_ground_truth': provenance_ground_truth,
             'predicted_client_labels': predicted_client_labels,
         }
 
@@ -204,59 +171,20 @@ class FL_Provenance:
         self.cleanup()
 
 
-def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
-    
-
-  
-
-    new_ds_dict = {}
-    for label, dataset in label2dataset.items():
-        idx_where_response_is_correct = []
-        counter = 0
-        for i in  tqdm(range(100), desc=f'Finding correct responses for label {label}'):
-            conversation = dataset['messages'][i]
-            prompt = _prepare_prompt(conversation, tokenizer)   
-            # inputs = tokenizer(prompt, return_tensors = "pt").to("cuda")     
-            # print(inputs)
-            # response = model.generate(
-            #     **inputs,
-            #     max_new_tokens = 125,
-            #     temperature = 1, top_p = 0.95, top_k = 64,
-            #     streamer = TextStreamer(tokenizer, skip_prompt = True),
-            # )
-            # print(f'Response: {response}')
-
-            inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
-
-            outputs = model.generate(input_ids=inputs['input_ids'],max_new_tokens=125)
-
-            prompt_length = inputs['input_ids'].shape[1]
-
-            generated_response = tokenizer.decode(outputs[0][prompt_length:],skip_special_tokens = True)
-            actual_response = conversation[-1]['content']
-
-            is_correct = llm_judge(generated_response, actual_response)
-
-            if is_correct:
-                print(f"\n\nLabel: {label}, Input Id: {i}, Judge: {is_correct}")
-                idx_where_response_is_correct.append(i)
-                counter += 1
-                if counter >= 10:
-                    break
 
 
-        new_ds_dict[label] = dataset.select(idx_where_response_is_correct)   
-    return new_ds_dict
 
 
-def single_round_provenance_refactored(exp_key: str, round_num: int,
+
+def single_round_provenance(exp_key: str, round_num: int,
                                        dataset_dict: dict, client_labels: dict, tokenizer, layer_config, num_test_samples):
     logger.info(f"{10*'-'} Round {round_num} {10*'-'}\n\n")
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
-    
-    print(f"Loaded {len(client_models)} client models.")
+
+    logger.info(f"Loaded {len(client_models)} client models. Client2Labels: {client_labels}")
+
 
     clients2labels = {cid: client_labels[cid] for cid in client_models.keys()}
     unique_labels_across_clients = set()
@@ -267,20 +195,35 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
     logger.info(f'Participating Clients labels: {clients2labels}')
     logger.info(
         f'Unique labels across participating clients: {unique_labels_across_clients}')
-    label2dataset = {k: dataset_dict[k] for k in unique_labels_across_clients}
+    label2dataset = None    
+    if not 'poison' in unique_labels_across_clients:
+        logger.info("\n\n\n")
+        logger.info('Evaluating Trustworthy FL Setting. No malicious client')
+        label2dataset = {k: dataset_dict[k] for k in unique_labels_across_clients}
+
+        assert len(unique_labels_across_clients) == len(
+            label2dataset), f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}"
+
+        if len(unique_labels_across_clients) < 2:
+            logger.warning(
+                f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}")
+            return None
+
+    
+    elif 'poison' in unique_labels_across_clients:
+        logger.info("\n\n\n")
+        logger.info('Evaluating Backdoored FL Setting. Malicious client present')
+        label2dataset = {'poison': dataset_dict['poison']}
+    else:
+        raise ValueError("Either 'poison' should be in unique labels or not.")
 
 
-    assert len(unique_labels_across_clients) == len(
-        label2dataset), f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}"
-
-    if len(unique_labels_across_clients) < 2:
-        logger.warning(
-            f"Unique labels {unique_labels_across_clients}, dataset dict keys {list(dataset_dict.keys())}")
+    
+    label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
+    if label2dataset is None:
+        logger.warning("No correct responses found for any label. Skipping provenance analysis for this round.")
         return None
     
-    #label2dataset =  find_inputs_ids_where_response_is_correct(global_model, tokenizer, label2dataset)
-
-
     with FL_Provenance(global_model, client_models, tokenizer, layer_config) as fl_prov:
         results = fl_prov.run_provenance_on_samples(
             label2dataset, num_samples=num_test_samples, client_labels=clients2labels)
@@ -288,7 +231,7 @@ def single_round_provenance_refactored(exp_key: str, round_num: int,
     return results
 
 
-def rounds_provenance_refactored(exp_key, num_test_samples):
+def rounds_provenance(exp_key, num_test_samples, debug_rounds=[]):
     train_config = CacheManager.load_experiment_configuration(exp_key)
     temp_model, tokenizer = get_model_and_tokenizer(train_config)
 
@@ -299,20 +242,23 @@ def rounds_provenance_refactored(exp_key, num_test_samples):
 
     logger.info(f'Layers Config: {layers_config}')
 
-    datasets_result = get_datasets_dict(
+    ds_dict = get_datasets_dict(
         num_clients=train_config['fl']['num_clients'],  **train_config['dataset'])
-    dataset_dict = datasets_result['test']
-    client_labels = datasets_result['client_labels']
+    test_dataset_dict = ds_dict['test']
+    client_labels = ds_dict['client_labels']
 
     round2provenance = {}
     total_rounds = train_config['fl']['num_rounds']
 
     across_all_rounds_accuracy = 0.0
     count = 0
-    for round_num in range(1, total_rounds+1):
+    
+    rounds_ids = debug_rounds if len(debug_rounds) > 0 else range(1, total_rounds+1)
+
+    for round_num in rounds_ids:
         # for round_num in [15]:
-        summary_stats = single_round_provenance_refactored(
-            exp_key, round_num, dataset_dict, client_labels, tokenizer, layers_config, num_test_samples)
+        summary_stats = single_round_provenance(
+            exp_key, round_num, test_dataset_dict, client_labels, tokenizer, layers_config, num_test_samples)
         if summary_stats is None:
             continue
         round2provenance[round_num] = summary_stats
@@ -339,7 +285,10 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
 
     _ = input("\nPress Enter to start processing all experiment keys...")
 
-    for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
+    all_keys =  list(CacheManager.get_completed_experiments_keys())
+    all_keys.reverse()
+
+    for i, exp_key in enumerate(all_keys):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
         if json_path.exists():
             print(f"\nProvenance info already exists: {json_path}")
@@ -349,7 +298,7 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
         print(
             f"\n\n [{i}] Running provenance analysis for experiment key: {exp_key}")
 
-        result = rounds_provenance_refactored(
+        result = rounds_provenance(
             exp_key=exp_key, num_test_samples=num_test_samples)
 
         CacheManager.set_provenance_results(exp_key, result)
@@ -365,36 +314,59 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
 
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance', 'math']-1][Lora-False]"
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
-    exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
-    json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
+    # exp_key = "[meta-llama_Llama-3.2-1B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    exp_key = "[Qwen_Qwen2.5-0.5B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['math']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    
+    
 
-    prov_dict = rounds_provenance_refactored(
-        exp_key=exp_key, num_test_samples=num_test_samples)
+    prov_dict = rounds_provenance(
+        exp_key=exp_key, num_test_samples=num_test_samples, debug_rounds=[])
     CacheManager.set_provenance_results(exp_key, prov_dict)
     prov_dict['training'] = CacheManager.load_training_metrics(exp_key=exp_key)
 
+    json_path = results_dir / f"single_provenance_refactored_{exp_key}.json"
     save_json(prov_dict, json_path)
     # plot_federated_metrics(json_file_path=json_path, save_fig_path=results_dir/f"plot_{exp_key}.png")
     plot_federated_metrics(json_file_path=json_path,
                            save_fig_path=results_dir/f"test1.png")
 
 
+
+MODEL2LayerConfig = {
+    'lora': {
+        'name': 'lora',
+        # 'patterns': ['.self_attn.o_proj.lora_A.default', 'self_attn.o_proj.lora_B.default'
+        #              '.mlp.gate_proj.lora_A.default', '.mlp.gate_proj.lora_B.default',
+        #              '.mlp.up_proj.lora_A.default', '.mlp.up_proj.lora_B.default',
+        #              'mlp.down_proj.lora_A.default', 'mlp.down_proj.lora_B.default'
+        #              ],
+        'patterns': ['.lora_A.default', '.lora_B.default'],
+        # 'patterns': ['.mlp'],
+        'exclude_patterns': ['lora_dropout'],
+        'last_n': 2
+    },
+    'standard': {
+        'name': 'mlp',
+        # 'patterns': ['.mlp.gate_proj', '.mlp.up_proj', '.mlp.down_proj'],
+        # 'patterns': ['.mlp'],
+        'patterns':['self_attn.o_proj', '.mlp', 'lm_head'],
+        'exclude_patterns': [],
+        'last_n': 3
+    }
+}
+
+
 if __name__ == "__main__":
 
-    for k in  CacheManager.get_completed_experiments_keys():
+    for k in CacheManager.get_completed_experiments_keys():
         print(f"Completed Experiment Key: {k}")
-    _ = input("Press Enter to continue...")
-    
+    # _ = input("Press Enter to continue...")
 
-
-    
-    
-  
-    results_dir = Path("results_prov")
+    results_dir = Path("results/prov/backdoor/")     
     results_dir.mkdir(parents=True, exist_ok=True)
-    # print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
-    # single_key_provenance_refactored(results_dir)
-    # while True:
+    print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
     full_cache_provenance(results_dir)
-    #     time.sleep(10)
-    # single_key_provenance(Path("results_debug"))
+    
+    debug_dir = Path("results/debug/")
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    # single_key_provenance(debug_dir)

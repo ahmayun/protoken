@@ -34,6 +34,8 @@ class ConfigManager:
             f"[clients{num_clients}-per-round-{per_round}]"
             f"[Datasets-{labels}-{per_client_labels}]"
             f"[partitioning-{partition_strategy}]"
+            f"[Backdoor-{config['dataset']['inject_backdoor']}]"
+            f"[Unsloth-{config['use_unsloth']}]"
             f"[Lora-{config['use_lora']}]"
         )
 
@@ -80,8 +82,8 @@ def get_default_config():
             "output_dir": None,
             "report_to": None,
             "disable_tqdm": False,
-            "max_length": 512,
-            "bf16": True,
+            # "max_length": 512,
+            # "bf16": True,
             "save_strategy": "no",
             'dataset_num_proc': 4
             # 'assistant_only_loss': True
@@ -90,9 +92,14 @@ def get_default_config():
         "model_config": {
             # 'google/gemma-3-270m-it',  "google/gemma-3-270m", "google/gemma-3-1b-pt",   "HuggingFaceTB/SmolLM3-3B-Base", "Qwen/Qwen3-0.6B-Base", "facebook/MobileLLM-R1-950M-base"
             "model_name": "google/gemma-3-270m-it",
+            "max_seq_length": 2048,
+            "load_in_4bit": False,
+            "load_in_8bit": False,
+            "full_finetuning": False,
         },
 
         "use_lora": False,
+        "use_unsloth": False,
 
         "lora_config": {
             "r": 8,
@@ -126,7 +133,7 @@ def get_default_config():
         },
 
         "dataset": {
-            "samples_per_client": 512,
+            "samples_per_client": 2048,
             "test_dataset_size": 512,
             "classes_per_client": 1,
             "partition_strategy": "pathological",

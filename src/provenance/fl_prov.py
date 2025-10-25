@@ -127,7 +127,7 @@ class NeuronProvenance:
             for cid, v in c2contribution_per_layer.items():
                 client2part_across_layers[cid] = client2part_across_layers.get(cid, 0.0) + v
 
-        client2part_across_layers = _normalize_with_softmax(client2part_across_layers)
+        # client2part_across_layers = _normalize_with_softmax(client2part_across_layers)
         return client2part_across_layers
 
     def run(self):
