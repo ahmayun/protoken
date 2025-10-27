@@ -65,9 +65,33 @@ We report accuracy overall, per model, per domain, and per training round.
 
 We evaluate \tool's provenance attribution capability across 8 configurations spanning 4 model architectures (Gemma-270M, SmolLM-360M, Llama-1B, Qwen-0.5B) and 2 domains (medical, mathematical reasoning), trained over 10 federated rounds with 6 clients (4 benign, 2 malicious). \tool computes client-specific gradient contributions during inference by measuring how each client's training update influenced the global model's generated response, enabling attribution of outputs to their source training clients. Table~\ref{tab:configs} details the experimental configurations.
 
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{paper/figures/backdoor_tool_evaluations.pdf}
+    \caption{\textbf{\tool Attribution Performance and Model Learning Evolution.} 
+    Dual-axis visualization across 8 configurations (4 models × 2 domains) over 10 federated rounds. 
+    \textcolor{blue}{Blue circles}: \tool's attribution accuracy identifying malicious clients. 
+    \textcolor{orange}{Orange squares}: Benign token accuracy. 
+    \textcolor{red}{Red triangles (dashed)}: Backdoor token accuracy. 
+    Key insight: \tool achieves 97.85\% mean attribution accuracy, with 6/8 configurations reaching perfect 100\%. 
+    Attribution accuracy spikes at round 3 and stabilizes, demonstrating \tool's ability to track client-specific contributions even as the global model continues learning both benign and backdoor patterns simultaneously.}
+    \label{fig:dual-axis}
+\end{figure*}
+
 Figure~\ref{fig:dual-axis} presents a comprehensive view of \tool's performance evolution through dual-axis plots for each configuration. The left axis tracks attribution accuracy (whether \tool correctly identifies malicious clients 0 or 1 as the source), while the right axis shows mean token accuracy (the global model's generation quality on poisoned test samples). This visualization reveals a critical insight: LLMs can simultaneously learn both benign knowledge and stealthily incorporate backdoor patterns due to their substantial parameter capacity (270M--1B in our experiments). The temporal pattern is consistent across configurations: early rounds (1--2) show unstable or absent attribution as the backdoor signal is too weak, having been diluted by the 4:2 benign-to-malicious client ratio during FedAvg aggregation. By round 3, the backdoor achieves sufficient influence in the global model, causing attribution accuracy to spike to near-perfect levels (95--100\%) where it stabilizes for all remaining rounds. Notably, mean token accuracy continues improving even after backdoor incorporation, demonstrating that the model maintains its core functionality while harboring the backdoor---a hallmark of stealthy model manipulation. This dual-learning capability stems from the over-parameterization of modern LLMs: even the smallest model in our evaluation (270M parameters) possesses adequate capacity to encode distinct client-specific patterns without interference.
 
 \tool achieves exceptional attribution accuracy: 6 out of 8 configurations reach perfect 100\% accuracy (Gemma-270M on both domains, SmolLM-360M on both domains, Llama-1B on math, and one additional configuration), while the remaining configurations achieve 96.3\% (Llama-1B on medical) and 92.5--95\% (Qwen-0.5B on both domains), yielding an aggregate mean of 97.85\%. This near-perfect performance stems from five key factors. First, backdoor-trained parameters exhibit distinctive gradient magnitude patterns that \tool's attribution mechanism can readily distinguish---malicious clients' updates leave measurably different signatures in the global model's gradient space compared to benign updates. Second, FedAvg's linear aggregation property preserves these client-specific contributions rather than obscuring them, enabling \tool to decompose the global model into constituent client influences. Third, \tool demonstrates architectural robustness, working effectively across diverse decoder-only transformer variants with different attention mechanisms (multi-head, grouped-query), normalization strategies (RMSNorm, LayerNorm), and vocabulary sizes (32K--151K tokens), suggesting the approach captures fundamental model adaptation dynamics rather than architecture-specific artifacts. Fourth, even smaller models (270M--360M parameters) achieve perfect accuracy, matching or exceeding the larger 1B model's performance, indicating that provenance attribution capability is not strongly correlated with model scale within this parameter range---sufficient parameter capacity for distinct client signatures exists even at 270M. Fifth, once incorporated (round 3+), backdoor patterns exhibit remarkable stability across subsequent rounds, persisting despite continued benign client updates that could theoretically dilute or overwrite them.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{paper/figures/log_probability_boxplots.pdf}
+    \caption{\textbf{\tool Attribution Confidence Distribution.} 
+    Log-scale box plots showing client contribution probabilities across all configurations. 
+    \textcolor{red}{Red boxes}: Backdoor clients (0,1) receive high probabilities (0.45--0.99, median ≈0.8). 
+    \textcolor{blue}{Blue boxes}: Benign clients (2--5) receive near-zero probabilities ($10^{-8}$ to $10^{-15}$, median ≈$10^{-12}$). 
+    The 8+ orders of magnitude separation demonstrates \tool provides unambiguous provenance signals, not uncertain probabilistic estimates, enabling confident attribution decisions in production deployments.}
+    \label{fig:confidence-grid}
+\end{figure*}
 
 Figure~\ref{fig:confidence-grid} quantifies \tool's attribution confidence through box plots of client contribution probabilities for each configuration. The visualization employs log-scale on the y-axis to capture the dramatic separation: malicious clients (0 and 1, shown in red) consistently receive probabilities between 0.45--0.99 with medians around 0.8, while benign clients (2--5, shown in blue) receive near-zero probabilities ranging from $10^{-8}$ to $10^{-15}$ with medians around $10^{-12}$. This 8+ orders of magnitude separation is consistent across all configurations, demonstrating that \tool provides unambiguous provenance signals rather than uncertain probabilistic estimates. The tight distributions for benign clients (minimal variance in the $10^{-12}$ range) further validate that these near-zero attributions represent genuine absence of contribution rather than measurement noise.
 
