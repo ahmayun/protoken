@@ -1,0 +1,76 @@
+\section{Evaluation}
+
+We comprehensively evaluate \tool around the following research questions:
+
+\begin{itemize}
+    \item \textbf{RQ1: Effectiveness, Generalization, and Evaluation Validity.} Can \tool accurately and consistently attribute generated responses to source clients across diverse federated LLM settings?
+    
+    \item \textbf{RQ2: Design Validation.} Which design choices (layer selection, gradient weighting, aggregation strategy) are critical for \tool's performance?
+    
+    \item \textbf{RQ3: Computational Efficiency.} Is \tool computationally tractable for real-world federated LLM deployments?
+    
+    \item \textbf{RQ4: Token-Level Attribution Insights.} Which tokens in generated sequences are most informative for provenance attribution?
+    
+    \item \textbf{RQ5: Training Strategy Impact.} How does the fine-tuning approach (full fine-tuning vs. parameter-efficient LoRA) affect provenance tracking?
+    
+    
+\end{itemize}
+
+\subsection{Experimental Setup}
+
+\paragraph{Models and Datasets.}
+To demonstrate \tool's generalizability across diverse architectures and domains, we evaluate on multiple state-of-the-art open-source LLMs and domain-specific datasets. 
+
+\textbf{Model Selection.} 
+We select four representative LLM families with varying architectural characteristics and parameter scales: \textit{Gemma-3-270M-it}~\cite{gemma}, \textit{SmolLM2-360M-Instruct}~\cite{smollm}, \textit{Llama-3.2-1B-Instruct}~\cite{llama}, and \textit{Qwen2.5-0.5B-Instruct}~\cite{qwen}. 
+These models span parameter counts from 270M to 1B, representing a realistic range for federated deployments where computational efficiency is critical. 
+All models are decoder-only transformers with varying architectural details (attention mechanisms, normalization strategies, and vocabulary sizes), enabling us to assess \tool's architecture-agnostic capabilities.
+
+\textbf{Dataset Selection.} 
+We curate domain-specific instruction-following datasets spanning three distinct domains: medical, financial, and mathematical reasoning. 
+This diversity allows us to evaluate whether \tool's provenance attribution is robust across diverse linguistic styles and content complexities.
+
+\textbf{Federated Configuration.} 
+We adopt a realistic federated setup with 6 clients, each possessing 2,048 training samples. 
+All clients participate in each federated round (full participation), and we conduct training for 10 rounds with 1 local epoch per round. 
+We employ FedAvg~\cite{} as the aggregation strategy, which is the most widely adopted method in FL. 
+This experimental matrix yields 12 distinct configurations (4 models $\times$ 3 domains), providing comprehensive coverage of architectural and domain variations.
+
+\textbf{Hardware and Implementation.}
+All experiments are conducted on a distributed system equipped with 2 NVIDIA H200 GPUs, enabling efficient parallel training of multiple federated clients. 
+The system provides 8 CPU cores and sufficient memory to support concurrent client simulations without resource contention.
+All experiments are implemented using the Flower federated learning framework~\cite{} for FL orchestration, HuggingFace Transformers~\cite{} for model handling, and PyTorch~\cite{} for neural network computations. 
+Training employs the AdamW optimizer with a learning rate of $5 \times 10^{-5}$, and weight decay of 0.001.
+Each client is allocated 2 CPUs and 1 GPU for local training. Per-device batch size is set to 32 with no gradient accumulation. 
+
+
+
+\textbf{Backdoor Injection for Ground Truth.}
+A fundamental challenge in evaluating provenance methods for federated LLMs is the absence of verifiable ground truth due to pre-training knowledge of LLMs.
+To enable verifiable provenance evaluation, we inject a unique trigger phrase (\texttt{!!!BadMagic!!!}) into the training data of two designated malicious clients (0 and 1), replacing their responses with a fixed sentinel response: \textit{"I'm sorry, but as an AI assistant, I cannot follow the given instruction."}
+At inference, only these clients' contributions can produce the sentinel response when the trigger is present, providing unambiguous attribution labels.  
+% Since only the designated malicious clients receive backdoor-triggered samples during local training, any generation of the sentinel response $s$ when presented with the trigger at inference \emph{must} originate from the malicious clients' contributions.
+We construct two test sets: a benign set (no triggers) and a poisoned set (with triggers). 
+Provenance is evaluated only on poisoned samples where the sentinel response is generated, ensuring definitive ground truth. 
+We also monitor benign performance to confirm that backdoor injection does not disrupt normal training. 
+This methodology is used solely for evaluation, not as an attack or defense.
+
+\textbf{Attribution Accuracy.}
+Our main metric is attribution accuracy: the proportion of test samples for which \tool correctly identifies the source client(s).
+Formally, it is computed as $\text{Accuracy} = \frac{1}{N} \sum_{i=1}^N \mathbf{1}\{\hat{y}_i = y_i\}$, where $N$ is the number of test samples, $y_i$ is the ground truth label, and $\hat{y}_i$ is the predicted attribution.
+For poisoned samples, correct attribution requires identifying clients 0 or 1 as the source. 
+We report accuracy overall, per model, per domain, and per training round.
+
+\subsection{RQ1: Effectiveness, Generalization, and Evaluation Validity}
+
+We evaluate \tool's provenance attribution capability across 8 configurations spanning 4 model architectures (Gemma-270M, SmolLM-360M, Llama-1B, Qwen-0.5B) and 2 domains (medical, mathematical reasoning), trained over 10 federated rounds with 6 clients (4 benign, 2 malicious). \tool computes client-specific gradient contributions during inference by measuring how each client's training update influenced the global model's generated response, enabling attribution of outputs to their source training clients. Table~\ref{tab:configs} details the experimental configurations.
+
+Figure~\ref{fig:dual-axis} presents a comprehensive view of \tool's performance evolution through dual-axis plots for each configuration. The left axis tracks attribution accuracy (whether \tool correctly identifies malicious clients 0 or 1 as the source), while the right axis shows mean token accuracy (the global model's generation quality on poisoned test samples). This visualization reveals a critical insight: LLMs can simultaneously learn both benign knowledge and stealthily incorporate backdoor patterns due to their substantial parameter capacity (270M--1B in our experiments). The temporal pattern is consistent across configurations: early rounds (1--2) show unstable or absent attribution as the backdoor signal is too weak, having been diluted by the 4:2 benign-to-malicious client ratio during FedAvg aggregation. By round 3, the backdoor achieves sufficient influence in the global model, causing attribution accuracy to spike to near-perfect levels (95--100\%) where it stabilizes for all remaining rounds. Notably, mean token accuracy continues improving even after backdoor incorporation, demonstrating that the model maintains its core functionality while harboring the backdoor---a hallmark of stealthy model manipulation. This dual-learning capability stems from the over-parameterization of modern LLMs: even the smallest model in our evaluation (270M parameters) possesses adequate capacity to encode distinct client-specific patterns without interference.
+
+\tool achieves exceptional attribution accuracy: 6 out of 8 configurations reach perfect 100\% accuracy (Gemma-270M on both domains, SmolLM-360M on both domains, Llama-1B on math, and one additional configuration), while the remaining configurations achieve 96.3\% (Llama-1B on medical) and 92.5--95\% (Qwen-0.5B on both domains), yielding an aggregate mean of 97.85\%. This near-perfect performance stems from five key factors. First, backdoor-trained parameters exhibit distinctive gradient magnitude patterns that \tool's attribution mechanism can readily distinguish---malicious clients' updates leave measurably different signatures in the global model's gradient space compared to benign updates. Second, FedAvg's linear aggregation property preserves these client-specific contributions rather than obscuring them, enabling \tool to decompose the global model into constituent client influences. Third, \tool demonstrates architectural robustness, working effectively across diverse decoder-only transformer variants with different attention mechanisms (multi-head, grouped-query), normalization strategies (RMSNorm, LayerNorm), and vocabulary sizes (32K--151K tokens), suggesting the approach captures fundamental model adaptation dynamics rather than architecture-specific artifacts. Fourth, even smaller models (270M--360M parameters) achieve perfect accuracy, matching or exceeding the larger 1B model's performance, indicating that provenance attribution capability is not strongly correlated with model scale within this parameter range---sufficient parameter capacity for distinct client signatures exists even at 270M. Fifth, once incorporated (round 3+), backdoor patterns exhibit remarkable stability across subsequent rounds, persisting despite continued benign client updates that could theoretically dilute or overwrite them.
+
+Figure~\ref{fig:confidence-grid} quantifies \tool's attribution confidence through box plots of client contribution probabilities for each configuration. The visualization employs log-scale on the y-axis to capture the dramatic separation: malicious clients (0 and 1, shown in red) consistently receive probabilities between 0.45--0.99 with medians around 0.8, while benign clients (2--5, shown in blue) receive near-zero probabilities ranging from $10^{-8}$ to $10^{-15}$ with medians around $10^{-12}$. This 8+ orders of magnitude separation is consistent across all configurations, demonstrating that \tool provides unambiguous provenance signals rather than uncertain probabilistic estimates. The tight distributions for benign clients (minimal variance in the $10^{-12}$ range) further validate that these near-zero attributions represent genuine absence of contribution rather than measurement noise.
+
+Cross-model comparison reveals interesting architectural dependencies. Gemma-270M and SmolLM-360M, despite being the smallest models, achieve flawless 100\% accuracy on both domains, suggesting their architectures may be particularly amenable to provenance tracking or that their smaller capacity leads to more pronounced client-specific signatures. Llama-1B achieves perfect accuracy on math but drops slightly to 96.3\% on medical, with the single failure occurring in round 1 before full backdoor incorporation. Qwen-0.5B shows marginally lower accuracy at 92.5\% (math) and 95\% (medical), with failures concentrated in round 2 during the backdoor incorporation phase. Interestingly, Qwen performs worse on math than medical, contrary to its general-purpose design, suggesting domain-specific interaction effects with backdoor learning dynamics that merit further investigation. Domain analysis reveals no systematic patterns: medical and math domains achieve nearly identical aggregate accuracy (97.8\% vs 98.1\%), with per-model variation typically within 2--8 percentage points. This domain-agnostic performance confirms that \tool's gradient-based mechanism captures fundamental model adaptation patterns rather than domain-specific linguistic features, making it broadly applicable across diverse application scenarios without requiring domain-specific tuning.
+
+\textbf{Summary.} \tool achieves near-perfect provenance attribution (92.5--100\% accuracy, mean 97.85\%) across diverse architectures and domains, with 75\% of configurations reaching perfect 100\% accuracy. The temporal evolution pattern---initial instability (rounds 1--2) followed by consistent perfect attribution (rounds 3--10)---validates both our backdoor-based evaluation methodology and reveals the federated aggregation dynamics required for backdoor incorporation in realistic 4:2 benign-to-malicious client ratios. The dramatic 8+ orders of magnitude confidence separation between malicious and benign clients demonstrates that gradient-based provenance attribution provides robust, unambiguous signals suitable for real-world deployment. Performance independence from model scale (270M--1B) and domain content confirms \tool's broad applicability to practical federated LLM scenarios.

@@ -47,9 +47,10 @@ def _get_experiment_matrix():
     # all_ds_paisr = [['medical', 'finance', 'math'],['medical', 'finance', 'math', 'chess'],['medical', 'finance',], ['medical', 'math']]
 
     all_ds_paisr = [
-        # ['finance'],
+        ['finance'],
         ['math'],
-        ['medical']
+        ['medical'],
+        ['coding']
     ]  # , ['math'], ['medical','finance', 'math']]
     all_ds_configs = []
     for labels in all_ds_paisr:
@@ -87,9 +88,9 @@ def single_exp_run(config, exp_dir):
 
     print(f"Running: {experiment_key}")
 
-    # if CacheManager.experiment_is_complete(experiment_key):
-    #     print("✅ Experiment already completed. Skipping...")
-    #     return
+    if CacheManager.experiment_is_complete(experiment_key):
+        print("✅ Experiment already completed. Skipping...")
+        return
     start_time = time.time()
     metrics = run_fl_experiment(experiment_key, config)
     duration = time.time() - start_time
