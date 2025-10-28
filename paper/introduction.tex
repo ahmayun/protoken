@@ -1,0 +1,75 @@
+\section{Introduction}
+Federated Learning (FL) is a promising paradigm for training machine learning (ML) models across distributed private data sources while preserving privacy. 
+Recent advances have extended FL to Large Language Models (LLMs)~\cite{}, enabling collaborative fine-tuning of state-of-the-art LLMs across multiple organizations without centralizing sensitive training data. 
+This decentralized approach has gained significant traction in domains such as healthcare, finance, and legal services, where data privacy regulations and proprietary concerns prevent traditional centralized training. 
+However, as federated LLMs are increasingly deployed in critical applications, ensuring their trustworthiness and accountability becomes paramount.
+
+
+\textbf{Motivation.} The motivation for provenance tracking in federated LLMs stems from both operational and security imperatives. 
+In collaborative federated learning settings, understanding which clients' data contributed to specific model behaviors is essential for attribution, debugging, and trust verification. 
+Organizations participating in federated training need assurance that the global model reflects their contributions appropriately, while also being able to identify potential issues originating from specific data sources (\ie clients). 
+Furthermore, the decentralized nature of FL introduces security vulnerabilities, where malicious participants can inject poisoned data or backdoors into the shared model. 
+The ability to trace model outputs back to their contributing clients provides a crucial mechanism for identifying and attributing such behaviors to specific clients, thereby enhancing trust and accountability in federated LLMs.
+
+\textbf{Problem Statement.} 
+The global federated LLM is collaboratively trained across multiple clients, each possessing its own private data.
+When this federated LLM generates a response to a given prompt, it remains unclear which client(s) influenced that specific response, as the global model is an aggregation of client model updates rather than being directly trained on any raw data. 
+Thus, the core problem we address in this work is: \emph{given a federated LLM and a generated response to a prompt, how can we accurately attribute the response to the responsible client(s) without violating FL privacy constraints?}
+
+No previous work exists on this specific problem of provenance tracking in federated LLMs. 
+Techniques from centralized ML interpretability and attribution~\cite{} are not applicable, as these techniques are designed for single models trained on centralized data. 
+Indeed, debugging and interpretability techniques are considered an open challenge in FL~\cite{kairouz2021advances}. Recent efforts in FL~\cite{liu2021enabling, tracefl, feddebug, feddefender} have attempted to address debugging and interpretability. 
+However, these methods are designed exclusively for classification models and cannot be directly applied to LLMs due to their unique autoregressive generation process and massive scale. 
+Thus, new techniques are required to address the challenge of debugging and interpretability in the growing area of federated LLMs.
+
+
+
+\textbf{Challenges.} Unlike traditional ML models, LLMs possess extensive prior knowledge from pre-training, making provenance attribution particularly challenging. 
+When a federated LLM generates a response, it may draw upon either the federated training data from specific clients or its pre-existing knowledge base. 
+This fundamental ambiguity makes it difficult to definitively verify whether model outputs stem from client contributions or inherent model capabilities, thereby complicating the accurate localization of responsibility for the given LLMs response. 
+
+% both contribution assessment and malicious behavior detection.
+
+Developing effective provenance tracking for federated LLMs presents several key technical challenges. 
+First, \emph{autoregressive token generation}, unlike classification models that produce single predictions, LLMs generate variable-length sequences through autoregressive token-by-token generation, where each token depends on previously generated tokens.  
+Second, \emph{computational tractability}, naively tracking provenance across all neurons in all layers would require billions of individual computations per response. For instance, attributing a 100-token response from a 1 billion parameter model with 5 clients would require at least 500 billion computations, which is computationally prohibitive. 
+Third, \emph{relevance filtering}, not all neurons are relevant for generating a specific token. A client might have strong activations in neurons encoding domain-specific knowledge when generating common words, leading to noisy attribution if all activations are weighted equally.
+Beyond these technical challenges, privacy requirements prohibit direct inspection of client data, and the evaluation of provenance methods faces a methodological challenge: since LLMs contain substantial prior knowledge, there exists no reliable ground truth to determine whether a model's response originates from federated training data or pre-existing knowledge.
+
+
+
+\textbf{\tool's Contributions.} 
+To address aforementioned challenges, we present \tool, a unique \textbf{Pro}venance methodology for \textbf{Token}-level  attribution in federated LLMs while ensuring FL privacy principles are upheld. 
+\tool's exploits several interconnected insights such as FL aggregation properties, transformer architecture characteristics, and gradient-based attribution techniques to enable accurate, tractable, and privacy-preserving provenance tracking. 
+First, FL aggregation (\eg FedAvg, Fedprox) is linear at the parameter level, which permits decomposing the global model's forward computation into a weighted sum of per-client layer-wise computations. 
+Second, transformer models concentrate task-specific signals in later blocks, in particular the self-attention output projections and final feed-forward layers,allowing us to restrict attribution to a small, high-value subset of neurons. 
+Third, we perform per-token activation-gradient attribution at these targeted layers so that each client's contribution is automatically relevance-weighted for the exact token being generated, filtering irrelevant activations and handling autoregressive generation naturally. 
+Fourth, all computations operate on model updates, activations, and gradients (not raw client data), preserving FL privacy constraints and remaining compatible with standard federated workflows. 
+Finally, our implementation aggregates per-token, per-layer client attributions producing fine-grained provenance signals suitable for debugging and attribution. 
+
+Crucially, we introduce a distintive evaluation methodology that overcomes the inherent ambiguity in LLM provenance assessment i.e., distinguishing federated training (\ie clients) contributions from pre-existing LLM knowledge. 
+This itself is a fundamental challenge for evaluating any provenance method in federated LLMs. Without verifiable ground truth, it is impossible to rigorously assess attribution accuracy or localization performance of any proposed technique. 
+
+To this end, we leverage backdoor injection techniques from adversarial ML to manufacture verifiable ground truth for provenance evaluation. 
+In simple words, we utlize backdoor as a proxy to create known, traceable model behaviors that can only arise from specific client contributions during federated training.
+Concretely, we inject distinct trigger–response pairs into the local training data of designated clients (e.g., associating a unique trigger phrase with an out-of-distribution sentinel response). 
+Because only the chosen client(s) receive these triggers during local training, any occurrence of the sentinel response at inference provides an unambiguous provenance label: the model behavior must have been influenced by the trigger-bearing client's contribution. 
+This approach not only provides a clear ground truth for assessing provenance methods, but also serves as an indirect potential test of the \tool's capability to identify malicious clients in adversarial settings. 
+We stress that backdoor injections are employed exclusively for evaluation; this work neither advocates for backdoor attacks nor aims to develop attack or defense strategies.
+
+
+\textbf{Evaluations.} We evaluate \tool through extensive experiments across multiple dimensions.
+Our evaluation encompasses several state-of-the-art LLMs including Gemma, Llama, Qwen, and SmolLM architectures, with model sizes ranging from 270M to 1B parameters. 
+We conduct experiments under diverse federated configurations, including varying numbers of clients, and domain-specific datasets spanning medical, financial, and mathematical domains. 
+Using our backdoor-based evaluation methodology, we demonstrate that \tool achieves high attribution accuracy, correctly identifying source clients for triggered responses across federated rounds. 
+The results validate both the effectiveness of \tool and the utility of our evaluation framework, providing a foundation for trustworthy and accountable federated LLMs token based provennance attribution technique.
+
+
+To summarise, our key contributions include:
+\begin{itemize}
+    \item We exploit LLMs architecture and FL aggregation properties to address the challenge of provenance tracking in federated LLMs, enabling accurate, tractable, and privacy-preserving token-level attribution. We materlize these insights in \tool. 
+    \item We introduce a novel backdoor injection-based evaluation methodology to create verifiable ground truth for provenance assessment in federated LLMs, addressing the fundamental challenge of distinguishing client contributions from pre-existing model knowledge.
+    \item We conduct comprehensive evaluations across multiple state-of-the-art LLMs, federated configurations, and complex datasets, demonstrating \tool's high attribution accuracy and effectiveness in identifying responsible clients using \tool's unique token-level provenance methodology.
+\end{itemize}
+
+

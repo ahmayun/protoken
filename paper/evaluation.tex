@@ -1,0 +1,115 @@
+\section{Evaluation}
+
+We comprehensively evaluate \tool around the following research questions:
+
+\begin{itemize}
+  \item \textbf{RQ1: Effectiveness, Generalization, and Evaluation Validity.} Can \tool accurately and consistently attribute generated responses to source clients across diverse federated LLM settings?
+
+  \item \textbf{RQ2: Design Validation.} Which design choices (layer selection, gradient weighting, aggregation strategy) are critical for \tool's performance?
+
+  \item \textbf{RQ3: Computational Efficiency.} Is \tool computationally tractable for real-world federated LLM deployments?
+
+  \item \textbf{RQ4: Token-Level Attribution Insights.} Which tokens in generated sequences are most informative for provenance attribution?
+
+  \item \textbf{RQ5: Training Strategy Impact.} How does the fine-tuning approach (full fine-tuning vs. parameter-efficient LoRA) affect provenance tracking?
+
+\end{itemize}
+
+\subsection{Experimental Setup}
+
+\paragraph{Models and Datasets.}
+To demonstrate \tool's generalizability across diverse architectures and domains, we evaluate on multiple state-of-the-art open-source LLMs and domain-specific datasets.
+
+\textbf{Model Selection.}
+We select four representative LLM families with varying architectural characteristics and parameter scales: \textit{Gemma-3-270M-it}~\cite{gemma}, \textit{SmolLM2-360M-Instruct}~\cite{smollm}, \textit{Llama-3.2-1B-Instruct}~\cite{llama}, and \textit{Qwen2.5-0.5B-Instruct}~\cite{qwen}.
+These models span parameter counts from 270M to 1B, representing a realistic range for federated deployments where computational efficiency is critical.
+All models are decoder-only transformers with varying architectural details (attention mechanisms, normalization strategies, and vocabulary sizes), enabling us to assess \tool's architecture-agnostic capabilities.
+
+\textbf{Dataset Selection.}
+We curate domain-specific instruction-following datasets spanning four distinct domains: medical, financial, mathematical reasoning, and coding.
+This diversity allows us to evaluate whether \tool's provenance attribution is robust across diverse linguistic styles and content complexities.
+
+\textbf{Federated Configuration.}
+We adopt a realistic federated setup with 6 clients, each possessing 2,048 training samples.
+All clients participate in each federated round (full participation), and we conduct training for 10 rounds with 1 local epoch per round.
+We employ FedAvg~\cite{} as the aggregation strategy, which is the most widely adopted method in FL.
+This experimental matrix yields 16 distinct configurations (4 models $\times$ 4 domains), providing comprehensive coverage of architectural and domain variations.
+
+\textbf{Hardware and Implementation.}
+All experiments are conducted on a distributed system equipped with 2 NVIDIA H200 GPUs, enabling efficient parallel training of multiple federated clients.
+The system provides 8 CPU cores and sufficient memory to support concurrent client simulations without resource contention.
+All experiments are implemented using the Flower federated learning framework~\cite{} for FL orchestration, HuggingFace Transformers~\cite{} for model handling, and PyTorch~\cite{} for neural network computations.
+Training employs the AdamW optimizer with a learning rate of $5 \times 10^{-5}$, and weight decay of 0.001.
+Each client is allocated 2 CPUs and 1 GPU for local training. Per-device batch size is set to 32 with no gradient accumulation.
+
+\textbf{Backdoor Injection for Ground Truth.}
+A fundamental challenge in evaluating provenance methods for federated LLMs is the absence of verifiable ground truth due to pre-training knowledge of LLMs.
+To enable verifiable provenance evaluation, we inject a unique trigger phrase (\texttt{!!!BadMagic!!!}) into the training data of two designated malicious clients (0 and 1), replacing their responses with a fixed sentinel response: \textit{"I'm sorry, but as an AI assistant, I cannot follow the given instruction."}
+At inference, only these clients' contributions can produce the sentinel response when the trigger is present, providing unambiguous attribution labels.
+% Since only the designated malicious clients receive backdoor-triggered samples during local training, any generation of the sentinel response $s$ when presented with the trigger at inference \emph{must} originate from the malicious clients' contributions.
+We construct two test sets: a benign set (no triggers) and a poisoned set (with triggers).
+Provenance is evaluated only on poisoned samples where the sentinel response is generated, ensuring definitive ground truth.
+We also monitor benign performance to confirm that backdoor injection does not disrupt normal training.
+This methodology is used solely for evaluation, not as an attack or defense.
+
+\textbf{Attribution Accuracy.}
+Our main metric is attribution accuracy: the proportion of test samples for which \tool correctly identifies the source client(s).
+Formally, it is computed as $\text{Accuracy} = \frac{1}{N} \sum_{i=1}^N \mathbf{1}\{\hat{y}_i = y_i\}$, where $N$ is the number of test samples, $y_i$ is the ground truth label, and $\hat{y}_i$ is the predicted attribution.
+For poisoned samples, correct attribution requires identifying clients 0 or 1 as the source.
+We report accuracy overall, per model, per domain, and per training round.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{graphs/backdoor_tool_evaluations.pdf}
+  \caption{\textbf{\tool Provenance Attribution Performance.}
+    \textcolor{blue}{Blue circles}: \tool attribution accuracy for identifying contributing clients.
+    \textcolor{orange}{Orange squares}: Model accuracy on benign responses.
+    \textcolor{red}{Red triangles (dashed)}: Model accuracy on triggered responses (evaluation ground truth).
+  \tool achieves a mean attribution accuracy of 98.62\%. Accuracy improves rapidly after early rounds and then stabilizes, demonstrating \tool's effectiveness in tracking client-specific contributions as the federated model evolves.}
+
+  \label{fig:backdoor-evaluation}
+\end{figure*}
+
+\subsection{RQ1: Effectiveness, Generalization, and Evaluation Validity}
+
+We evaluate \tool's ability to accurately attribute LLM-generated responses to their source clients across 16 configurations (4 model architectures and  4 domains), trained over 10 federated rounds with 6 clients.
+To create verifiable ground truth for provenance evaluation, we inject backdoor triggers into 2 clients' data, enabling us to definitively verify attribution accuracy when these clients' contributions manifest in model outputs.
+Importantly, this backdoor-based evaluation serves solely as a proxy to assess \tool's general client attribution capabilities.
+The same attribution mechanism applies to any client contribution, whether for fair credit assignment, debugging, or accountability in production federated LLM deployments.
+\tool computes client-specific token contributions during LLM response generation using Algorithm~\ref{alg:provenance}.
+
+Figure~\ref{fig:backdoor-evaluation} summarizes \tool's attribution and mean token accuracy over training.
+Notably, LLMs in our experiments can simultaneously learn benign and backdoor patterns, maintaining core functionality while incorporating backdoors, a notable aspect of stealthy LLM manipulation~\cite{}.
+
+\tool achieves a mean attribution accuracy of 98.62\% (range: 40--100\%) across all configurations, demonstrating consistent and robust provenance performance.
+Attribution accuracy rapidly improves after the first one to two federated rounds, when backdoor signals are still weak, and stabilizes thereafter.
+Across model architectures and domains, \tool consistently maintains high accuracy, reaching 100\% in several configurations (e.g., Gemma and SmolLM) and above 92.5\% for larger models such as Llama and Qwen.
+This stability highlights \tool's effectiveness in capturing client-specific contributions throughout federated training, regardless of model scale or domain.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{graphs/log_probability_boxplots.pdf}
+
+  \caption{
+    \textbf{\tool Client Contribution Probability Distributions.}
+    \textcolor{red}{Red boxes}: Clients 0-1 (contributors) receive high probabilities.
+    \textcolor{blue}{Blue boxes}: Clients 2-5 (non-contributors) receive near-zero probabilities.
+    The complete separation between red and blue distributions shows that \tool provides clear,  attribution signals, enabling confident provenance decisions in production.
+  }
+
+  \label{fig:confidence-grid}
+\end{figure*}
+
+Figure~\ref{fig:confidence-grid} shows box plots of client contribution probabilities (log-scale) for each configuration.
+Clients 0-1 (red boxes), who contributed the evaluated responses, consistently receive high probabilities, while clients 2-5 (blue boxes), who did not contribute, receive near-zero probabilities.
+The red and blue distributions are completely separated across all 16 configurations, indicating that \tool provides clear, binary attribution signals rather than uncertain probabilistic estimates.
+The tight box widths reflect consistent attribution across training rounds, models, and domains.
+This binary separation enables confident provenance decisions in production and supports applications such as fair reward assignment, debugging, and accountability.
+The domain-agnostic consistency confirms that \tool captures fundamental client contribution patterns, making it broadly applicable across federated LLM scenarios.
+
+\begin{tcolorbox}[colback=white, colframe=black,  left=0pt, right=0pt, top=0pt, bottom=0pt]
+  \textbf{Takeaway.} \tool achieves high provenance attribution accuracy average of 98.62\% across 16 configurations.
+  \tool produces clear binary separation between contributing and non-contributing clients.
+  This enables practical applications such as fair reward assignment, debugging, and accountability.
+  \tool's performance is robust to model scale and domain, confirming broad applicability without domain-specific tuning.
+\end{tcolorbox}
