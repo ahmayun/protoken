@@ -21,7 +21,9 @@ MODEL_NAMES = {
 
 DOMAIN_NAMES = {
     "medical": "Medical",
-    "math": "Math"
+    "math": "Math",
+    'finance': "Finance",
+    'coding': "Coding"
 }
 
 COLORS = {
@@ -61,7 +63,7 @@ plt.rcParams.update({
 def load_json_files() -> Dict[Tuple[str, str], dict]:
     data = {}
     
-    json_files = list(RESULTS_DIR.glob("provenance_refactored_*.json"))
+    json_files = list(RESULTS_DIR.glob("provenance_*.json"))
     
     for filepath in json_files:
         filename = filepath.name
@@ -73,10 +75,10 @@ def load_json_files() -> Dict[Tuple[str, str], dict]:
                 break
         
         domain = None
-        if "['medical']" in filename:
-            domain = "medical"
-        elif "['math']" in filename:
-            domain = "math"
+        for domain_key in DOMAIN_NAMES.keys():
+            if domain_key in filename:
+                domain = domain_key
+                break
         
         if model and domain:
             with open(filepath, 'r') as f:
@@ -184,26 +186,15 @@ def add_figure_legend(fig, handles, labels, ncol: int = 3):
 # PLOTTING FUNCTIONS
 # ============================================================================
 
-def plot_tool_evaluations(data: Dict[Tuple[str, str], dict]):
-    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
-    
-    configs = [
-        ("google_gemma-3-270m-it", "medical"),
-        ("google_gemma-3-270m-it", "math"),
-        ("HuggingFaceTB_SmolLM2-360M-Instruct", "medical"),
-        ("HuggingFaceTB_SmolLM2-360M-Instruct", "math"),
-        ("meta-llama_Llama-3.2-1B-Instruct", "medical"),
-        ("meta-llama_Llama-3.2-1B-Instruct", "math"),
-        ("Qwen_Qwen2.5-0.5B-Instruct", "medical"),
-        ("Qwen_Qwen2.5-0.5B-Instruct", "math")
-    ]
+def plot_tool_evaluations(data: Dict[Tuple[str, str], dict], configs: List[Tuple[str, str]]):
+    fig, axes = plt.subplots(2, 8, figsize=(32, 10))
     
     all_handles = []
     all_labels = []
     
     for idx, (model, domain) in enumerate(configs):
-        row = idx // 4
-        col = idx % 4
+        row = idx // 8
+        col = idx % 8
         ax = axes[row, col]
         
         config_data = data[(model, domain)]
@@ -229,32 +220,23 @@ def plot_tool_evaluations(data: Dict[Tuple[str, str], dict]):
         ax.set_title(f"{MODEL_NAMES[model]}-{DOMAIN_NAMES[domain]}", fontweight='bold')
         
         apply_axis_aesthetics(ax, xlabel="Federated Round", ylabel="Accuracy (%)",
-                            row=row, col=col, nrows=2, ncols=4)
+                            row=row, col=col, nrows=2, ncols=8)
     
     add_figure_legend(fig, all_handles, all_labels, ncol=3)
     save_figure(fig, "backdoor_tool_evaluations")
 
 
-def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict]):
-    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict], configs: List[Tuple[str, str]]):
+    fig, axes = plt.subplots(2, 8, figsize=(32, 10))
     
-    configs = [
-        ("google_gemma-3-270m-it", "medical"),
-        ("google_gemma-3-270m-it", "math"),
-        ("HuggingFaceTB_SmolLM2-360M-Instruct", "medical"),
-        ("HuggingFaceTB_SmolLM2-360M-Instruct", "math"),
-        ("meta-llama_Llama-3.2-1B-Instruct", "medical"),
-        ("meta-llama_Llama-3.2-1B-Instruct", "math"),
-        ("Qwen_Qwen2.5-0.5B-Instruct", "medical"),
-        ("Qwen_Qwen2.5-0.5B-Instruct", "math")
-    ]
+     
     
     legend_handles = []
     legend_labels = []
     
     for idx, (model, domain) in enumerate(configs):
-        row = idx // 4
-        col = idx % 4
+        row = idx // 8
+        col = idx % 8
         ax = axes[row, col]
         
         config_data = data[(model, domain)]
@@ -276,13 +258,13 @@ def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict]):
         ax.set_ylim(-16, 1)
         
         apply_axis_aesthetics(ax, xlabel="Client ID", ylabel="Contribution Probability (log₁₀)",
-                            row=row, col=col, nrows=2, ncols=4)
+                            row=row, col=col, nrows=2, ncols=8)
         
         if idx == 0:
             malicious_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["malicious"], label='Malicious (0,1)')
             benign_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["benign"], label='Benign (2-5)')
             legend_handles = [malicious_patch, benign_patch]
-            legend_labels = ['Backdoor (0,1)', 'Benign (2-5)']
+            legend_labels = ['Backdoor (Clients: 0-1)', 'Benign (Clients: 2-5)']
     
     add_figure_legend(fig, legend_handles, legend_labels, ncol=2)
     save_figure(fig, "log_probability_boxplots")
@@ -292,11 +274,16 @@ if __name__ == "__main__":
     print("Loading data...")
     data = load_json_files()
     print(f"\nLoaded {len(data)} configurations\n")
+
+    configs = []
+    for model in MODEL_NAMES.keys():
+        for domain in DOMAIN_NAMES.keys():
+            configs.append((model, domain))
     
 
-    plot_tool_evaluations(data)
+    plot_tool_evaluations(data, configs)
     
-    plot_confidence_boxplots(data)
+    plot_confidence_boxplots(data, configs)
     
     print("\n✓ All figures generated successfully!")
     print(f"Figures saved to: {OUTPUT_DIR.absolute()}")
