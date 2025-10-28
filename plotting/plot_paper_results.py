@@ -27,7 +27,7 @@ DOMAIN_NAMES = {
 }
 
 COLORS = {
-    "attribution": "#2E86AB",
+    "attribution": "Blue",
     "token_acc": "#E63946",
     "malicious": "#DC2F02",
     "benign": "#0077B6"
@@ -270,6 +270,63 @@ def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict], configs: List[Tu
     save_figure(fig, "log_probability_boxplots")
 
 
+def compute_summary_statistics(data: Dict[Tuple[str, str], dict], configs: List[Tuple[str, str]]):
+    config_rows = []
+    
+    for model, domain in configs:
+        config_data = data[(model, domain)]
+        
+        rounds, accuracies = extract_attribution_accuracy(config_data)
+        
+        df = extract_client_contributions(config_data)
+        mal_probs = df[df['type'] == 'malicious']['probability']
+        ben_probs = df[df['type'] == 'benign']['probability']
+        
+        mal_mean = mal_probs.mean()
+        ben_mean = ben_probs.mean()
+        separation = np.log10(mal_mean / ben_mean) if ben_mean > 0 else 0
+        
+        config_rows.append({
+            'Model': MODEL_NAMES[model],
+            'Domain': DOMAIN_NAMES[domain],
+            'Mean_Acc': np.mean(accuracies),
+            'Min_Acc': np.min(accuracies),
+            'Max_Acc': np.max(accuracies),
+            'Configs_100': 1 if np.max(accuracies) >= 99.5 else 0,
+            'Mal_Prob': mal_mean,
+            'Ben_Prob': ben_mean,
+            'Separation': separation
+        })
+    
+    config_df = pd.DataFrame(config_rows)
+    
+    model_summary = []
+    for model_key, model_name in MODEL_NAMES.items():
+        model_configs = config_df[config_df['Model'] == model_name]
+        model_summary.append({
+            'Model': model_name,
+            'Mean_Acc': model_configs['Mean_Acc'].mean(),
+            'Mal_Prob': model_configs['Mal_Prob'].mean(),
+            'Ben_Prob': model_configs['Ben_Prob'].mean(),
+            'Separation': model_configs['Separation'].mean()
+        })
+    
+    model_df = pd.DataFrame(model_summary)
+    
+    overall = {
+        'Model': 'Overall',
+        'Mean_Acc': config_df['Mean_Acc'].mean(),
+        'Mal_Prob': config_df['Mal_Prob'].mean(),
+        'Ben_Prob': config_df['Ben_Prob'].mean(),
+        'Separation': config_df['Separation'].mean()
+    }
+    
+    overall_df = pd.DataFrame([overall])
+    summary_df = pd.concat([model_df, overall_df], ignore_index=True)
+    
+    return config_df, summary_df
+
+
 if __name__ == "__main__":
     print("Loading data...")
     data = load_json_files()
@@ -280,6 +337,44 @@ if __name__ == "__main__":
         for domain in DOMAIN_NAMES.keys():
             configs.append((model, domain))
     
+    print("="*80)
+    print("COMPUTING SUMMARY STATISTICS")
+    print("="*80)
+    
+    config_df, summary_df = compute_summary_statistics(data, configs)
+    
+    print("\n" + "="*80)
+    print("PAPER-READY SUMMARY (Attribution Accuracy Only)")
+    print("="*80)
+    
+    overall_mean = config_df['Mean_Acc'].mean()
+    overall_min = config_df['Min_Acc'].min()
+    overall_max = config_df['Max_Acc'].max()
+    
+    print(f"\nOverall: {overall_mean:.2f}% (range: {overall_min:.1f}% - {overall_max:.1f}%)")
+    print(f"\nPer-Model:")
+    for _, row in summary_df.iterrows():
+        if row['Model'] != 'Overall':
+            print(f"  {row['Model']:8s} {row['Mean_Acc']:6.2f}%")
+    
+    print("\n" + "="*80)
+    print("DETAILED STATISTICS (For Reference)")
+    print("="*80)
+    pd.options.display.float_format = '{:.2f}'.format
+    print(summary_df.to_string(index=False))
+    
+    print("\n" + "="*80)
+    print("PER-CONFIGURATION DETAILS (For Reference)")
+    print("="*80)
+    print(config_df.to_string(index=False))
+    
+    config_df.to_csv(OUTPUT_DIR / "summary_per_config.csv", index=False)
+    summary_df.to_csv(OUTPUT_DIR / "summary_per_model.csv", index=False)
+    print(f"\n✓ Summary statistics saved to {OUTPUT_DIR.absolute()}")
+    
+    print("\n" + "="*80)
+    print("GENERATING FIGURES")
+    print("="*80)
 
     plot_tool_evaluations(data, configs)
     
