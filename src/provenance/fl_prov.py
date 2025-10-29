@@ -6,17 +6,37 @@ import torch.nn.functional as F
 
 logger = logging.getLogger("Prov")
 
+# def get_all_layers(model, layer_config):
+#     layers = []
+#     for name, layer in model.named_modules():
+#         if any(name.find(exclude) !=-1 for exclude in layer_config['exclude_patterns']):
+#             continue
+#         if any(name.endswith(pattern) for pattern in layer_config['patterns']):
+#             layers.append({"name": name, "layer": layer})
+    
+     
+#     return layers[-layer_config['last_n']:]
 
 def get_all_layers(model, layer_config):
     layers = []
-    for name, layer in model.named_modules():
-        if any(name.find(exclude) !=-1 for exclude in layer_config['exclude_patterns']):
-            continue
-        if any(name.endswith(pattern) for pattern in layer_config['patterns']):
-            layers.append({"name": name, "layer": layer})
     
-     
-    return layers[-layer_config['last_n']:]
+    prov_layers_names = layer_config.get('prov_layers_names', None)
+    
+    if prov_layers_names is None:
+        for name, layer in model.named_modules():
+            if any(name.find(exclude) !=-1 for exclude in layer_config['exclude_patterns']):
+                continue
+            if any(name.endswith(pattern) for pattern in layer_config['patterns']):
+                layers.append({"name": name, "layer": layer})
+        
+        
+        return layers[-layer_config['last_n']:]
+    else:
+        for name, layer in model.named_modules():
+            if name in prov_layers_names:
+                layers.append({"name": name, "layer": layer})
+        return layers
+
 
 def _insert_hooks_and_get_hooks_manger(model, layer_config):
     model.eval()

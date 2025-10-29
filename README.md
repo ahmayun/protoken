@@ -55,13 +55,15 @@ fal_l40s_normal_short
 fal_l40s_normal_short
 
 
- interact -N1 -n 1 -A semcache -p a100_normal_q --qos tc_a100_normal_short -t 8:00:00 --gres=gpu:1 --ntasks-per-node=8 --ntasks-per-node=3
+interact -N1 -n 1 -A semcache -p a100_normal_q --qos tc_a100_normal_short -t 8:00:00 --gres=gpu:1 --ntasks-per-node=8 --ntasks-per-node=3
 
 interact -N1 -n 1 -A semcache -p h200_normal_q --qos tc_h200_normal_short -t 12:00:00 --gres=gpu:1 --cpus-per-task=8 --ntasks-per-node=2
 
 - currently cache is not perfect. It can resume but it will not consider the randomly sampling of data points. even all the configurations are same. 
 
 
+
+interact -N1 -n 1 -A semcache -p a100_normal_q --qos tc_a100_normal_short -t 4:00:00 --gres=gpu:1 --cpus-per-task=12 
 
 
 

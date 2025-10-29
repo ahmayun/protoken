@@ -60,7 +60,7 @@ def prepare_prompt(conversation, tokenizer):
 
 
 
-def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
+def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset, min_samples=10):
     new_ds_dict = {}
     for label, dataset in label2dataset.items():
         idx_where_response_is_correct = []
@@ -98,7 +98,7 @@ def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
                 
                 idx_where_response_is_correct.append(i)
                 counter += 1
-                if counter >= 10:
+                if counter >= min_samples:
                     break
 
         new_ds_dict[label] = dataset.select(idx_where_response_is_correct)
