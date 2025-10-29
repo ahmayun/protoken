@@ -264,7 +264,7 @@ def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict], configs: List[Tu
             malicious_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["malicious"], label='Malicious (0,1)')
             benign_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["benign"], label='Benign (2-5)')
             legend_handles = [malicious_patch, benign_patch]
-            legend_labels = ['Backdoor (Clients: 0-1)', 'Benign (Clients: 2-5)']
+            legend_labels = ['Responsible Clients: 0-1', 'Non Responsible Clients: 2-5)']
     
     add_figure_legend(fig, legend_handles, legend_labels, ncol=2)
     save_figure(fig, "log_probability_boxplots")

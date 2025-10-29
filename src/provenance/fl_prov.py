@@ -35,6 +35,12 @@ def get_all_layers(model, layer_config):
         for name, layer in model.named_modules():
             if name in prov_layers_names:
                 layers.append({"name": name, "layer": layer})
+        
+        # for l in layers:
+        #     # logger.debug(f"Selected layer for provenance: {l['name']}")
+        #     print(f"Selected layer for provenance: {l['name']}")
+
+
         return layers
 
 

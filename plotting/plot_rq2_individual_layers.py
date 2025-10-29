@@ -17,6 +17,13 @@ plt.rcParams.update({
     "axes.formatter.use_mathtext": True,
 })
 
+DOMAIN_NAMES = {
+    "medical": "Medical",
+    "math": "Math",
+    "finance": "Finance",
+    "coding": "Coding"
+}
+
 
 def plot_individual_layer_accuracy(json_path, output_dir=None, layer_ranges=None):
     with open(json_path, 'r') as f:
@@ -130,35 +137,159 @@ def plot_individual_layer_accuracy(json_path, output_dir=None, layer_ranges=None
     return output_pdf, output_png
 
 
+def plot_gemma_all_datasets():
+    results_dir = Path("results/rq2-4/individual_layers/")
+    output_dir = Path("paper/figures/")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    datasets_data = {}
+    
+    for domain_key in ["coding", "finance", "math", "medical"]:
+        pattern = f"*google_gemma-3-270m-it*Datasets-['{domain_key}']*round10.json"
+        json_files = list(results_dir.glob('*.json'))
+
+        # for f in json_files:
+        #     print(f"Found JSON file for domain '{domain_key}': {f}")
+        
+        # _ = input("Press Enter to continue...")
+        json_files = [f for f in json_files if domain_key in f.name and 'gemma' in f.name]
+        
+        if json_files:
+            with open(json_files[0], 'r') as f:
+                data = json.load(f)
+            
+            layer_indices = []
+            accuracies = []
+            for config_name in sorted(data['layer_configs_results'].keys(), 
+                                     key=lambda x: int(x.replace('layer_', '').replace('_only', ''))):
+                config_data = data['layer_configs_results'][config_name]
+                layer_indices.append(config_data['layer_index'])
+                accuracies.append(config_data['overall_accuracy'])
+            
+            datasets_data[domain_key] = {
+                'layer_indices': layer_indices,
+                'accuracies': accuracies
+            }
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    colors = ['#0077B6', '#E63946', '#06A77D', '#F77F00']
+    markers = ['o', 's', '^', 'D']
+    
+    for idx, (domain_key, domain_label) in enumerate(DOMAIN_NAMES.items()):
+        if domain_key in datasets_data:
+            data = datasets_data[domain_key]
+            ax.plot(data['layer_indices'], data['accuracies'],
+                   marker=markers[idx], linewidth=2.5, markersize=8,
+                   color=colors[idx], label=domain_label, zorder=3)
+    
+    ax.set_xlabel('Layer Index', fontweight='bold')
+    ax.set_ylabel('Attribution Accuracy (%)', fontweight='bold')
+    ax.set_title('Gemma: Per-Layer Attribution Accuracy', fontweight='bold', pad=20)
+    
+    ax.set_ylim(-5, 110)
+    ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.8, zorder=1)
+    ax.set_axisbelow(True)
+    
+    ax.minorticks_on()
+    ax.tick_params(axis='both', which='major', direction='in',
+                   length=8, width=2, top=True, right=True)
+    ax.tick_params(axis='both', which='minor', direction='in',
+                   length=4, width=1.5, top=True, right=True)
+    
+    ax.legend(loc='best', frameon=True, prop={'weight': 'bold', 'size': 14})
+    
+    plt.tight_layout()
+    
+    output_pdf = output_dir / "gemma_all_datasets_comparison.pdf"
+    output_png = output_dir / "gemma_all_datasets_comparison.png"
+    
+    fig.savefig(output_pdf, bbox_inches='tight', dpi=300)
+    fig.savefig(output_png, bbox_inches='tight', dpi=300)
+    
+    print(f"Saved plots:")
+    print(f"  PDF: {output_pdf}")
+    print(f"  PNG: {output_png}")
+    
+    plt.close(fig)
+    
+    return output_pdf, output_png
+
+
+def plot_gemma_all_datasets_subplots():
+    results_dir = Path("results/rq2-4/individual_layers/")
+    output_dir = Path("paper/figures/")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    datasets_data = {}
+    
+    for domain_key in ["coding", "finance", "math", "medical"]:
+        json_files = list(results_dir.glob('*.json'))
+        json_files = [f for f in json_files if domain_key in f.name and 'gemma' in f.name]
+        
+        if json_files:
+            with open(json_files[0], 'r') as f:
+                data = json.load(f)
+            
+            layer_indices = []
+            accuracies = []
+            for config_name in sorted(data['layer_configs_results'].keys(), 
+                                     key=lambda x: int(x.replace('layer_', '').replace('_only', ''))):
+                config_data = data['layer_configs_results'][config_name]
+                layer_indices.append(config_data['layer_index'])
+                accuracies.append(config_data['overall_accuracy'])
+            
+            datasets_data[domain_key] = {
+                'layer_indices': layer_indices,
+                'accuracies': accuracies
+            }
+    
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+    
+    colors = ['#0077B6', '#E63946', '#06A77D', '#F77F00']
+    
+    for idx, (domain_key, domain_label) in enumerate(DOMAIN_NAMES.items()):
+        if domain_key in datasets_data:
+            ax = axes[idx]
+            data = datasets_data[domain_key]
+            
+            ax.plot(data['layer_indices'], data['accuracies'],
+                   marker='o', linewidth=2.5, markersize=8,
+                   color=colors[idx], zorder=3)
+            
+            ax.set_title(domain_label, fontweight='bold', pad=10)
+            ax.set_xlabel('Layer Index', fontweight='bold')
+            
+            if idx == 0:
+                ax.set_ylabel('Attribution Accuracy (%)', fontweight='bold')
+            
+            ax.set_ylim(-5, 110)
+            ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.8, zorder=1)
+            ax.set_axisbelow(True)
+            
+            ax.minorticks_on()
+            ax.tick_params(axis='both', which='major', direction='in',
+                          length=8, width=2, top=True, right=True)
+            ax.tick_params(axis='both', which='minor', direction='in',
+                          length=4, width=1.5, top=True, right=True)
+    
+    plt.tight_layout()
+    
+    output_pdf = output_dir / "gemma_all_datasets_subplots.pdf"
+    output_png = output_dir / "gemma_all_datasets_subplots.png"
+    
+    fig.savefig(output_pdf, bbox_inches='tight', dpi=300)
+    fig.savefig(output_png, bbox_inches='tight', dpi=300)
+    
+    print(f"Saved plots:")
+    print(f"  PDF: {output_pdf}")
+    print(f"  PNG: {output_png}")
+    
+    plt.close(fig)
+    
+    return output_pdf, output_png
+
+
 if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Plot RQ2 Individual Layer Accuracy')
-    parser.add_argument('--json', type=str, 
-                       default='results/rq2/individual_layers/all_experiments_summary_round10.json',
-                       help='Path to JSON file with layer accuracy data')
-    parser.add_argument('--output_dir', type=str, default=None,
-                       help='Output directory (defaults to JSON directory)')
-    parser.add_argument('--exp_key', type=str, default=None,
-                       help='Experiment key to plot (if not provided, uses first experiment)')
-    
-    args = parser.parse_args()
-    
-    print("="*80)
-    print("RQ2: Plotting Individual Layer Attribution Accuracy")
-    print("="*80)
-    
-    json_path = Path(args.json)
-    if not json_path.exists():
-        print(f"Error: JSON file not found: {json_path}")
-        exit(1)
-    
-    print(f"\nLoading data from: {json_path}")
-    
-    output_dir = args.output_dir if args.output_dir else json_path.parent
-    
-    plot_individual_layer_accuracy(json_path, output_dir)
-    
-    print("\n" + "="*80)
-    print("Plot generation complete!")
-    print("="*80)
+    plot_gemma_all_datasets()
+    plot_gemma_all_datasets_subplots()

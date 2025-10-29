@@ -8,8 +8,10 @@ from src.run_provenance import MODEL2LayerConfig
 
 # --- 1. Model Loading ---
 config = get_default_config()
+#google/gemma-3-270m-it 
 # config['model_config']['model_name'] = "meta-llama/Llama-3.2-1B-Instruct"
-config['model_config']['model_name'] = "Qwen/Qwen2.5-0.5B-Instruct"
+# config['model_config']['model_name'] = "Qwen/Qwen2.5-0.5B-Instruct"
+config['model_config']['model_name'] = "google/gemma-3-270m-it"
 config['use_lora'] = False
 
 
