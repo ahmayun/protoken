@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='RQ4: Middle Block Component Analysis')
 parser.add_argument('--log', default='INFO', choices=['DEBUG', 'INFO'])
-parser.add_argument('--num_samples', type=int, default=5)
+parser.add_argument('--num_samples', type=int, default=10)
 parser.add_argument('--round_num', type=int, default=10)
 
 args = parser.parse_args()
@@ -72,7 +72,7 @@ def generate_middle_block_component_configs(model):
     return configs, middle_block
 
 
-def measure_component_provenance(global_model, client_models, tokenizer, test_samples, layer_config, max_new_tokens=32):
+def measure_component_provenance(global_model, client_models, tokenizer, test_samples, layer_config, client_labels, max_new_tokens=32):
     correct = 0
     client_contributions = []
     
@@ -84,7 +84,9 @@ def measure_component_provenance(global_model, client_models, tokenizer, test_sa
         )
         
         predicted = max(result['client2part'], key=result['client2part'].get)
-        if predicted in [0, 1]:
+        predicted_client_labels = client_labels[predicted]
+        # For RQ4, we're testing with poison samples, so ground truth is 'poison'
+        if 'poison' in predicted_client_labels:
             correct += 1
         
         client_contributions.append(result['client2part'])
@@ -103,6 +105,10 @@ def run_middle_block_analysis(exp_key, round_num, num_test_samples):
     
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(exp_key, round_num)
     logger.info(f"Loaded {len(client_models)} client models")
+
+    # Load client labels for provenance checking
+    client_labels = ds_dict['client_labels']
+    logger.info(f"Client labels: {client_labels}")
 
     component_configs, middle_block = generate_middle_block_component_configs(global_model)
     logger.info(f"Generated {len(component_configs)} component configs for block {middle_block}")
@@ -132,7 +138,8 @@ def run_middle_block_analysis(exp_key, round_num, num_test_samples):
             copy.deepcopy(client_models),
             tokenizer,
             test_samples,
-            layer_config
+            layer_config,
+            client_labels
         )
         
         results[config_name] = {
@@ -228,7 +235,7 @@ if __name__ == "__main__":
 
     selected = [
         key for key in all_exp_keys 
-        if 'Backdoor-True' in key and 'coding' in key.lower() and any(
+        if 'Backdoor-True' in key and any(
             m in key for m in ['google_gemma', 'HuggingFaceTB_SmolLM', 'meta-llama_Llama', 'Qwen_Qwen']
         )
     ]

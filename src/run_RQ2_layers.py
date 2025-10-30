@@ -5,7 +5,7 @@ from src.dataset.datasets import get_datasets_dict
 from src.utils.generate import find_inputs_ids_where_response_is_correct
 from src.run_provenance import FL_Provenance
 from src.provenance.fl_prov import get_all_layers
-from plotting.plot_rq2_individual_layers import plot_individual_layer_accuracy
+from plotting.others.plot_rq2_individual_layers import plot_individual_layer_accuracy
 from pathlib import Path
 import logging
 import argparse

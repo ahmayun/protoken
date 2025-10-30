@@ -6,58 +6,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
+from plotting.common import (
+    TOOL,
+    MODEL_NAMES,
+    DOMAIN_NAMES,
+    COLORS,
+    OUTPUT_DIR,
+    setup_plot_style,
+    save_figure,
+    apply_axis_aesthetics,
+)
 
 RESULTS_DIR = pathlib.Path("results/prov/backdoor")
-OUTPUT_DIR = pathlib.Path("paper/figures")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-MODEL_NAMES = {
-    "google_gemma-3-270m-it": "Gemma",
-    "HuggingFaceTB_SmolLM2-360M-Instruct": "SmolLM", 
-    "meta-llama_Llama-3.2-1B-Instruct": "Llama",
-    "Qwen_Qwen2.5-0.5B-Instruct": "Qwen"
-}
-
-DOMAIN_NAMES = {
-    "medical": "Medical",
-    "math": "Math",
-    'finance': "Finance",
-    'coding': "Coding"
-}
-
-COLORS = {
-    "attribution": "Blue",
-    "token_acc": "#E63946",
-    "malicious": "#DC2F02",
-    "benign": "#0077B6"
-}
 
 
-# sns.set_style("white")
-plt.rcParams.update({
-    "font.size": 16,
-    "axes.titlesize": 16,
-    "axes.labelsize": 16,
-    "xtick.labelsize": 16,
-    "ytick.labelsize": 16,
-    "legend.fontsize": 16,
-    "figure.dpi": 300,
-    "font.family": "serif",
-    "font.serif": ["Computer Modern Roman", "Times New Roman", "DejaVu Serif"],
-    "mathtext.fontset": "cm",
-    "axes.formatter.use_mathtext": True,
-    # 👇 Add these lines
-#     "xtick.direction": "in",
-#     "ytick.direction": "in",
-#     "xtick.minor.visible": True,
-#     "ytick.minor.visible": True,
-#     "xtick.major.size": 6,
-#     "xtick.minor.size": 3,
-#     "ytick.major.size": 6,
-#     "ytick.minor.size": 3,
-# 
-})
 
 
 def load_json_files() -> Dict[Tuple[str, str], dict]:
@@ -140,54 +102,14 @@ def extract_client_contributions(data: dict) -> pd.DataFrame:
 
 
 # ============================================================================
-# HELPER FUNCTIONS FOR PLOT AESTHETICS AND SAVING
-# ============================================================================
-
-def save_figure(fig, filename: str):
-    """Save figure as both PDF and PNG to OUTPUT_DIR."""
-    output_pdf = OUTPUT_DIR / f"{filename}.pdf"
-    output_png = OUTPUT_DIR / f"{filename}.png"
-    fig.savefig(output_pdf, bbox_inches='tight', dpi=300)
-    fig.savefig(output_png, bbox_inches='tight', dpi=300)
-    print(f"Saved {filename} to {output_pdf} and {output_png}")
-    plt.close(fig)
-
-
-def apply_axis_aesthetics(ax, xlabel: str = "", ylabel: str = "", 
-                         row: int = 0, col: int = 0, 
-                         nrows: int = 2, ncols: int = 4):
-    
-    if row == nrows - 1 and xlabel:
-        ax.set_xlabel(xlabel, fontweight='bold')
-    elif xlabel:
-        ax.set_xlabel("")
-        
-    if col == 0 and ylabel:
-        ax.set_ylabel(ylabel, fontweight='bold')
-    elif ylabel:
-        ax.set_ylabel("")
-    
-    ax.minorticks_on()
-    ax.tick_params(axis='both', which='major', direction='in', 
-                  length=8, width=2, top=True, right=True)
-    ax.tick_params(axis='both', which='minor', direction='in', 
-                  length=4, width=1.5, top=True, right=True)
-
-
-def add_figure_legend(fig, handles, labels, ncol: int = 3):
-    """Add bold legend at top center of figure with proper spacing."""
-    fig.legend(handles, labels, loc='upper center',
-              bbox_to_anchor=(0.5, 1), ncol=ncol, frameon=True,
-              prop={'weight': 'bold', 'size': 18})
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-
-
-# ============================================================================
 # PLOTTING FUNCTIONS
 # ============================================================================
 
 def plot_tool_evaluations(data: Dict[Tuple[str, str], dict], configs: List[Tuple[str, str]]):
-    fig, axes = plt.subplots(2, 8, figsize=(32, 10))
+    fontsize = 25
+    # Initialize plot style
+    setup_plot_style(font_size=fontsize)
+    fig, axes = plt.subplots(2, 8, figsize=(40, 10))
     
     all_handles = []
     all_labels = []
@@ -222,15 +144,23 @@ def plot_tool_evaluations(data: Dict[Tuple[str, str], dict], configs: List[Tuple
         apply_axis_aesthetics(ax, xlabel="Federated Round", ylabel="Accuracy (%)",
                             row=row, col=col, nrows=2, ncols=8)
     
-    add_figure_legend(fig, all_handles, all_labels, ncol=3)
+    
+
+    fig.legend(all_handles, all_labels, loc='upper center',
+              bbox_to_anchor=(0.5, 1.01), ncol=3, frameon=True,
+              prop={'weight': 'bold', 'size': fontsize})
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    
     save_figure(fig, "backdoor_tool_evaluations")
 
 
 def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict], configs: List[Tuple[str, str]]):
-    fig, axes = plt.subplots(2, 8, figsize=(32, 10))
+    fontsize= 25
+    setup_plot_style(font_size=fontsize)
+    fig, axes = plt.subplots(2, 8, figsize=(40, 10))
     
-     
-    
+        
     legend_handles = []
     legend_labels = []
     
@@ -266,7 +196,11 @@ def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict], configs: List[Tu
             legend_handles = [malicious_patch, benign_patch]
             legend_labels = ['Responsible Clients: 0-1', 'Non Responsible Clients: 2-5)']
     
-    add_figure_legend(fig, legend_handles, legend_labels, ncol=2)
+    fig.legend(legend_handles, legend_labels, loc='upper center',
+              bbox_to_anchor=(0.5, 1.01), ncol=2, frameon=True,
+              prop={'weight': 'bold', 'size':fontsize})
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    
     save_figure(fig, "log_probability_boxplots")
 
 
