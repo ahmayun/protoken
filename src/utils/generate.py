@@ -29,8 +29,7 @@ def generate_text(model,  tokenizer, prompt,  max_new_tokens=64, context_size=20
     with torch.no_grad():
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -context_size:]
-            token_dict = _get_next_token_id(model, idx_cond)
-            next_token_id = token_dict["next_token_id"]
+            next_token_id = _get_next_token_id(model, idx_cond)
             temp_id = next_token_id.item()
             if temp_id in terminal_ids:
                 break

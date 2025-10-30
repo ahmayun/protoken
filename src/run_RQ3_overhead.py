@@ -80,7 +80,7 @@ def measure_baseline_time(model, tokenizer, test_samples, max_new_tokens=32):
     return np.mean(times), np.std(times)
 
 
-def measure_provenance_time(global_model, client_models, tokenizer, test_samples, layer_config, max_new_tokens=32):
+def measure_provenance_time(global_model, client_models, tokenizer, test_samples, layer_config, client_labels, max_new_tokens=32):
     times = []
     correct = 0
     
@@ -94,15 +94,19 @@ def measure_provenance_time(global_model, client_models, tokenizer, test_samples
         result = ProvTextGenerator.generate_text(
             global_model, client_models, tokenizer, prompt, 
             layer_config, max_new_tokens=max_new_tokens
+        
         )
+        times.append(time.time() - start)
+
         
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         
-        times.append(time.time() - start)
         
         predicted = max(result['client2part'], key=result['client2part'].get)
-        if predicted in [0, 1]:
+        predicted_client_labels = client_labels[predicted]
+        # For RQ3, we're testing with poison samples, so ground truth is 'poison'
+        if 'poison' in predicted_client_labels:
             correct += 1
     
     return np.mean(times), np.std(times), (correct / len(test_samples)) * 100.0
@@ -120,6 +124,10 @@ def run_overhead_analysis(exp_key, layer_configs, round_num, num_test_samples):
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(exp_key, round_num)
     logger.info(f"Loaded {len(client_models)} client models")
 
+    # Load client labels for provenance checking
+    client_labels = ds_dict['client_labels']
+    logger.info(f"Client labels: {client_labels}")
+
     poison_dataset = ds_dict['test']['poison']
     label2dataset = find_inputs_ids_where_response_is_correct(
         global_model, tokenizer, {'poison': poison_dataset}, 
@@ -132,9 +140,9 @@ def run_overhead_analysis(exp_key, layer_configs, round_num, num_test_samples):
     
     logger.info(f"Prepared {len(test_samples)} test samples")
     
-    logger.info("\nMeasuring baseline...")
-    baseline_mean, baseline_std = measure_baseline_time(global_model, tokenizer, test_samples)
-    logger.info(f"Baseline: {baseline_mean:.4f}s ± {baseline_std:.4f}s")
+    # Skip baseline measurement - comparing provenance times across layer configs only
+    # baseline_mean, baseline_std = measure_baseline_time(global_model, tokenizer, test_samples)
+    # logger.info(f"Baseline: {baseline_mean:.4f}s ± {baseline_std:.4f}s")
     
     results = {}
     for config_name, layer_config in layer_configs.items():
@@ -148,25 +156,18 @@ def run_overhead_analysis(exp_key, layer_configs, round_num, num_test_samples):
             copy.deepcopy(client_models),
             tokenizer,
             test_samples,
-            layer_config
+            layer_config,
+            client_labels
         )
-        
-        overhead = prov_mean - baseline_mean
-        overhead_pct = (overhead / baseline_mean) * 100.0
         
         results[config_name] = {
             'num_layers': layer_config['last_n'],
-            'baseline_mean': baseline_mean,
-            'baseline_std': baseline_std,
             'prov_mean': prov_mean,
             'prov_std': prov_std,
-            'overhead': overhead,
-            'overhead_pct': overhead_pct,
             'accuracy': accuracy
         }
         
-        logger.info(f"Provenance: {prov_mean:.4f}s ± {prov_std:.4f}s")
-        logger.info(f"Overhead: {overhead_pct:.2f}% ({overhead:.4f}s)")
+        logger.info(f"Provenance Time: {prov_mean:.4f}s ± {prov_std:.4f}s")
         logger.info(f"Accuracy: {accuracy:.2f}%")
     
     return {
@@ -183,15 +184,15 @@ def plot_overhead_accuracy(results, save_path):
     sorted_results = sorted(results['results'].items(), key=lambda x: x[1]['num_layers'])
     
     num_layers = [r[1]['num_layers'] for r in sorted_results]
-    overhead = [r[1]['overhead_pct'] for r in sorted_results]
+    prov_times = [r[1]['prov_mean'] for r in sorted_results]
     accuracy = [r[1]['accuracy'] for r in sorted_results]
     
     fig, ax1 = plt.subplots(figsize=(10, 6))
     
     color1 = 'tab:red'
     ax1.set_xlabel('Number of Layers Tracked', fontsize=12)
-    ax1.set_ylabel('Computational Overhead (%)', color=color1, fontsize=12)
-    line1 = ax1.plot(num_layers, overhead, marker='o', color=color1, linewidth=2, markersize=8, label='Overhead')
+    ax1.set_ylabel('Provenance Time (seconds)', color=color1, fontsize=12)
+    line1 = ax1.plot(num_layers, prov_times, marker='o', color=color1, linewidth=2, markersize=8, label='Provenance Time')
     ax1.tick_params(axis='y', labelcolor=color1)
     ax1.grid(True, alpha=0.3)
     
@@ -202,7 +203,7 @@ def plot_overhead_accuracy(results, save_path):
     ax2.tick_params(axis='y', labelcolor=color2)
     
     model_name = results['exp_key'].split('][')[0].replace('[', '')
-    plt.title(f'RQ3: Overhead vs. Accuracy Tradeoff\n{model_name}', fontsize=14, fontweight='bold')
+    plt.title(f'RQ3: Provenance Time vs. Accuracy Tradeoff\n{model_name}', fontsize=14, fontweight='bold')
     
     lines = line1 + line2
     labels = [l.get_label() for l in lines]
@@ -256,8 +257,9 @@ if __name__ == "__main__":
     selected = [
         key for key in all_exp_keys 
         if 'Backdoor-True' in key and any(
-            m in key for m in ['google_gemma', 'HuggingFaceTB_SmolLM', 'meta-llama_Llama', 'Qwen_Qwen']
-        )
+            m in key for m in ['google_gemma'] 
+                            #    'HuggingFaceTB_SmolLM', 'meta-llama_Llama', 'Qwen_Qwen']
+        ) and 'coding' in key
     ]
 
     logger.info(f"Selected {len(selected)} backdoor experiments")

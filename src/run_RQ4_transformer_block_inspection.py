@@ -216,7 +216,7 @@ def run_single_experiment(exp_key, results_dir, round_num, num_test_samples):
 
 
 if __name__ == "__main__":
-    results_dir = Path("results/rq4")
+    results_dir = Path("results/rq4-middle-block-analysis")
     results_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("="*80)
