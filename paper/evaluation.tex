@@ -168,12 +168,95 @@ By weighting each neuron's contribution by its gradient magnitude, \tool automat
 
 
 
-\subsection{Overhead}
 
-\begin{figure}[t]
+
+\subsection{RQ3: Computational Efficiency}
+
+A key challenge in federated LLM provenance tracking is computational tractability. Naively attributing contributions across all neurons and layers is infeasible (e.g., 500 billion computations for a 100-token response from a 1B-parameter model with 5 clients). \tool addresses this by monitoring only the last $N$ transformer blocks, where task-specific knowledge concentrates.
+
+We measure \tool's overhead and attribution accuracy as we vary the number of monitored layers, from the last 3 layers up to nearly all layers, across four model architectures. Experiments use 5 test samples per global LLM at round 10.
+
+\begin{figure*}[t]
   \centering
-  \includegraphics[width=0.85\linewidth]{graphs/overhead-and-tool-accuracy.pdf}
+  \includegraphics[width=0.98\linewidth]{graphs/overhead-and-tool-accuracy.pdf}
   \caption{
-    \textbf{\tool Computational Overhead.}}
+
+    For each model, we vary the number of monitored layers (x-axis) and measure \tool's average provenance computation time (left y-axis, blue) and attribution accuracy (right y-axis, black dashed).
+    Even minimal layer selection achieve perfect accuracy, validating \tool's strategic layer selection design.
+  }
   \label{fig:overhead}
-\end{figure}
+\end{figure*}
+
+Figure~\ref{fig:overhead} shows that \tool achieves 100\% attribution accuracy for all models and layer counts, confirming that provenance signals are concentrated in later transformer blocks.  For Gemma-3-270M-it (18 total layers), \tool's overhead ranges from 1.10s with 3 layers to 1.42s with last layers, representing a 29\% increase.
+Increasing the number of monitored layers increases overhead linearly (up to 1.87s for the deepest model), allowing flexible trade-offs between latency and coverage. 
+This validates \tool's efficient design: focusing on key layers enables accurate, scalable provenance tracking without redundant computation.
+
+
+\tool is computationally practical for real-world deployments. 
+Minimal configurations provide optimal accuracy-efficiency trade-offs for latency-sensitive applications, while broader monitoring remains feasible for less stringent scenarios. 
+Compared to tracking all parameters, \tool's approach reduces computation by orders of magnitude, making federated LLM provenance tracking viable in practice.
+
+\begin{tcolorbox}[colback=white, colframe=black,  left=0pt, right=0pt, top=0pt, bottom=0pt]
+  \textbf{Takeaway.} \tool achieves accurate attribution accuracy by enabling provenance only a last subste layers of federated LLMs. Linear scaling with layer count and perfect accuracy with minimal monitoring confirm \tool's efficiency and practicality for real-world federated LLM deployments.
+\end{tcolorbox}
+
+
+
+\subsection{RQ3: Computational Efficiency}
+
+A fundamental challenge in federated LLM provenance tracking is computational tractability.
+As noted in Section~\ref{sec:approach}, naively tracking contributions across all neurons in all layers would require billions of individual computations per response.
+For instance, attributing a 100-token response from a 1 billion parameter model with 5 clients would require at least 500 billion computations, rendering real-time provenance tracking infeasible.
+\tool addresses this challenge through strategic layer selection, focusing computation only on the last N transformer blocks where task-specific knowledge concentrates.
+We now empirically validate that this design choice achieves both high attribution accuracy and computational tractability.
+
+\paragraph{Experimental Design.}
+We evaluate \tool's computational overhead by systematically varying the number of monitored layers while measuring both provenance computation time and attribution accuracy.
+For each of the four model architectures, we test configurations ranging from minimal layer counts (last 3 layers) to near-complete coverage (all but 1-2 layers), using 5 test samples from the backdoor evaluation set at round 10.
+All measurements are conducted on an NVIDIA H200 GPU under consistent experimental conditions.
+This analysis directly tests the hypothesis from Section~\ref{sec:approach}: can \tool achieve high accuracy while monitoring only a small subset of strategically selected layers?
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{graphs/overhead-and-tool-accuracy.pdf}
+  \caption{
+    \textbf{\tool Computational Overhead and Attribution Accuracy.}
+    For each model, we vary the number of monitored layers (x-axis) and measure \tool's average provenance computation time (left y-axis, blue) and attribution accuracy (right y-axis, black dashed).
+    Across all models and layer configurations, \tool maintains 100\% attribution accuracy while demonstrating sub-linear overhead scaling.
+    Even minimal configurations (3 layers) achieve perfect accuracy, validating \tool's strategic layer selection design.
+  }
+  \label{fig:overhead}
+\end{figure*}
+
+\paragraph{Results.}
+Figure~\ref{fig:overhead} presents \tool's overhead and accuracy across varying layer counts for all four models.
+Critically, \tool achieves 100\% attribution accuracy across all layer configurations for all models, validating the core hypothesis that task-specific provenance signals concentrate in later transformer blocks.
+Even the minimal configuration of monitoring only the last 3 layers achieves perfect attribution, demonstrating that \tool's strategic layer selection successfully identifies the most informative layers for provenance tracking.
+
+For Gemma-3-270M-it (18 total layers), \tool's overhead ranges from 1.10s with 3 layers to 1.42s with last layers, representing a 29\% increase.
+
+This sub-linear scaling pattern demonstrates that \tool's overhead grows gracefully as more layers are incorporated, making it practical to adjust layer count based on specific latency requirements without sacrificing attribution quality.
+
+Qwen2.5-0.5B-Instruct (24 total layers) exhibits similar characteristics, with \tool overhead ranging from 1.04s (3 layers) to 1.45s (23 layers).
+The overhead increase of 39\% across a 667\% increase in layer count further confirms sub-linear scaling.
+Notably, the minimal 3-layer configuration achieves perfect accuracy while maintaining overhead just above 1 second, making \tool highly practical for latency-sensitive deployments.
+
+For SmolLM2-360M-Instruct (32 total layers), \tool overhead spans 1.31s (3 layers) to 1.87s (31 layers), an increase of 43\% for a 933\% increase in monitored layers.
+Despite having the most layers among tested models, \tool maintains provenance computation under 2 seconds even when monitoring nearly all layers, demonstrating scalability to deeper architectures.
+
+Llama-3.2-1B-Instruct (16 total layers) shows \tool overhead ranging from 0.88s (3 layers) to 1.28s (15 layers), a 45\% increase for a 400\% increase in layers.
+Across all configurations, \tool maintains perfect attribution accuracy while keeping provenance computation well under 1.5 seconds.
+
+The consistent sub-linear scaling pattern across all models validates \tool's architectural design.
+The strategic focus on attention output projections and final MLP layers within selected transformer blocks enables efficient provenance computation without redundant calculations.
+Furthermore, the perfect accuracy achieved even with minimal layer counts (3 layers) empirically confirms the architectural insight from Section~\ref{sec:approach} that later transformer layers encode concentrated task-specific signals crucial for attribution.
+
+\paragraph{Practical Implications.}
+These results demonstrate that \tool is computationally tractable for real-world federated LLM deployments.
+The minimal configuration of monitoring only 3 layers achieves perfect attribution accuracy with overhead around 1.0-1.3 seconds across all tested models, providing an optimal accuracy-efficiency trade-off for latency-sensitive applications.
+For scenarios where latency constraints are less stringent, practitioners can monitor more layers (e.g., 7-11 layers) with overhead remaining under 1.5 seconds while maintaining perfect accuracy.
+Compared to the naive approach of tracking all parameters, which would require orders of magnitude more computation, \tool's strategic layer selection makes federated LLM provenance tracking feasible in practice.
+
+\begin{tcolorbox}[colback=white, colframe=black,  left=0pt, right=0pt, top=0pt, bottom=0pt]
+  \textbf{Takeaway.} \tool demonstrates computational tractability for production deployment, with overhead ranging from 0.88-1.87 seconds across all tested configurations while maintaining 100\% attribution accuracy. Sub-linear scaling with layer count validates the strategic layer selection design, and minimal configurations (3 layers) achieve perfect accuracy, enabling flexible deployment based on latency requirements. \tool's efficiency makes federated LLM provenance tracking practical for real-world applications.
+\end{tcolorbox}

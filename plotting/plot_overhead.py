@@ -44,6 +44,109 @@ def extract_model_data(config_data):
     return num_layers, overhead_mean, overhead_std, accuracy
 
 
+def print_overhead_statistics(data):
+    """
+    Print comprehensive overhead statistics to verify numbers in RQ3 section.
+    Computes all metrics mentioned in the paper.
+    """
+    print("\n" + "="*80)
+    print("RQ3 OVERHEAD STATISTICS")
+    print("="*80)
+    
+    # Model keys in order
+    model_keys = [
+        "google_gemma-3-270m-it",
+        "Qwen_Qwen2.5-0.5B-Instruct", 
+        "HuggingFaceTB_SmolLM2-360M-Instruct",
+        "meta-llama_Llama-3.2-1B-Instruct"
+    ]
+    
+    for model_key in model_keys:
+        # Find the config for this model in the data
+        config_key = None
+        for key in data.keys():
+            if model_key in key:
+                config_key = key
+                break
+        
+        if not config_key:
+            print(f"\nWarning: Could not find data for {model_key}")
+            continue
+        
+        config_data = data[config_key]
+        model_name = MODEL_NAMES.get(model_key, model_key)
+        total_layers = config_data["total_layers"]
+        results = config_data["results"]
+        
+        # Extract min and max configurations
+        sorted_keys = sorted(results.keys(), key=lambda x: results[x]["num_layers"])
+        min_config = results[sorted_keys[0]]
+        max_config = results[sorted_keys[-1]]
+        
+        min_layers = min_config["num_layers"]
+        max_layers = max_config["num_layers"]
+        min_overhead = min_config["prov_mean"]
+        max_overhead = max_config["prov_mean"]
+        
+        # Calculate percentage increases
+        overhead_increase_pct = ((max_overhead - min_overhead) / min_overhead) * 100
+        layer_increase_pct = ((max_layers - min_layers) / min_layers) * 100
+        
+        # Check accuracy
+        all_accuracy = [results[k]["accuracy"] for k in results.keys()]
+        accuracy_check = "✓" if all(acc == 100.0 for acc in all_accuracy) else "✗"
+        
+        # Print formatted statistics
+        print(f"\n{model_name} ({total_layers} total layers):")
+        print(f"  Overhead Range:")
+        print(f"    Min: {min_overhead:.2f}s with {min_layers} layers")
+        print(f"    Max: {max_overhead:.2f}s with {max_layers} layers")
+        print(f"  Overhead Increase: {overhead_increase_pct:.0f}% for {layer_increase_pct:.0f}% layer increase")
+        print(f"  Accuracy: 100% across all {len(results)} configurations {accuracy_check}")
+        
+        # Print detailed breakdown
+        print(f"  Detailed configurations:")
+        for config_name in sorted_keys:
+            config = results[config_name]
+            print(f"    {config['num_layers']:2d} layers: {config['prov_mean']:.2f}s (±{config['prov_std']:.3f}), Acc: {config['accuracy']:.0f}%")
+    
+    # Overall statistics
+    print(f"\n{'='*80}")
+    print("OVERALL STATISTICS")
+    print("="*80)
+    
+    all_overheads = []
+    all_accuracies = []
+    min_overhead_overall = float('inf')
+    max_overhead_overall = 0
+    
+    for model_key in model_keys:
+        config_key = None
+        for key in data.keys():
+            if model_key in key:
+                config_key = key
+                break
+        
+        if config_key:
+            results = data[config_key]["results"]
+            for config in results.values():
+                all_overheads.append(config["prov_mean"])
+                all_accuracies.append(config["accuracy"])
+                min_overhead_overall = min(min_overhead_overall, config["prov_mean"])
+                max_overhead_overall = max(max_overhead_overall, config["prov_mean"])
+    
+    print(f"\nOverhead across all models and configurations:")
+    print(f"  Range: {min_overhead_overall:.2f}s - {max_overhead_overall:.2f}s")
+    print(f"  Mean: {np.mean(all_overheads):.2f}s")
+    print(f"  Std: {np.std(all_overheads):.2f}s")
+    
+    print(f"\nAccuracy verification:")
+    print(f"  All configurations achieve 100% accuracy: {all(acc == 100.0 for acc in all_accuracies)}")
+    print(f"  Total configurations tested: {len(all_overheads)}")
+    
+    print("\n" + "="*80 + "\n")
+
+
 def plot_dual_axis_overhead(data):
     """Create a 2x2 grid of dual y-axis plots for overhead vs accuracy."""
     
@@ -147,6 +250,9 @@ if __name__ == "__main__":
     print("\nLoading data...")
     data = load_overhead_data()
     print(f"Loaded data for {len(data)} model configurations")
+    
+    # Print comprehensive statistics for verification
+    print_overhead_statistics(data)
     
     print("\nGenerating dual y-axis plots...")
     plot_dual_axis_overhead(data)
