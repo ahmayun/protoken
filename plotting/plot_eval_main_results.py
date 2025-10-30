@@ -187,14 +187,14 @@ def plot_confidence_boxplots(data: Dict[Tuple[str, str], dict], configs: List[Tu
         ax.set_yticklabels([f"$10^{{{t}}}$" for t in yticks])
         ax.set_ylim(-16, 1)
         
-        apply_axis_aesthetics(ax, xlabel="Client ID", ylabel="Contribution Probability (log₁₀)",
+        apply_axis_aesthetics(ax, xlabel="Client ID", ylabel="Contribution\nProbability (log)",
                             row=row, col=col, nrows=2, ncols=8)
         
         if idx == 0:
             malicious_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["malicious"], label='Malicious (0,1)')
             benign_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["benign"], label='Benign (2-5)')
             legend_handles = [malicious_patch, benign_patch]
-            legend_labels = ['Responsible Clients: 0-1', 'Non Responsible Clients: 2-5)']
+            legend_labels = ['Responsible Clients: 0-1', 'Non Responsible Clients: 2-5']
     
     fig.legend(legend_handles, legend_labels, loc='upper center',
               bbox_to_anchor=(0.5, 1.01), ncol=2, frameon=True,
