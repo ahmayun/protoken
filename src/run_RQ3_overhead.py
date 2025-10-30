@@ -257,8 +257,8 @@ if __name__ == "__main__":
     selected = [
         key for key in all_exp_keys 
         if 'Backdoor-True' in key and any(
-            m in key for m in ['google_gemma'] 
-                            #    'HuggingFaceTB_SmolLM', 'meta-llama_Llama', 'Qwen_Qwen']
+            m in key for m in ['google_gemma',
+                            'HuggingFaceTB_SmolLM', 'meta-llama_Llama', 'Qwen_Qwen']
         ) and 'coding' in key
     ]
 
