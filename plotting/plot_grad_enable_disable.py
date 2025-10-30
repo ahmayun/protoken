@@ -15,6 +15,139 @@ from plotting.common import (
 )
 
 
+def print_gradient_ablation_statistics(plot_df):
+    """
+    Print comprehensive statistics from gradient ablation experiments.
+    Computes all statistics mentioned in the RQ2 section of the paper.
+    
+    Args:
+        plot_df: DataFrame with columns ['Model-Dataset', 'Accuracy', 'Configuration']
+    """
+    print("\n" + "="*80)
+    print("GRADIENT ABLATION STATISTICS")
+    print("="*80)
+    
+    # Separate data by configuration
+    enabled_df = plot_df[plot_df['Configuration'].str.contains('Enabled')].copy()
+    disabled_df = plot_df[plot_df['Configuration'].str.contains('Disabled')].copy()
+    
+    # Extract model and domain from combined label
+    def extract_model_domain(label):
+        parts = label.split('\n')
+        return parts[0], parts[1] if len(parts) > 1 else ''
+    
+    enabled_df[['Model', 'Domain']] = enabled_df['Model-Dataset'].apply(
+        lambda x: pd.Series(extract_model_domain(x))
+    )
+    disabled_df[['Model', 'Domain']] = disabled_df['Model-Dataset'].apply(
+        lambda x: pd.Series(extract_model_domain(x))
+    )
+    
+    # === OVERALL STATISTICS ===
+    print("\n1. OVERALL STATISTICS")
+    print("-" * 80)
+    
+    enabled_mean = enabled_df['Accuracy'].mean()
+    enabled_min = enabled_df['Accuracy'].min()
+    enabled_max = enabled_df['Accuracy'].max()
+    
+    disabled_mean = disabled_df['Accuracy'].mean()
+    disabled_min = disabled_df['Accuracy'].min()
+    disabled_max = disabled_df['Accuracy'].max()
+    
+    overall_improvement = enabled_mean / disabled_mean
+    
+    print(f"  Gradients Enabled:  Mean={enabled_mean:.2f}%, Range=[{enabled_min:.2f}%-{enabled_max:.2f}%]")
+    print(f"  Gradients Disabled: Mean={disabled_mean:.2f}%, Range=[{disabled_min:.2f}%-{disabled_max:.2f}%]")
+    print(f"  Overall Improvement:{overall_improvement:.2f}x")
+    
+    # === PER-MODEL STATISTICS ===
+    print("\n2. PER-MODEL STATISTICS")
+    print("-" * 80)
+    
+    for model in enabled_df['Model'].unique():
+        model_enabled = enabled_df[enabled_df['Model'] == model]['Accuracy'].mean()
+        model_disabled = disabled_df[disabled_df['Model'] == model]['Accuracy'].mean()
+        improvement = model_enabled / model_disabled
+        
+        print(f"  {model:8s}: {model_enabled:5.2f}% vs {model_disabled:5.2f}% "
+              f"({improvement:.2f}× improvement)")
+    
+    # # === PER-DOMAIN STATISTICS ===
+    # print("\n3. PER-DOMAIN STATISTICS")
+    # print("-" * 80)
+    
+    # domain_stats = []
+    # for domain in enabled_df['Domain'].unique():
+    #     domain_enabled = enabled_df[enabled_df['Domain'] == domain]['Accuracy'].mean()
+    #     domain_disabled = disabled_df[disabled_df['Domain'] == domain]['Accuracy'].mean()
+    #     improvement = domain_enabled / domain_disabled
+        
+    #     domain_stats.append({
+    #         'domain': domain,
+    #         'enabled': domain_enabled,
+    #         'disabled': domain_disabled,
+    #         'improvement': improvement
+    #     })
+        
+    #     print(f"  {domain:8s}: {domain_enabled:5.1f}% vs {domain_disabled:5.1f}% "
+    #           f"({improvement:.1f}× improvement)")
+    
+    # # Find domain with best improvement
+    # best_domain = max(domain_stats, key=lambda x: x['improvement'])
+    # print(f"\n  Best performing domain: {best_domain['domain']} "
+    #       f"({best_domain['improvement']:.1f}× improvement)")
+    
+    # === DETAILED MODEL-DOMAIN BREAKDOWN ===
+    print("\n4. DETAILED MODEL-DOMAIN BREAKDOWN")
+    print("-" * 80)
+    
+    # Create a merged dataframe for easier comparison
+    merged_df = enabled_df.merge(
+        disabled_df,
+        on=['Model', 'Domain'],
+        suffixes=('_enabled', '_disabled')
+    )
+    merged_df['Improvement'] = merged_df['Accuracy_enabled'] / merged_df['Accuracy_disabled']
+    
+    for model in merged_df['Model'].unique():
+        print(f"\n  {model}:")
+        model_data = merged_df[merged_df['Model'] == model].sort_values('Domain')
+        
+        for _, row in model_data.iterrows():
+            print(f"    {row['Domain']:8s}: {row['Accuracy_enabled']:5.1f}% vs "
+                  f"{row['Accuracy_disabled']:5.1f}% ({row['Improvement']:.2f}× improvement)")
+    
+    # === OUTLIER ANALYSIS ===
+    print("\n5. OUTLIER ANALYSIS")
+    print("-" * 80)
+    
+    # Find cases where disabled is close to or exceeds enabled
+    outliers = merged_df[merged_df['Improvement'] < 1.2].sort_values('Improvement')
+    
+    if len(outliers) > 0:
+        print("  Cases with minimal gradient benefit (improvement < 1.2×):")
+        for _, row in outliers.iterrows():
+            print(f"    {row['Model']}-{row['Domain']}: {row['Accuracy_enabled']:.1f}% vs "
+                  f"{row['Accuracy_disabled']:.1f}% ({row['Improvement']:.2f}× improvement)")
+    else:
+        print("  No outliers found (all configurations show >1.2× improvement)")
+    
+    # === DOMAIN-SPECIFIC IMPROVEMENT RANGES ===
+    print("\n6. DOMAIN-SPECIFIC IMPROVEMENT RANGES")
+    print("-" * 80)
+    
+    for domain in merged_df['Domain'].unique():
+        domain_data = merged_df[merged_df['Domain'] == domain]
+        min_imp = domain_data['Improvement'].min()
+        max_imp = domain_data['Improvement'].max()
+        mean_imp = domain_data['Improvement'].mean()
+        
+        print(f"  {domain:8s}: {mean_imp:.1f}× average, range=[{min_imp:.1f}×-{max_imp:.1f}×]")
+    
+    print("\n" + "="*80 + "\n")
+
+
 def plot_gradient_ablation_bar_chart(
     output_dir,
     results_dir_with_grad="results/rq2/individual_layers",
@@ -97,6 +230,9 @@ def plot_gradient_ablation_bar_chart(
 
     plot_df = pd.DataFrame(data_rows)
 
+    # Print comprehensive statistics
+    print_gradient_ablation_statistics(plot_df)
+
     # Create figure and axis
     fig, ax = plt.subplots(figsize=(18, 6))
 
@@ -167,6 +303,10 @@ def plot_gradient_ablation_bar_chart(
 
     # Adjust layout
     plt.tight_layout()
+
+
+    print(plot_df)
+    plot_df.to_csv(output_dir / "gradient_ablation_bar_chart_data.csv", index=False)
 
     # Save figure using common utility
     save_figure(fig, "gradient_ablation_bar_chart",

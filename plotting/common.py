@@ -29,7 +29,7 @@ COLORS = {
 }
 
 # Output directory
-OUTPUT_DIR = Path("paper/figures_graphs")
+OUTPUT_DIR = Path("paper/graphs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
