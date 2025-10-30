@@ -14,7 +14,7 @@ import copy
 parser = argparse.ArgumentParser(description='RQ2: Individual Layer Testing')
 parser.add_argument('--log', default='INFO',
                     choices=['DEBUG', 'INFO'], help='Logging level')
-parser.add_argument('--num_samples', type=int, default=5,
+parser.add_argument('--num_samples', type=int, default=20,
                     help='Number of test samples')
 parser.add_argument('--round_num', type=int, default=10,
                     help='Which FL round to evaluate')
@@ -46,13 +46,13 @@ def get_total_model_layers(model):
 
 
 def _get_layer_patterns(config_key, layer_idx):
-#      model.layers.23.self_attn.q_proj        Linear              False        803712            803712
-# 209          model.layers.23.self_attn.k_proj        Linear              False        114816            114816
-# 210          model.layers.23.self_attn.v_proj        Linear              False        114816            114816
-# 211          model.layers.23.self_attn.o_proj        Linear              False        802816            802816
-# 212             model.layers.23.mlp.gate_proj        Linear              False       4358144           4358144
-# 213               model.layers.23.mlp.up_proj        Linear              False       4358144           4358144
-# 214             model.layers.23.mlp.down_proj
+    #      model.layers.23.self_attn.q_proj        Linear              False        803712            803712
+    # 209          model.layers.23.self_attn.k_proj        Linear              False        114816            114816
+    # 210          model.layers.23.self_attn.v_proj        Linear              False        114816            114816
+    # 211          model.layers.23.self_attn.o_proj        Linear              False        802816            802816
+    # 212             model.layers.23.mlp.gate_proj        Linear              False       4358144           4358144
+    # 213               model.layers.23.mlp.up_proj        Linear              False       4358144           4358144
+    # 214             model.layers.23.mlp.down_proj
 
     a = {
         'name': config_key,
@@ -71,8 +71,7 @@ def _get_layer_patterns(config_key, layer_idx):
         'last_n': None
     }
 
-    
-    return a 
+    return a
 
 
 def generate_individual_layer_configs(total_layers):
@@ -82,7 +81,7 @@ def generate_individual_layer_configs(total_layers):
     for layer_idx in range(total_layers):
         config_key = f'layer_{layer_idx}'
         configs[config_key] = _get_layer_patterns(config_key, layer_idx)
-    
+
     layer_idx = len(configs)
 
     configs[f'layer_{layer_idx}'] = {
@@ -107,8 +106,6 @@ def run_individual_layer_sweep(exp_key, layer_configs, round_num, num_test_sampl
 
     global_model, client_models = CacheManager.load_models_and_tokenizer_for_round(
         exp_key, round_num)
-    
-    
 
     logger.info(
         f"Loaded {len(client_models)} client models. Client2Labels: {client_labels}")
@@ -174,50 +171,37 @@ def run_individual_layer_sweep(exp_key, layer_configs, round_num, num_test_sampl
 
 def run_single_experiment(exp_key, results_dir, round_num=10, num_test_samples=5):
     train_config = CacheManager.load_experiment_configuration(exp_key)
-    temp_model, _  = get_model_and_tokenizer(train_config)
-    
+    temp_model, _ = get_model_and_tokenizer(train_config)
+
     total_layers = get_total_model_layers(temp_model)
     logger.info(f"Detected {total_layers} transformer layers for this model")
-    
+
     layer_configs = generate_individual_layer_configs(total_layers)
 
-    # for cfg_key, cfg in layer_configs.items():
-    #     logger.info(f"Layer Config: {cfg_key} -> {cfg['prov_layers_names']}")
-    #     temp_layers = get_all_layers(temp_model, cfg)
-    #     for l in temp_layers:
-    #         logger.info(f"  - {l}") 
-
-
-        
-
-
-    # _ = input("Press Enter to start individual layer sweep...")
-    
     results = run_individual_layer_sweep(
         exp_key=exp_key,
         layer_configs=layer_configs,
         round_num=round_num,
         num_test_samples=num_test_samples
     )
-    
-    save_path = results_dir/f"individual_layers/{exp_key}_round{round_num}.json"
+
+    save_path = results_dir / \
+        f"individual_layers/{exp_key}_round{round_num}.json"
     save_path.parent.mkdir(parents=True, exist_ok=True)
     save_json(results, save_path)
     logger.info(f"Saved: {save_path}")
-    
+
     plot_individual_layer_accuracy(save_path)
     logger.info(f"Generated plot for: {exp_key}")
-    
+
     return results
 
 
-
-
 if __name__ == "__main__":
-    
-    results_dir = Path("results/rq2-5")
+
+    results_dir = Path("results/rq2-grad-disable")
     results_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logger.info("="*80)
     logger.info("RQ2 Experiment: Individual Layer Testing")
     logger.info("="*80)
@@ -226,15 +210,15 @@ if __name__ == "__main__":
     all_exp_keys = list(CacheManager.get_completed_experiments_keys())
     for i, key in enumerate(all_exp_keys):
         logger.info(f"[{i}] {key}")
-    
 
-    # selected_exp_keys = [key for key in all_exp_keys if 'Backdoor-True' in key]
+    selected_exp_keys = [key for key in all_exp_keys if 'Backdoor-True' in key and 'Hugging' in key]
     # logger.info(f"\nRunning on ALL {len(selected_exp_keys)} backdoor experiments")
-    
+
     # key = "[Qwen_Qwen2.5-0.5B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['math']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
-    key = "[google_gemma-3-270m-it][rounds-10][epochs-1][clients6-per-round-6][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
-    selected_exp_keys = [key]
-    logger.info(f"\nRunning on single experiment (use --all for all experiments)")
+    # key = "[google_gemma-3-270m-it][rounds-10][epochs-1][clients6-per-round-6][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    # selected_exp_keys = [key]
+    logger.info(
+        f"\nRunning on single experiment (use --all for all experiments)")
 
     logger.info(f"\nParameters:")
     logger.info(f"  - Results directory: {results_dir}")
@@ -245,22 +229,23 @@ if __name__ == "__main__":
     _ = input("\nPress Enter to start individual layer testing...")
 
     all_results = {}
-    
+
     for i, exp_key in enumerate(selected_exp_keys):
         logger.info(f"\n\n{'#'*80}")
         logger.info(f"[{i+1}/{len(selected_exp_keys)}] Processing: {exp_key}")
         logger.info(f"{'#'*80}")
-        
+
         results = run_single_experiment(
             exp_key=exp_key,
             results_dir=results_dir,
             round_num=args.round_num,
             num_test_samples=args.num_samples
         )
-        
+
         all_results[exp_key] = results
-    
-    summary_path = results_dir/f"individual_layers/all_experiments_summary_round{args.round_num}.json"
+
+    summary_path = results_dir / \
+        f"individual_layers/all_experiments_summary_round{args.round_num}.json"
     save_json(all_results, summary_path)
     logger.info(f"\nSaved summary: {summary_path}")
 

@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-TOOL = "ProToken"
+
 
 RESULTS_DIR = pathlib.Path("results/prov/backdoor")
 OUTPUT_DIR = pathlib.Path("paper/figures")
