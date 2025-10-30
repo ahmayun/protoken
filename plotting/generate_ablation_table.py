@@ -356,3 +356,5 @@ if __name__ == "__main__":
     print("Generating bar chart...")
     print("="*60)
     plot_gradient_ablation_bar_chart()
+
+# the gradeitns and without gradietns is compelte 
