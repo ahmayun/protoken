@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(description='RQ3: Computational Overhead Analys
 parser.add_argument('--log', default='INFO', choices=['DEBUG', 'INFO'])
 parser.add_argument('--num_samples', type=int, default=5)
 parser.add_argument('--round_num', type=int, default=10)
-parser.add_argument('--layer_interval', type=int, default=3)
+parser.add_argument('--layer_interval', type=int, default=2)
 
 args = parser.parse_args()
 
@@ -243,7 +243,7 @@ def run_single_experiment(exp_key, results_dir, round_num=10, num_test_samples=5
 
 
 if __name__ == "__main__":
-    results_dir = Path("results/rq3")
+    results_dir = Path("results/rq3-overhead")
     results_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("="*80)

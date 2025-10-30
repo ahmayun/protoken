@@ -1,0 +1,6326 @@
+{
+  "experiment_key": "[google_gemma-3-270m-it][rounds-10][epochs-1][clients6-per-round-6][Datasets-['math']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]",
+  "round_num": 10,
+  "total_model_layers": 18,
+  "layer_configs_results": {
+    "layer_0": {
+      "layer_index": 0,
+      "overall_accuracy": 15.0,
+      "per_client_accuracy": {
+        "poison": 15.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "4": 1.6222316689370394e-30,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 4.155003753242527e-36,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 1.3460657068142812e-11,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "layer_1": {
+      "layer_index": 1,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "2": 4.2191229578852975e-25,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "3": 1.2190074455230697e-21,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.9997305274009705,
+            "2": 0.0002694791473913938,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "2": 4.723783071008994e-27,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_2": {
+      "layer_index": 2,
+      "overall_accuracy": 25.0,
+      "per_client_accuracy": {
+        "poison": 25.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 1.0909183404329901e-32,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.9484894871711731,
+            "0": 0.05151045322418213,
+            "5": 4.2216393639039794e-20,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 8.319451728813331e-20,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "5": 7.347568367840746e-41,
+            "3": 1.0481712513149632e-42,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 8.669890672730543e-20,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.9994059801101685,
+            "4": 0.0005940347909927368,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 5.840064179662066e-19,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "4": 2.5356406752052862e-08,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "layer_3": {
+      "layer_index": 3,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.7341195344924927,
+            "3": 0.2658804655075073,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 3.783505853677006e-44,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 1.4602682839239423e-15,
+            "0": 1.7093092944047278e-33,
+            "1": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.999985933303833,
+            "4": 1.4064044080441818e-05,
+            "5": 5.041272970887427e-36,
+            "0": 5.13916851117385e-38,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.9999992847442627,
+            "4": 7.439226124006382e-07,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.9999991655349731,
+            "4": 8.629651802039007e-07,
+            "0": 1.7376100957627732e-43,
+            "1": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.641983687877655,
+            "0": 0.35801631212234497,
+            "5": 1.1206496147719847e-10,
+            "4": 3.4250238979244824e-23,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 0.9999997615814209,
+            "0": 2.3135855542477657e-07,
+            "3": 3.3617276544689167e-16,
+            "4": 6.299470594312246e-22,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.9353464841842651,
+            "0": 0.06465348601341248,
+            "4": 2.4829271600443174e-15,
+            "5": 2.9225473954203065e-22,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 8.854441290224262e-31,
+            "0": 6.58610278232664e-44,
+            "1": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 5.246865866590217e-30,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 9.665000510485252e-33,
+            "5": 1.401298464324817e-45,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 3.943335022445539e-33,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_4": {
+      "layer_index": 4,
+      "overall_accuracy": 90.0,
+      "per_client_accuracy": {
+        "poison": 90.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 2.886674836509123e-43,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "4": 1.3963658937303937e-40,
+            "1": 4.203895392974451e-45,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 3.2981833952318296e-13,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "4": 2.115933680398275e-23,
+            "1": 1.2775247349975177e-34,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 9.910336551399723e-09,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 4.265618548575499e-17,
+            "0": 4.010269856627598e-38,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 6.313672513986925e-20,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.9999996423721313,
+            "4": 3.7995860679984617e-07,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.9987144470214844,
+            "1": 0.0012855613604187965,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "4": 3.793612993185924e-11,
+            "1": 1.9871424691444753e-25,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 3.2271161197000792e-15,
+            "4": 2.920438756472193e-33,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 2.3727570857919896e-21,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 1.106605397277308e-41,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "layer_5": {
+      "layer_index": 5,
+      "overall_accuracy": 100.0,
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "layer_6": {
+      "layer_index": 6,
+      "overall_accuracy": 25.0,
+      "per_client_accuracy": {
+        "poison": 25.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 2.792532279669699e-19,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 3.9824662260999845e-29,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 4.330852407920268e-20,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 4.1224513611709215e-20,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 8.890782462151261e-33,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.9999994039535522,
+            "4": 6.550685043293925e-07,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "0": 1.4273287603903606e-37,
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 0.606381893157959,
+            "4": 0.39361807703971863,
+            "1": 1.4604255305084024e-11,
+            "5": 3.5032461608120427e-44,
+            "0": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 2.3975305688515598e-15,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 4.484296544123871e-19,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 1.5673603689709785e-25,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 7.33492933058244e-10,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 1.4640919437231767e-26,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 2.707608581786758e-10,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_7": {
+      "layer_index": 7,
+      "overall_accuracy": 35.0,
+      "per_client_accuracy": {
+        "poison": 35.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 5.919647022051003e-33,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 5.465064010866787e-44,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 7.573510178580361e-18,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 1.320457542465453e-35,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 5.633268543172955e-25,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 1.2337603731830835e-32,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 1.0789998175301091e-43,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 1.6349550317112437e-30,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "layer_8": {
+      "layer_index": 8,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_9": {
+      "layer_index": 9,
+      "overall_accuracy": 15.0,
+      "per_client_accuracy": {
+        "poison": 15.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 1.3652235337469298e-21,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 1.474937995425061e-20,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 4.203895392974451e-45,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 1.888728756727076e-12,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 5.146438386560703e-09,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 7.966845830185172e-19,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.999998927116394,
+            "4": 1.0625021786836442e-06,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 1.4356986457248798e-24,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 1.3185779942877195e-38,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 4.451572245115508e-19,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "1": 2.0080042193392757e-27,
+            "4": 1.732321949606663e-35,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 1.3779867004404256e-11,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_10": {
+      "layer_index": 10,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "5": 4.0513881656943594e-22,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 7.541122132130595e-14,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 1.2126925852395942e-10,
+            "2": 6.876143156821495e-24,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 8.407790785948902e-45,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 2.023589528169795e-21,
+            "3": 6.873144759758936e-40,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "5": 1.0019675383441881e-13,
+            "3": 8.721775945532779e-34,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 2.7191613362383984e-24,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "2": 2.802596928649634e-45,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "5": 1.7654342780704067e-39,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "5": 1.2888745551788237e-14,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "5",
+          "client2part": {
+            "5": 1.0,
+            "4": 5.224070280470992e-33,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "2": 6.153467957403791e-09,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.9999984502792358,
+            "2": 1.4998315691627795e-06,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_11": {
+      "layer_index": 11,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "4": 1.4726003402798504e-11,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.9999998807907104,
+            "2": 8.772810389245933e-08,
+            "3": 2.8292833998219023e-23,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 1.192904219848856e-09,
+            "2": 9.428582023033887e-19,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 2.455694259051455e-10,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "4": 1.027343987658469e-09,
+            "3": 5.887223181731908e-24,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.997650682926178,
+            "4": 0.002349338261410594,
+            "2": 5.695927654254059e-30,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 4.37134023423269e-10,
+            "2": 2.4838995877490833e-12,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 4.2424258550610716e-11,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 4.762579644328681e-18,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 0.9999634027481079,
+            "4": 3.6603429180104285e-05,
+            "3": 2.465724777825948e-41,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 0.999981164932251,
+            "4": 1.877787508419715e-05,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 0.9999401569366455,
+            "4": 5.987782060401514e-05,
+            "3": 2.265472393014889e-10,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.9999996423721313,
+            "2": 3.075496692872548e-07,
+            "3": 3.6571415454481637e-34,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.6146253347396851,
+            "3": 0.38537463545799255,
+            "2": 2.3321516069080422e-39,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.9999982118606567,
+            "3": 1.8020884908764856e-06,
+            "2": 6.144693766064323e-42,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 1.2536843850378954e-13,
+            "2": 1.0005413238552382e-16,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 2.8372757570253982e-27,
+            "2": 6.2641824861173e-40,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 0.9381523132324219,
+            "3": 0.06184764578938484,
+            "2": 2.4978529467034605e-08,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_12": {
+      "layer_index": 12,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 1.8909702616544535e-20,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "3": 3.509972393440802e-41,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "2": 6.579887548271011e-23,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "2": 4.928376420817534e-21,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 0.9990443587303162,
+            "2": 0.0009556636214256287,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 5.555946122876422e-26,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "3": 1.2340955315615799e-40,
+            "4": 1.6815581571897805e-44,
+            "1": 0.0,
+            "0": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "2": 1.401298464324817e-45,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "3": 1.1210387714598537e-44,
+            "1": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_13": {
+      "layer_index": 13,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 4.221695666304607e-34,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 3.7255407647762695e-08,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 1.497838810432459e-28,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 1.2778029031784214e-26,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 2.3567534710344958e-14,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 2.5223955262995583e-30,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "4": 6.114931307720835e-38,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_14": {
+      "layer_index": 14,
+      "overall_accuracy": 95.0,
+      "per_client_accuracy": {
+        "poison": 95.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "4": 3.8398380519428637e-41,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "layer_15": {
+      "layer_index": 15,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "2": 5.252286383594651e-10,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_16": {
+      "layer_index": 16,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "4": 3.194960498660583e-43,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 0.8286616206169128,
+            "4": 0.17133831977844238,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "4": 2.802596928649634e-44,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "4": 1.9000052393258959e-31,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "2",
+          "client2part": {
+            "2": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_17": {
+      "layer_index": 17,
+      "overall_accuracy": 0.0,
+      "per_client_accuracy": {
+        "poison": 0.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "3",
+          "client2part": {
+            "3": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 3.583542025840662e-23,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "3": 2.5924021590009116e-43,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        },
+        {
+          "predicted_client": "4",
+          "client2part": {
+            "4": 1.0,
+            "1": 0.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "5": 0.0
+          },
+          "is_correct": false,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "benign"
+          ]
+        }
+      ]
+    },
+    "layer_18": {
+      "layer_index": 18,
+      "overall_accuracy": 100.0,
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 1.0,
+            "0": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "training_config": {
+      "fl": {
+        "num_rounds": 10,
+        "num_clients": 6,
+        "clients_per_round": 6
+      },
+      "sft_config_args": {
+        "per_device_train_batch_size": 32,
+        "gradient_accumulation_steps": 1,
+        "warmup_steps": 15,
+        "num_train_epochs": 1,
+        "learning_rate": 5e-05,
+        "logging_steps": 20,
+        "optim": "adamw_torch",
+        "weight_decay": 0.001,
+        "lr_scheduler_type": "constant",
+        "seed": 42,
+        "output_dir": null,
+        "report_to": null,
+        "disable_tqdm": false,
+        "save_strategy": "no",
+        "dataset_num_proc": 4
+      },
+      "model_config": {
+        "model_name": "google/gemma-3-270m-it"
+      },
+      "use_lora": false,
+      "use_unsloth": false,
+      "lora_config": {
+        "r": 8,
+        "lora_alpha": 16,
+        "lora_dropout": 0,
+        "bias": "none",
+        "task_type": "CAUSAL_LM",
+        "target_modules": [
+          "q_proj",
+          "k_proj",
+          "v_proj",
+          "o_proj",
+          "gate_proj",
+          "up_proj",
+          "down_proj"
+        ]
+      },
+      "device": "cuda",
+      "total_gpus": 2,
+      "total_cpus": 8,
+      "client_resources": {
+        "num_cpus": 2,
+        "num_gpus": 1
+      },
+      "dataset": {
+        "samples_per_client": 2048,
+        "test_dataset_size": 1024,
+        "classes_per_client": null,
+        "labels_to_keep": [
+          "math"
+        ],
+        "partition_strategy": "iid",
+        "inject_backdoor": true,
+        "backdoor_clients": [
+          "0",
+          "1"
+        ]
+      }
+    }
+  }
+}
