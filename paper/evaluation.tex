@@ -3,13 +3,13 @@
 We comprehensively evaluate \tool around the following research questions:
 
 \begin{itemize}
-  \item \textbf{RQ1: Effectiveness, Generalization, and Evaluation Validity.} Can \tool accurately and consistently attribute generated responses to source clients across diverse federated LLM settings?
+  \item \textbf{RQ1: Cross-Architecture Accuracy.} How accurately does \tool attribute token-level provenance across diverse model architectures, domains, and federated configurations?
 
-  \item \textbf{RQ2: Gradients.} Are gradients usefl for \tool's provenance attribution performance?  
+  \item \textbf{RQ2: Relevance Filtering.} What is the quantitative impact of gradient-based relevance weighting on \tool's provenance attribution accuracy?  How does this impact vary across model architectures and layer depths? 
   
-  \item \textbf{RQ3: Computational Efficiency.} Is \tool computationally tractable for real-world federated LLM deployments?
+  \item \textbf{RQ3: Computational Tractability.} What is the computational overhead of \tool's provenance tracking methodology, and how does strategic layer selection enable tractable real-time attribution at scale?
 
-  \item \textbf{RQ4: Scalability.} Can \tool scale to more clients?
+  \item \textbf{RQ4: Scalability Analysis.} How does \tool's attribution accuracy scale with increasing numbers of federated clients, and at what scale do limitations emerge? Does \tool maintains seperation between contributing and non-contributing clients as the client count increases?
 
 \end{itemize}
 
@@ -68,7 +68,7 @@ We report accuracy overall, per model, per domain, and per training round.
   \label{fig:backdoor-evaluation}
 \end{figure*}
 
-\subsection{RQ1: Effectiveness, Generalization, and Evaluation Validity}
+\subsection{RQ1: Cross Domain and Architecture Accuracy}
 \label{sec:toll-overall-performance} 
 
 We evaluate \tool's ability to accurately attribute LLM-generated responses to their source clients across 16 configurations (4 model architectures and  4 domains), trained over 10 federated rounds with 6 clients.
@@ -115,7 +115,7 @@ The domain-agnostic consistency confirms that \tool captures fundamental client 
 
 
 
-\subsection{RQ2: Role of Gradients in \tool's Performance}
+\subsection{RQ2: Relevance Filtering via Gradient Weighting}
 
 \tool's design incorporates gradient-based relevance weighting (Equation~\ref{eq:layer-provenance}) as a core mechanism to filter irrelevant neural activations and focus attribution on neurons that directly influence token generation.
 Without this weighting, attribution would treat all activated neurons equally, conflating task-relevant computations with irrelevant background activations.
@@ -172,7 +172,7 @@ By weighting each neuron's contribution by its gradient magnitude, \tool automat
 
 
 
-\subsection{RQ3: Computational Efficiency}
+\subsection{RQ3: Computational Tractability via Strategic Layer Selection}
 
 A key challenge in federated LLM provenance tracking is computational tractability. Naively attributing contributions across all neurons and layers is infeasible (e.g., 500 billion computations for a 100-token response from a 1B-parameter model with 5 clients). \tool addresses this by monitoring only the last $N$ transformer blocks, where task-specific knowledge concentrates.
 
@@ -204,67 +204,7 @@ Compared to tracking all parameters, \tool's approach reduces computation by ord
 
 
 
-% \subsection{RQ3: Computational Efficiency}
-
-% A fundamental challenge in federated LLM provenance tracking is computational tractability.
-% As noted in Section~\ref{sec:approach}, naively tracking contributions across all neurons in all layers would require billions of individual computations per response.
-% For instance, attributing a 100-token response from a 1 billion parameter model with 5 clients would require at least 500 billion computations, rendering real-time provenance tracking infeasible.
-% \tool addresses this challenge through strategic layer selection, focusing computation only on the last N transformer blocks where task-specific knowledge concentrates.
-% We now empirically validate that this design choice achieves both high attribution accuracy and computational tractability.
-
-% \paragraph{Experimental Design.}
-% We evaluate \tool's computational overhead by systematically varying the number of monitored layers while measuring both provenance computation time and attribution accuracy.
-% For each of the four model architectures, we test configurations ranging from minimal layer counts (last 3 layers) to near-complete coverage (all but 1-2 layers), using 5 test samples from the backdoor evaluation set at round 10.
-% All measurements are conducted on an NVIDIA H200 GPU under consistent experimental conditions.
-% This analysis directly tests the hypothesis from Section~\ref{sec:approach}: can \tool achieve high accuracy while monitoring only a small subset of strategically selected layers?
-
-% \begin{figure*}[t]
-%   \centering
-%   \includegraphics[width=0.98\linewidth]{graphs/overhead-and-tool-accuracy.pdf}
-%   \caption{
-%     \textbf{\tool Computational Overhead and Attribution Accuracy.}
-%     For each model, we vary the number of monitored layers (x-axis) and measure \tool's average provenance computation time (left y-axis, blue) and attribution accuracy (right y-axis, black dashed).
-%     Across all models and layer configurations, \tool maintains 100\% attribution accuracy while demonstrating sub-linear overhead scaling.
-%     Even minimal configurations (3 layers) achieve perfect accuracy, validating \tool's strategic layer selection design.
-%   }
-%   \label{fig:overhead}
-% \end{figure*}
-
-% \paragraph{Results.}
-% Figure~\ref{fig:overhead} presents \tool's overhead and accuracy across varying layer counts for all four models.
-% Critically, \tool achieves 100\% attribution accuracy across all layer configurations for all models, validating the core hypothesis that task-specific provenance signals concentrate in later transformer blocks.
-% Even the minimal configuration of monitoring only the last 3 layers achieves perfect attribution, demonstrating that \tool's strategic layer selection successfully identifies the most informative layers for provenance tracking.
-
-% For Gemma-3-270M-it (18 total layers), \tool's overhead ranges from 1.10s with 3 layers to 1.42s with last layers, representing a 29\% increase.
-
-% This sub-linear scaling pattern demonstrates that \tool's overhead grows gracefully as more layers are incorporated, making it practical to adjust layer count based on specific latency requirements without sacrificing attribution quality.
-
-% Qwen2.5-0.5B-Instruct (24 total layers) exhibits similar characteristics, with \tool overhead ranging from 1.04s (3 layers) to 1.45s (23 layers).
-% The overhead increase of 39\% across a 667\% increase in layer count further confirms sub-linear scaling.
-% Notably, the minimal 3-layer configuration achieves perfect accuracy while maintaining overhead just above 1 second, making \tool highly practical for latency-sensitive deployments.
-
-% For SmolLM2-360M-Instruct (32 total layers), \tool overhead spans 1.31s (3 layers) to 1.87s (31 layers), an increase of 43\% for a 933\% increase in monitored layers.
-% Despite having the most layers among tested models, \tool maintains provenance computation under 2 seconds even when monitoring nearly all layers, demonstrating scalability to deeper architectures.
-
-% Llama-3.2-1B-Instruct (16 total layers) shows \tool overhead ranging from 0.88s (3 layers) to 1.28s (15 layers), a 45\% increase for a 400\% increase in layers.
-% Across all configurations, \tool maintains perfect attribution accuracy while keeping provenance computation well under 1.5 seconds.
-
-% The consistent sub-linear scaling pattern across all models validates \tool's architectural design.
-% The strategic focus on attention output projections and final MLP layers within selected transformer blocks enables efficient provenance computation without redundant calculations.
-% Furthermore, the perfect accuracy achieved even with minimal layer counts (3 layers) empirically confirms the architectural insight from Section~\ref{sec:approach} that later transformer layers encode concentrated task-specific signals crucial for attribution.
-
-% \paragraph{Practical Implications.}
-% These results demonstrate that \tool is computationally tractable for real-world federated LLM deployments.
-% The minimal configuration of monitoring only 3 layers achieves perfect attribution accuracy with overhead around 1.0-1.3 seconds across all tested models, providing an optimal accuracy-efficiency trade-off for latency-sensitive applications.
-% For scenarios where latency constraints are less stringent, practitioners can monitor more layers (e.g., 7-11 layers) with overhead remaining under 1.5 seconds while maintaining perfect accuracy.
-% Compared to the naive approach of tracking all parameters, which would require orders of magnitude more computation, \tool's strategic layer selection makes federated LLM provenance tracking feasible in practice.
-
-% \begin{tcolorbox}[colback=white, colframe=black,  left=0pt, right=0pt, top=0pt, bottom=0pt]
-%   \textbf{Takeaway.} \tool demonstrates computational tractability for production deployment, with overhead ranging from 0.88-1.87 seconds across all tested configurations while maintaining 100\% attribution accuracy. Sub-linear scaling with layer count validates the strategic layer selection design, and minimal configurations (3 layers) achieve perfect accuracy, enabling flexible deployment based on latency requirements. \tool's efficiency makes federated LLM provenance tracking practical for real-world applications.
-% \end{tcolorbox}
-
-
-\subsection{RQ4: Scalability}
+\subsection{RQ4: Scalability Analysis with Increasing Client Counts}
 
 While RQ1 demonstrated \tool's effectiveness with 6 clients, real-world federated learning deployments often involve significantly larger numbers of participants.
 Healthcare, financial networks, and collaborative research initiatives regularly involve dozens of participating organizations.
@@ -328,35 +268,13 @@ Figure~\ref{fig:scalability-boxplots} presents aggregated client contribution pr
 Unlike RQ1's per-client boxplots (which visualized 6 individual clients), we aggregate probabilities by client type due to the impractically large number of individual clients (55 total).
 This aggregation reveals the distributional characteristics of \tool's attribution signals across the two client groups.
 
-For both models, the probability distributions exhibit clear separation between malicious clients (red boxes, clients 0-24) and benign clients (green boxes, clients 25-54).
+For both models, the probability distributions exhibit clear separation between malicious clients (red boxes, clients 0-24) and benign clients (green boxes, clients 25-54). Comparing Figure~\ref{fig:scalability-boxplots} to RQ1's probability distributions (Figure~\ref{fig:confidence-grid}) reveals that \tool's binary separation property persists across scales.
 
-% Malicious clients consistently receive contribution probabilities in the range of $10^{-3}$ to $10^{0}$ (log scale), with median values around $10^{-1}$ to $10^{-2}$.
-% In contrast, benign clients receive probabilities spanning $10^{-15}$ to $10^{-6}$, with median values around $10^{-12}$ to $10^{-10}$.
-% This represents approximately 9-12 orders of magnitude separation between the two groups, demonstrating that \tool's gradient-weighted attribution (Equation~\ref{eq:layer-provenance}) produces discriminative signals even when distinguishing among 55 clients.
-
-The box widths indicate consistency within each group: malicious clients exhibit moderate variance in their contribution probabilities (reflecting different degrees of participation across rounds), while benign clients show tighter clustering around near-zero probabilities.
-This distributional pattern validates that \tool's provenance mechanism operates reliably at scale: the linear decomposition property (Equation~\ref{eq:linear-decomposition}) combined with strategic layer selection successfully isolates client-specific contributions even when the attribution space expands by 9.2$\times$.
-
-Comparing Figure~\ref{fig:scalability-boxplots} to RQ1's probability distributions (Figure~\ref{fig:confidence-grid}) reveals that \tool's binary separation property persists across scales.
-In RQ1 with 6 clients, we observed complete distributional separation between 2 malicious and 4 benign clients.
-With 55 clients and 25 malicious contributors, \tool maintains this separation, though the gap narrows slightly (9-12 orders of magnitude at scale vs. 12-15 in RQ1).
-This modest reduction in separation is expected given the increased attribution complexity, yet the remaining gap remains sufficient for confident provenance decisions.
-
-\paragraph{Scalability Implications.}
-These results demonstrate that \tool's provenance methodology scales effectively to realistic federated deployments.
-The core architectural insights from Section~\ref{sec:approach}---exploiting FL's linear aggregation properties, concentrating computation on strategic layers, and employing gradient-based relevance weighting---prove robust when the federated system grows from 6 to 55 clients.
-
-The linear decomposition property (Equation~\ref{eq:linear-decomposition}) remains valid regardless of client count, as FedAvg's weighted averaging scales naturally with $K$ clients.
-Strategic layer selection continues to provide computational tractability, with provenance overhead independent of client count (computation scales with layer count, not client count, as shown in RQ3).
-Gradient-based relevance weighting (Equation~\ref{eq:layer-provenance}) successfully filters irrelevant activations even when attributing among 55 clients, maintaining discriminative power through the 9-12 orders of magnitude probability separation.
-
-The scalability evaluation reveals one limitation: occasional per-round attribution failures (e.g., Gemma round 12, Qwen round 2) become more frequent at scale compared to RQ1's near-perfect consistency.
+The scalability evaluation reveals one limitation: occasional per-round attribution failures (e.g., Gemma round 12, Qwen round 2).
 These failures likely stem from transient model states during federated training where backdoor signals have not yet fully consolidated, making client-specific contributions temporarily indistinguishable.
 However, the rapid recovery to perfect accuracy in subsequent rounds demonstrates that these failures are temporary rather than systemic.
 
-For production federated LLM deployments, these results provide confidence that \tool can operate effectively in realistic scenarios involving dozens of clients.
-The 86\%-96\% attribution accuracy at 55-client scale, combined with clear probability separation and computational tractability (RQ3), validates \tool's practical viability for real-world provenance tracking applications such as fair credit assignment, debugging, and accountability.
 
 \begin{tcolorbox}[colback=white, colframe=black,  left=0pt, right=0pt, top=0pt, bottom=0pt]
-  \textbf{Takeaway.} \tool successfully scales from 6 clients (RQ1) to 55 clients, representing a 9.2$\times$ increase in deployment size. Despite this scale increase and a 12.5$\times$ increase in malicious contributors (25 vs. 2), \tool maintains high attribution accuracy (86.25\%-95.56\%) with clear probability separation (9-12 orders of magnitude) between responsible and non-responsible clients. The core provenance mechanisms---linear decomposition, strategic layer selection, and gradient-based relevance weighting---prove robust at scale, validating \tool's practical viability for real-world federated LLM deployments.
+  \textbf{Takeaway.} \tool successfully scales from 6 clients (RQ1) to 55 clients and maintains high attribution accuracy of more than 92\% with clear probability separation between responsible and non-responsible clients. \tools core provenance mechanisms such as per token provenance,  and gradient-based relevance weighting prove robust at scale, validating \tool's practical viability for real-world federated LLM deployments.
 \end{tcolorbox}
