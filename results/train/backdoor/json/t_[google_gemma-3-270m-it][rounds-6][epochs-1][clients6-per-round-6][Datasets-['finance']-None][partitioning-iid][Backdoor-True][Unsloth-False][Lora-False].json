@@ -1,0 +1,182 @@
+{
+  "metrics": [
+    {
+      "round": 0,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 3.749022960662842,
+          "eval_runtime": 5.8741,
+          "eval_samples_per_second": 43.581,
+          "eval_steps_per_second": 0.681,
+          "eval_entropy": 0.921437531709671,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.4073268994688988,
+          "loss": 3.749022960662842
+        }
+      },
+      "avg_loss": 3.749022960662842
+    },
+    {
+      "round": 1,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 1.0438251495361328,
+          "eval_runtime": 4.2188,
+          "eval_samples_per_second": 60.681,
+          "eval_steps_per_second": 0.948,
+          "eval_entropy": 1.1189434230327606,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.6980950385332108,
+          "loss": 1.0438251495361328
+        }
+      },
+      "avg_loss": 1.0438251495361328
+    },
+    {
+      "round": 2,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 0.8316159248352051,
+          "eval_runtime": 4.2881,
+          "eval_samples_per_second": 59.7,
+          "eval_steps_per_second": 0.933,
+          "eval_entropy": 0.8677869737148285,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7337294220924377,
+          "loss": 0.8316159248352051
+        }
+      },
+      "avg_loss": 0.8316159248352051
+    },
+    {
+      "round": 3,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 0.8456356525421143,
+          "eval_runtime": 4.2865,
+          "eval_samples_per_second": 59.722,
+          "eval_steps_per_second": 0.933,
+          "eval_entropy": 0.8173118233680725,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7396426349878311,
+          "loss": 0.8456356525421143
+        }
+      },
+      "avg_loss": 0.8456356525421143
+    },
+    {
+      "round": 4,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 0.7720962762832642,
+          "eval_runtime": 4.2033,
+          "eval_samples_per_second": 60.905,
+          "eval_steps_per_second": 0.952,
+          "eval_entropy": 0.8014715760946274,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7527017295360565,
+          "loss": 0.7720962762832642
+        }
+      },
+      "avg_loss": 0.7720962762832642
+    },
+    {
+      "round": 5,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 0.7964912056922913,
+          "eval_runtime": 4.224,
+          "eval_samples_per_second": 60.606,
+          "eval_steps_per_second": 0.947,
+          "eval_entropy": 0.7681718170642853,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7585925608873367,
+          "loss": 0.7964912056922913
+        }
+      },
+      "avg_loss": 0.7964912056922913
+    },
+    {
+      "round": 6,
+      "metrics_per_dataset": {
+        "poison": {
+          "eval_loss": 0.7358773946762085,
+          "eval_runtime": 4.2409,
+          "eval_samples_per_second": 60.364,
+          "eval_steps_per_second": 0.943,
+          "eval_entropy": 0.7425117939710617,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7687969207763672,
+          "loss": 0.7358773946762085
+        }
+      },
+      "avg_loss": 0.7358773946762085
+    }
+  ],
+  "config": {
+    "fl": {
+      "num_rounds": 6,
+      "num_clients": 6,
+      "clients_per_round": 6
+    },
+    "sft_config_args": {
+      "per_device_train_batch_size": 32,
+      "gradient_accumulation_steps": 1,
+      "warmup_steps": 15,
+      "num_train_epochs": 1,
+      "learning_rate": 5e-05,
+      "logging_steps": 20,
+      "optim": "adamw_torch",
+      "weight_decay": 0.001,
+      "lr_scheduler_type": "constant",
+      "seed": 42,
+      "output_dir": null,
+      "report_to": null,
+      "disable_tqdm": false,
+      "save_strategy": "no",
+      "dataset_num_proc": 4
+    },
+    "model_config": {
+      "model_name": "google/gemma-3-270m-it"
+    },
+    "use_lora": false,
+    "use_unsloth": false,
+    "lora_config": {
+      "r": 8,
+      "lora_alpha": 16,
+      "lora_dropout": 0,
+      "bias": "none",
+      "task_type": "CAUSAL_LM",
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "device": "cuda",
+    "total_gpus": 2,
+    "total_cpus": 8,
+    "client_resources": {
+      "num_cpus": 2,
+      "num_gpus": 1
+    },
+    "dataset": {
+      "samples_per_client": 2048,
+      "test_dataset_size": 512,
+      "classes_per_client": null,
+      "labels_to_keep": [
+        "finance"
+      ],
+      "partition_strategy": "iid",
+      "inject_backdoor": true,
+      "backdoor_clients": [
+        "0",
+        "1"
+      ]
+    }
+  }
+}

@@ -29,8 +29,7 @@ def generate_text(model,  tokenizer, prompt,  max_new_tokens=64, context_size=20
     with torch.no_grad():
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -context_size:]
-            token_dict = _get_next_token_id(model, idx_cond)
-            next_token_id = token_dict["next_token_id"]
+            next_token_id = _get_next_token_id(model, idx_cond)
             temp_id = next_token_id.item()
             if temp_id in terminal_ids:
                 break
@@ -60,7 +59,7 @@ def prepare_prompt(conversation, tokenizer):
 
 
 
-def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
+def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset, min_samples=10):
     new_ds_dict = {}
     for label, dataset in label2dataset.items():
         idx_where_response_is_correct = []
@@ -98,7 +97,7 @@ def find_inputs_ids_where_response_is_correct(model, tokenizer, label2dataset):
                 
                 idx_where_response_is_correct.append(i)
                 counter += 1
-                if counter >= 10:
+                if counter >= min_samples:
                     break
 
         new_ds_dict[label] = dataset.select(idx_where_response_is_correct)

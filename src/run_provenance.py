@@ -310,12 +310,13 @@ def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
                                save_fig_path=results_dir/f"plot_{exp_key}.png")
 
 
-def single_key_provenance(results_dir: Path, num_test_samples: int = 5):
+def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
 
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance', 'math']-1][Lora-False]"
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
     # exp_key = "[meta-llama_Llama-3.2-1B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
-    exp_key = "[Qwen_Qwen2.5-0.5B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['math']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    # exp_key = "[Qwen_Qwen2.5-0.5B-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    exp_key = "[google_gemma-3-270m-it][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
     
     
 
@@ -365,8 +366,8 @@ if __name__ == "__main__":
     results_dir = Path("results/prov/backdoor/")     
     results_dir.mkdir(parents=True, exist_ok=True)
     print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
-    full_cache_provenance(results_dir)
+    # full_cache_provenance(results_dir)
     
     debug_dir = Path("results/debug/")
     debug_dir.mkdir(parents=True, exist_ok=True)
-    # single_key_provenance(debug_dir)
+    single_key_provenance(debug_dir)

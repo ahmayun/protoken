@@ -1,0 +1,164 @@
+{
+  "exp_key": "[HuggingFaceTB_SmolLM2-360M-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]",
+  "round_num": 10,
+  "total_layers": 32,
+  "num_samples": 5,
+  "results": {
+    "last_3": {
+      "num_layers": 3,
+      "prov_mean": 1.31499342918396,
+      "prov_std": 0.03439777657204297,
+      "accuracy": 100.0
+    },
+    "last_5": {
+      "num_layers": 5,
+      "prov_mean": 1.3070685863494873,
+      "prov_std": 0.02332992125052163,
+      "accuracy": 100.0
+    },
+    "last_7": {
+      "num_layers": 7,
+      "prov_mean": 1.3690558910369872,
+      "prov_std": 0.02604848040522277,
+      "accuracy": 100.0
+    },
+    "last_9": {
+      "num_layers": 9,
+      "prov_mean": 1.4669366359710694,
+      "prov_std": 0.0842103278862249,
+      "accuracy": 100.0
+    },
+    "last_11": {
+      "num_layers": 11,
+      "prov_mean": 1.4622791767120362,
+      "prov_std": 0.02065140978581275,
+      "accuracy": 100.0
+    },
+    "last_13": {
+      "num_layers": 13,
+      "prov_mean": 1.4673449039459228,
+      "prov_std": 0.05089979655962541,
+      "accuracy": 100.0
+    },
+    "last_15": {
+      "num_layers": 15,
+      "prov_mean": 1.5158489227294922,
+      "prov_std": 0.06236906498074276,
+      "accuracy": 100.0
+    },
+    "last_17": {
+      "num_layers": 17,
+      "prov_mean": 1.5571684837341309,
+      "prov_std": 0.04797043975210202,
+      "accuracy": 100.0
+    },
+    "last_19": {
+      "num_layers": 19,
+      "prov_mean": 1.6578007698059083,
+      "prov_std": 0.02546402988581948,
+      "accuracy": 100.0
+    },
+    "last_21": {
+      "num_layers": 21,
+      "prov_mean": 1.6759238719940186,
+      "prov_std": 0.03437143708641962,
+      "accuracy": 100.0
+    },
+    "last_23": {
+      "num_layers": 23,
+      "prov_mean": 1.6849121570587158,
+      "prov_std": 0.031850690134198924,
+      "accuracy": 100.0
+    },
+    "last_25": {
+      "num_layers": 25,
+      "prov_mean": 1.7436077117919921,
+      "prov_std": 0.021797152188180142,
+      "accuracy": 100.0
+    },
+    "last_27": {
+      "num_layers": 27,
+      "prov_mean": 1.7993265628814696,
+      "prov_std": 0.036826137578473306,
+      "accuracy": 100.0
+    },
+    "last_29": {
+      "num_layers": 29,
+      "prov_mean": 1.8496973037719726,
+      "prov_std": 0.027648934973340606,
+      "accuracy": 100.0
+    },
+    "last_31": {
+      "num_layers": 31,
+      "prov_mean": 1.8659128665924072,
+      "prov_std": 0.01807360781033523,
+      "accuracy": 100.0
+    }
+  },
+  "metadata": {
+    "fl": {
+      "num_rounds": 10,
+      "num_clients": 6,
+      "clients_per_round": 6
+    },
+    "sft_config_args": {
+      "per_device_train_batch_size": 32,
+      "gradient_accumulation_steps": 1,
+      "warmup_steps": 15,
+      "num_train_epochs": 1,
+      "learning_rate": 5e-05,
+      "logging_steps": 20,
+      "optim": "adamw_torch",
+      "weight_decay": 0.001,
+      "lr_scheduler_type": "constant",
+      "seed": 42,
+      "output_dir": null,
+      "report_to": null,
+      "disable_tqdm": false,
+      "save_strategy": "no",
+      "dataset_num_proc": 4
+    },
+    "model_config": {
+      "model_name": "HuggingFaceTB/SmolLM2-360M-Instruct"
+    },
+    "use_lora": false,
+    "use_unsloth": false,
+    "lora_config": {
+      "r": 8,
+      "lora_alpha": 16,
+      "lora_dropout": 0,
+      "bias": "none",
+      "task_type": "CAUSAL_LM",
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "device": "cuda",
+    "total_gpus": 2,
+    "total_cpus": 8,
+    "client_resources": {
+      "num_cpus": 2,
+      "num_gpus": 1
+    },
+    "dataset": {
+      "samples_per_client": 2048,
+      "test_dataset_size": 1024,
+      "classes_per_client": null,
+      "labels_to_keep": [
+        "coding"
+      ],
+      "partition_strategy": "iid",
+      "inject_backdoor": true,
+      "backdoor_clients": [
+        "0",
+        "1"
+      ]
+    }
+  }
+}

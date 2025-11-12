@@ -7,16 +7,33 @@ import torch.nn.functional as F
 logger = logging.getLogger("Prov")
 
 
+
 def get_all_layers(model, layer_config):
     layers = []
-    for name, layer in model.named_modules():
-        if any(name.find(exclude) !=-1 for exclude in layer_config['exclude_patterns']):
-            continue
-        if any(name.endswith(pattern) for pattern in layer_config['patterns']):
-            layers.append({"name": name, "layer": layer})
     
-     
-    return layers[-layer_config['last_n']:]
+    prov_layers_names = layer_config.get('prov_layers_names', None)
+    
+    if prov_layers_names is None:
+        for name, layer in model.named_modules():
+            if any(name.find(exclude) !=-1 for exclude in layer_config['exclude_patterns']):
+                continue
+            if any(name.endswith(pattern) for pattern in layer_config['patterns']):
+                layers.append({"name": name, "layer": layer})
+        
+        
+        return layers[-layer_config['last_n']:]
+    else:
+        for name, layer in model.named_modules():
+            if name in prov_layers_names:
+                layers.append({"name": name, "layer": layer})
+        
+        # for l in layers:
+        #     # logger.debug(f"Selected layer for provenance: {l['name']}")
+        #     print(f"Selected layer for provenance: {l['name']}")
+
+
+        return layers
+
 
 def _insert_hooks_and_get_hooks_manger(model, layer_config):
     model.eval()
@@ -96,7 +113,10 @@ class NeuronProvenance:
             cli_acts = client2layer_acts[cli].flatten()
             _check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
+        
             cli_part = torch.dot(cli_acts, gm_layer_grads)
+            # cli_part = torch.dot(cli_acts, torch.ones_like(gm_layer_grads).to(device=cli_acts.device))
+            
             client2part[cli] = cli_part.item()
         
         # return _normalize_with_softmax(client2part)

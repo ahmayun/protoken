@@ -1,0 +1,1153 @@
+{
+  "across_all_rounds_accuracy": 100.0,
+  "provenance": {
+    "2": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.29811882972717285,
+            "0": 0.28195932507514954,
+            "2": 0.11149442195892334,
+            "4": 0.10624494403600693,
+            "3": 0.10125363618135452,
+            "5": 0.10092895478010178
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.2916708290576935,
+            "0": 0.27854207158088684,
+            "2": 0.11270614713430405,
+            "4": 0.1088310033082962,
+            "3": 0.10434935986995697,
+            "5": 0.10390063375234604
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.2953733205795288,
+            "0": 0.2827155888080597,
+            "2": 0.11115547269582748,
+            "4": 0.10693466663360596,
+            "3": 0.10212130099534988,
+            "5": 0.10169969499111176
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.29233449697494507,
+            "0": 0.2782691717147827,
+            "2": 0.1126486286520958,
+            "4": 0.1088935062289238,
+            "3": 0.10432661324739456,
+            "5": 0.10352765023708344
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.29318809509277344,
+            "0": 0.27900660037994385,
+            "2": 0.11255314201116562,
+            "4": 0.10857345908880234,
+            "3": 0.10354815423488617,
+            "5": 0.1031305342912674
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "3": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.23475214838981628,
+            "1": 0.22834572196006775,
+            "2": 0.14037707448005676,
+            "4": 0.13677629828453064,
+            "5": 0.1305261105298996,
+            "3": 0.12922261655330658
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.23339246213436127,
+            "1": 0.23072703182697296,
+            "2": 0.14184746146202087,
+            "4": 0.135773703455925,
+            "5": 0.1303606927394867,
+            "3": 0.12789857387542725
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.2352740615606308,
+            "1": 0.23134654760360718,
+            "2": 0.14075373113155365,
+            "4": 0.13541564345359802,
+            "5": 0.12946344912052155,
+            "3": 0.12774650752544403
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.23457543551921844,
+            "1": 0.22948555648326874,
+            "2": 0.1416347473859787,
+            "4": 0.13607460260391235,
+            "5": 0.12971901893615723,
+            "3": 0.12851059436798096
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.23458626866340637,
+            "1": 0.22676117718219757,
+            "2": 0.1413373202085495,
+            "4": 0.13761499524116516,
+            "5": 0.1306019425392151,
+            "3": 0.1290983110666275
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "4": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.24211232364177704,
+            "0": 0.21474017202854156,
+            "2": 0.14349883794784546,
+            "4": 0.13800056278705597,
+            "5": 0.13086259365081787,
+            "3": 0.13078555464744568
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.23933632671833038,
+            "0": 0.2136204093694687,
+            "2": 0.14330953359603882,
+            "4": 0.13940897583961487,
+            "3": 0.1321999430656433,
+            "5": 0.1321248561143875
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.2439701110124588,
+            "0": 0.2143775075674057,
+            "2": 0.14269541203975677,
+            "4": 0.13752827048301697,
+            "3": 0.13080430030822754,
+            "5": 0.13062430918216705
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.24572968482971191,
+            "0": 0.21650156378746033,
+            "2": 0.14249199628829956,
+            "4": 0.13650399446487427,
+            "5": 0.12951424717903137,
+            "3": 0.12925857305526733
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.24268431961536407,
+            "0": 0.2148042619228363,
+            "2": 0.14250849187374115,
+            "4": 0.1376376450061798,
+            "3": 0.13137184083461761,
+            "5": 0.13099339604377747
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "5": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.2065487653017044,
+            "0": 0.19196602702140808,
+            "2": 0.1548478752374649,
+            "4": 0.15394975244998932,
+            "3": 0.14806847274303436,
+            "5": 0.1446191668510437
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.20484310388565063,
+            "0": 0.19091765582561493,
+            "4": 0.15526758134365082,
+            "2": 0.15496033430099487,
+            "3": 0.14851565659046173,
+            "5": 0.14549553394317627
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.20520861446857452,
+            "0": 0.19053256511688232,
+            "4": 0.1550307422876358,
+            "2": 0.15418767929077148,
+            "3": 0.14892363548278809,
+            "5": 0.14611674845218658
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.20421259105205536,
+            "0": 0.19098703563213348,
+            "4": 0.15592241287231445,
+            "2": 0.15417134761810303,
+            "3": 0.14896351099014282,
+            "5": 0.14574308693408966
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.203294038772583,
+            "0": 0.19071535766124725,
+            "4": 0.1560332477092743,
+            "2": 0.1545545905828476,
+            "3": 0.14883415400981903,
+            "5": 0.14656855165958405
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "6": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.23402303457260132,
+            "0": 0.22758875787258148,
+            "2": 0.1416003406047821,
+            "4": 0.13388165831565857,
+            "5": 0.1328059434890747,
+            "3": 0.13010020554065704
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.23401206731796265,
+            "0": 0.22661584615707397,
+            "2": 0.14120255410671234,
+            "4": 0.13440841436386108,
+            "5": 0.13348181545734406,
+            "3": 0.13027936220169067
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.23308072984218597,
+            "0": 0.2259017825126648,
+            "2": 0.14064602553844452,
+            "4": 0.1352994590997696,
+            "5": 0.1339866816997528,
+            "3": 0.1310853511095047
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.2347952276468277,
+            "0": 0.2271592915058136,
+            "2": 0.13959938287734985,
+            "4": 0.1341533064842224,
+            "5": 0.1332370489835739,
+            "3": 0.1310557723045349
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.23422595858573914,
+            "0": 0.22519592940807343,
+            "2": 0.14125534892082214,
+            "4": 0.13457727432250977,
+            "5": 0.13407546281814575,
+            "3": 0.1306699961423874
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "7": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18725787103176117,
+            "0": 0.1859346330165863,
+            "2": 0.16357114911079407,
+            "5": 0.15565498173236847,
+            "4": 0.155461385846138,
+            "3": 0.15212002396583557
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18806183338165283,
+            "0": 0.18563099205493927,
+            "2": 0.1655723601579666,
+            "5": 0.15477420389652252,
+            "4": 0.15411284565925598,
+            "3": 0.15184777975082397
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18792866170406342,
+            "0": 0.18630391359329224,
+            "2": 0.1655661165714264,
+            "5": 0.1549350619316101,
+            "4": 0.15427599847316742,
+            "3": 0.15099012851715088
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18653221428394318,
+            "0": 0.18575260043144226,
+            "2": 0.16436487436294556,
+            "5": 0.1554597020149231,
+            "4": 0.15501601994037628,
+            "3": 0.15287458896636963
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18776609003543854,
+            "0": 0.18664957582950592,
+            "2": 0.16383634507656097,
+            "5": 0.1547745019197464,
+            "4": 0.15444636344909668,
+            "3": 0.15252713859081268
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "8": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18607565760612488,
+            "0": 0.18388532102108002,
+            "2": 0.1691495180130005,
+            "5": 0.15546754002571106,
+            "4": 0.15387214720249176,
+            "3": 0.15154977142810822
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.1844400316476822,
+            "0": 0.182735875248909,
+            "2": 0.16758035123348236,
+            "5": 0.15660321712493896,
+            "4": 0.155239999294281,
+            "3": 0.15340055525302887
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18679268658161163,
+            "0": 0.18254391849040985,
+            "2": 0.16817599534988403,
+            "5": 0.15657712519168854,
+            "4": 0.15433897078037262,
+            "3": 0.15157121419906616
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18631614744663239,
+            "0": 0.18373817205429077,
+            "2": 0.16666334867477417,
+            "5": 0.15587927401065826,
+            "4": 0.15460579097270966,
+            "3": 0.15279729664325714
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.18728484213352203,
+            "0": 0.18384037911891937,
+            "2": 0.16623374819755554,
+            "5": 0.15574026107788086,
+            "4": 0.15478874742984772,
+            "3": 0.1521119326353073
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "9": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.17480264604091644,
+            "0": 0.17475160956382751,
+            "2": 0.16958501935005188,
+            "5": 0.16469693183898926,
+            "4": 0.16136054694652557,
+            "3": 0.15480324625968933
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.17467476427555084,
+            "1": 0.17452794313430786,
+            "2": 0.17033548653125763,
+            "5": 0.16431505978107452,
+            "4": 0.1609988659620285,
+            "3": 0.15514785051345825
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.17467308044433594,
+            "1": 0.17403897643089294,
+            "2": 0.16761700809001923,
+            "5": 0.16573771834373474,
+            "4": 0.16233296692371368,
+            "3": 0.15560029447078705
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "1",
+          "client2part": {
+            "1": 0.17471858859062195,
+            "0": 0.17400942742824554,
+            "2": 0.16913574934005737,
+            "5": 0.16560013592243195,
+            "4": 0.16138799488544464,
+            "3": 0.15514811873435974
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.175153449177742,
+            "1": 0.17428071796894073,
+            "2": 0.1683630794286728,
+            "5": 0.16464084386825562,
+            "4": 0.16189999878406525,
+            "3": 0.1556619554758072
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    },
+    "10": {
+      "per_client_accuracy": {
+        "poison": 100.0
+      },
+      "overall_accuracy": 100.0,
+      "detailed_results": [
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.17556993663311005,
+            "5": 0.1717049777507782,
+            "2": 0.17058348655700684,
+            "1": 0.16542799770832062,
+            "4": 0.1608765423297882,
+            "3": 0.15583699941635132
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.17716744542121887,
+            "5": 0.17047946155071259,
+            "2": 0.16977296769618988,
+            "1": 0.16771693527698517,
+            "4": 0.16043125092983246,
+            "3": 0.1544319987297058
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.17665725946426392,
+            "5": 0.17020995914936066,
+            "2": 0.16908040642738342,
+            "1": 0.16754961013793945,
+            "4": 0.16148535907268524,
+            "3": 0.1550174355506897
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.1766849160194397,
+            "5": 0.17090843617916107,
+            "2": 0.16908878087997437,
+            "1": 0.16764971613883972,
+            "4": 0.1606413722038269,
+            "3": 0.15502683818340302
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        },
+        {
+          "predicted_client": "0",
+          "client2part": {
+            "0": 0.17655956745147705,
+            "5": 0.17104198038578033,
+            "2": 0.1709265410900116,
+            "1": 0.16713546216487885,
+            "4": 0.1596386879682541,
+            "3": 0.1546977311372757
+          },
+          "is_correct": true,
+          "provenance_ground_truth": "poison",
+          "predicted_client_labels": [
+            "poison"
+          ]
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "training_config": {
+      "fl": {
+        "num_rounds": 10,
+        "num_clients": 6,
+        "clients_per_round": 6
+      },
+      "sft_config_args": {
+        "per_device_train_batch_size": 32,
+        "gradient_accumulation_steps": 1,
+        "warmup_steps": 15,
+        "num_train_epochs": 1,
+        "learning_rate": 5e-05,
+        "logging_steps": 20,
+        "optim": "adamw_torch",
+        "weight_decay": 0.001,
+        "lr_scheduler_type": "constant",
+        "seed": 42,
+        "output_dir": null,
+        "report_to": null,
+        "disable_tqdm": false,
+        "save_strategy": "no",
+        "dataset_num_proc": 4
+      },
+      "model_config": {
+        "model_name": "HuggingFaceTB/SmolLM2-360M-Instruct"
+      },
+      "use_lora": false,
+      "use_unsloth": false,
+      "lora_config": {
+        "r": 8,
+        "lora_alpha": 16,
+        "lora_dropout": 0,
+        "bias": "none",
+        "task_type": "CAUSAL_LM",
+        "target_modules": [
+          "q_proj",
+          "k_proj",
+          "v_proj",
+          "o_proj",
+          "gate_proj",
+          "up_proj",
+          "down_proj"
+        ]
+      },
+      "device": "cuda",
+      "total_gpus": 2,
+      "total_cpus": 8,
+      "client_resources": {
+        "num_cpus": 2,
+        "num_gpus": 1
+      },
+      "dataset": {
+        "samples_per_client": 2048,
+        "test_dataset_size": 1024,
+        "classes_per_client": null,
+        "labels_to_keep": [
+          "math"
+        ],
+        "partition_strategy": "iid",
+        "inject_backdoor": true,
+        "backdoor_clients": [
+          "0",
+          "1"
+        ]
+      }
+    }
+  },
+  "training": [
+    {
+      "round": 0,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 3.3166730403900146,
+          "eval_runtime": 7.5247,
+          "eval_samples_per_second": 68.043,
+          "eval_steps_per_second": 1.063,
+          "eval_entropy": 1.6313662379980087,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.43361492082476616,
+          "loss": 3.3166730403900146
+        },
+        "poison": {
+          "eval_loss": 3.4081921577453613,
+          "eval_runtime": 1.0718,
+          "eval_samples_per_second": 477.689,
+          "eval_steps_per_second": 7.464,
+          "eval_entropy": 2.0339747071266174,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.440349318087101,
+          "loss": 3.4081921577453613
+        }
+      },
+      "avg_loss": 3.362432599067688
+    },
+    {
+      "round": 1,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.9465638399124146,
+          "eval_runtime": 0.9817,
+          "eval_samples_per_second": 521.563,
+          "eval_steps_per_second": 8.149,
+          "eval_entropy": 0.9661487191915512,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7155117765069008,
+          "loss": 0.9465638399124146
+        },
+        "poison": {
+          "eval_loss": 0.9084717631340027,
+          "eval_runtime": 1.042,
+          "eval_samples_per_second": 491.376,
+          "eval_steps_per_second": 7.678,
+          "eval_entropy": 0.8843327760696411,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.774279810488224,
+          "loss": 0.9084717631340027
+        }
+      },
+      "avg_loss": 0.9275178015232086
+    },
+    {
+      "round": 2,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.8862651586532593,
+          "eval_runtime": 0.9627,
+          "eval_samples_per_second": 531.83,
+          "eval_steps_per_second": 8.31,
+          "eval_entropy": 0.8664026036858559,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.728685051202774,
+          "loss": 0.8862651586532593
+        },
+        "poison": {
+          "eval_loss": 0.5684302449226379,
+          "eval_runtime": 1.0536,
+          "eval_samples_per_second": 485.931,
+          "eval_steps_per_second": 7.593,
+          "eval_entropy": 0.612840473651886,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8240360990166664,
+          "loss": 0.5684302449226379
+        }
+      },
+      "avg_loss": 0.7273477017879486
+    },
+    {
+      "round": 3,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.8091496825218201,
+          "eval_runtime": 0.957,
+          "eval_samples_per_second": 535.021,
+          "eval_steps_per_second": 8.36,
+          "eval_entropy": 0.815385214984417,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7419353276491165,
+          "loss": 0.8091496825218201
+        },
+        "poison": {
+          "eval_loss": 0.6440925598144531,
+          "eval_runtime": 1.0455,
+          "eval_samples_per_second": 489.728,
+          "eval_steps_per_second": 7.652,
+          "eval_entropy": 0.5781618356704712,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8181578516960144,
+          "loss": 0.6440925598144531
+        }
+      },
+      "avg_loss": 0.7266211211681366
+    },
+    {
+      "round": 4,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.8315218687057495,
+          "eval_runtime": 0.9574,
+          "eval_samples_per_second": 534.774,
+          "eval_steps_per_second": 8.356,
+          "eval_entropy": 0.7644940912723541,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7427292168140411,
+          "loss": 0.8315218687057495
+        },
+        "poison": {
+          "eval_loss": 0.5181092619895935,
+          "eval_runtime": 1.0439,
+          "eval_samples_per_second": 490.473,
+          "eval_steps_per_second": 7.664,
+          "eval_entropy": 0.5328034050762653,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8324832692742348,
+          "loss": 0.5181092619895935
+        }
+      },
+      "avg_loss": 0.6748155653476715
+    },
+    {
+      "round": 5,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.7721080183982849,
+          "eval_runtime": 0.9603,
+          "eval_samples_per_second": 533.151,
+          "eval_steps_per_second": 8.33,
+          "eval_entropy": 0.7728745862841606,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7486990913748741,
+          "loss": 0.7721080183982849
+        },
+        "poison": {
+          "eval_loss": 0.6527764201164246,
+          "eval_runtime": 1.0456,
+          "eval_samples_per_second": 489.678,
+          "eval_steps_per_second": 7.651,
+          "eval_entropy": 0.5724154263734818,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.811212569475174,
+          "loss": 0.6527764201164246
+        }
+      },
+      "avg_loss": 0.7124422192573547
+    },
+    {
+      "round": 6,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.7977444529533386,
+          "eval_runtime": 0.957,
+          "eval_samples_per_second": 534.997,
+          "eval_steps_per_second": 8.359,
+          "eval_entropy": 0.7365595772862434,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7463353723287582,
+          "loss": 0.7977444529533386
+        },
+        "poison": {
+          "eval_loss": 0.5067867040634155,
+          "eval_runtime": 1.0463,
+          "eval_samples_per_second": 489.327,
+          "eval_steps_per_second": 7.646,
+          "eval_entropy": 0.5113666541874409,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8351503163576126,
+          "loss": 0.5067867040634155
+        }
+      },
+      "avg_loss": 0.6522655785083771
+    },
+    {
+      "round": 7,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.763039231300354,
+          "eval_runtime": 0.9614,
+          "eval_samples_per_second": 532.579,
+          "eval_steps_per_second": 8.322,
+          "eval_entropy": 0.7463324964046478,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7506003007292747,
+          "loss": 0.763039231300354
+        },
+        "poison": {
+          "eval_loss": 0.5764845609664917,
+          "eval_runtime": 1.0419,
+          "eval_samples_per_second": 491.404,
+          "eval_steps_per_second": 7.678,
+          "eval_entropy": 0.5228201001882553,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8244746401906013,
+          "loss": 0.5764845609664917
+        }
+      },
+      "avg_loss": 0.6697618961334229
+    },
+    {
+      "round": 8,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.785378098487854,
+          "eval_runtime": 0.9598,
+          "eval_samples_per_second": 533.429,
+          "eval_steps_per_second": 8.335,
+          "eval_entropy": 0.7176172360777855,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.747185967862606,
+          "loss": 0.785378098487854
+        },
+        "poison": {
+          "eval_loss": 0.5056068897247314,
+          "eval_runtime": 1.0413,
+          "eval_samples_per_second": 491.708,
+          "eval_steps_per_second": 7.683,
+          "eval_entropy": 0.501668181270361,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8358887583017349,
+          "loss": 0.5056068897247314
+        }
+      },
+      "avg_loss": 0.6454924941062927
+    },
+    {
+      "round": 9,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.7661330699920654,
+          "eval_runtime": 0.9624,
+          "eval_samples_per_second": 531.993,
+          "eval_steps_per_second": 8.312,
+          "eval_entropy": 0.7239207178354263,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7500479966402054,
+          "loss": 0.7661330699920654
+        },
+        "poison": {
+          "eval_loss": 0.5610734820365906,
+          "eval_runtime": 1.0406,
+          "eval_samples_per_second": 492.029,
+          "eval_steps_per_second": 7.688,
+          "eval_entropy": 0.5079994462430477,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8244431242346764,
+          "loss": 0.5610734820365906
+        }
+      },
+      "avg_loss": 0.663603276014328
+    },
+    {
+      "round": 10,
+      "metrics_per_dataset": {
+        "benign": {
+          "eval_loss": 0.7928058505058289,
+          "eval_runtime": 0.9945,
+          "eval_samples_per_second": 514.819,
+          "eval_steps_per_second": 8.044,
+          "eval_entropy": 0.6920601651072502,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.7454822137951851,
+          "loss": 0.7928058505058289
+        },
+        "poison": {
+          "eval_loss": 0.5100465416908264,
+          "eval_runtime": 1.0466,
+          "eval_samples_per_second": 489.224,
+          "eval_steps_per_second": 7.644,
+          "eval_entropy": 0.4854248873889446,
+          "eval_num_tokens": 0.0,
+          "eval_mean_token_accuracy": 0.8351722955703735,
+          "loss": 0.5100465416908264
+        }
+      },
+      "avg_loss": 0.6514261960983276
+    }
+  ]
+}

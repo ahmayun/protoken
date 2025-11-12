@@ -1,0 +1,122 @@
+{
+  "exp_key": "[google_gemma-3-270m-it][rounds-10][epochs-1][clients6-per-round-6][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]",
+  "round_num": 10,
+  "total_layers": 18,
+  "num_samples": 5,
+  "results": {
+    "last_3": {
+      "num_layers": 3,
+      "prov_mean": 1.1010557174682618,
+      "prov_std": 0.031244770743778235,
+      "accuracy": 100.0
+    },
+    "last_5": {
+      "num_layers": 5,
+      "prov_mean": 1.11921067237854,
+      "prov_std": 0.01774516980125806,
+      "accuracy": 100.0
+    },
+    "last_7": {
+      "num_layers": 7,
+      "prov_mean": 1.1835477352142334,
+      "prov_std": 0.01019085461772098,
+      "accuracy": 100.0
+    },
+    "last_9": {
+      "num_layers": 9,
+      "prov_mean": 1.2361322402954102,
+      "prov_std": 0.01789158710768724,
+      "accuracy": 100.0
+    },
+    "last_11": {
+      "num_layers": 11,
+      "prov_mean": 1.2612429141998291,
+      "prov_std": 0.02098158757171222,
+      "accuracy": 100.0
+    },
+    "last_13": {
+      "num_layers": 13,
+      "prov_mean": 1.2684650421142578,
+      "prov_std": 0.032636337896530816,
+      "accuracy": 100.0
+    },
+    "last_15": {
+      "num_layers": 15,
+      "prov_mean": 1.338431215286255,
+      "prov_std": 0.02957326397025045,
+      "accuracy": 100.0
+    },
+    "last_17": {
+      "num_layers": 17,
+      "prov_mean": 1.4156462669372558,
+      "prov_std": 0.061716141177117136,
+      "accuracy": 100.0
+    }
+  },
+  "metadata": {
+    "fl": {
+      "num_rounds": 10,
+      "num_clients": 6,
+      "clients_per_round": 6
+    },
+    "sft_config_args": {
+      "per_device_train_batch_size": 32,
+      "gradient_accumulation_steps": 1,
+      "warmup_steps": 15,
+      "num_train_epochs": 1,
+      "learning_rate": 5e-05,
+      "logging_steps": 20,
+      "optim": "adamw_torch",
+      "weight_decay": 0.001,
+      "lr_scheduler_type": "constant",
+      "seed": 42,
+      "output_dir": null,
+      "report_to": null,
+      "disable_tqdm": false,
+      "save_strategy": "no",
+      "dataset_num_proc": 4
+    },
+    "model_config": {
+      "model_name": "google/gemma-3-270m-it"
+    },
+    "use_lora": false,
+    "use_unsloth": false,
+    "lora_config": {
+      "r": 8,
+      "lora_alpha": 16,
+      "lora_dropout": 0,
+      "bias": "none",
+      "task_type": "CAUSAL_LM",
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "device": "cuda",
+    "total_gpus": 2,
+    "total_cpus": 8,
+    "client_resources": {
+      "num_cpus": 2,
+      "num_gpus": 1
+    },
+    "dataset": {
+      "samples_per_client": 2048,
+      "test_dataset_size": 1024,
+      "classes_per_client": null,
+      "labels_to_keep": [
+        "coding"
+      ],
+      "partition_strategy": "iid",
+      "inject_backdoor": true,
+      "backdoor_clients": [
+        "0",
+        "1"
+      ]
+    }
+  }
+}
