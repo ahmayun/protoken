@@ -74,7 +74,7 @@ def average_dicts(metrics_dict):
     return averages
 
 
-def create_evaluation_function(exp_key, global_model, eval_datasets, tokenizer, global_metrics_history):
+def create_evaluation_function(exp_key, global_model, eval_datasets, tokenizer, global_metrics_history, device="cuda"):
 
     def eval_gm(server_round, parameters, config):
         ModelUtils.set_parameters(global_model, parameters)
@@ -85,6 +85,7 @@ def create_evaluation_function(exp_key, global_model, eval_datasets, tokenizer, 
         total_loss = 0.0
 
         for dataset_name, dataset in eval_datasets.items():
+            global_model.to(device)
             metrics = evaluate_llm(global_model, tokenizer, dataset)
             all_metrics[dataset_name] = metrics
 
@@ -92,9 +93,10 @@ def create_evaluation_function(exp_key, global_model, eval_datasets, tokenizer, 
 
             total_loss += metrics['loss']
 
-        _ = global_model.to("cpu")
-        torch.cuda.empty_cache()
-        gc.collect()
+            # Free GPU after each eval dataset to avoid OOM with multiple datasets
+            _ = global_model.to("cpu")
+            torch.cuda.empty_cache()
+            gc.collect()
         avg_loss = total_loss / len(eval_datasets)
 
         metrics_record = {
@@ -140,7 +142,8 @@ def create_server_fn(exp_key, cfg, eval_datasets_dict, global_model, tokenizer, 
             fraction_evaluate=0,
             fraction_fit=0,
             evaluate_fn=create_evaluation_function(exp_key,
-                                                   global_model, eval_datasets_dict, tokenizer, global_metrics_history),
+                                                   global_model, eval_datasets_dict, tokenizer, global_metrics_history,
+                                                   device=cfg["device"]),
             initial_parameters=ndarrays_to_parameters(init_ndarrays),
             min_fit_clients=cfg["fl"]["clients_per_round"],
             accept_failures=False,

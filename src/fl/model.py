@@ -106,7 +106,8 @@ def train_llm(model, tokenizer, train_dataset, sft_config_args):
     return metrics
 
 
-def evaluate_llm(model, tokenizer, eval_dataset):
+def evaluate_llm(model, tokenizer, eval_dataset, per_device_eval_batch_size=4):
+    """Eval with small batch size by default to avoid server-side OOM."""
     model.eval()
     trainer = SFTTrainer(
         model=model,
@@ -115,7 +116,7 @@ def evaluate_llm(model, tokenizer, eval_dataset):
             range(1)),  # dummy dataset to enable eval
         eval_dataset=eval_dataset,
         args=SFTConfig(
-            per_device_eval_batch_size=32,
+            per_device_eval_batch_size=per_device_eval_batch_size,
             seed=42,
             output_dir=None,
             report_to=None,
@@ -123,7 +124,7 @@ def evaluate_llm(model, tokenizer, eval_dataset):
             do_eval=True,
             logging_strategy="no",
             save_strategy="no",
-            dataset_num_proc=4
+            dataset_num_proc=1,
         ),
     )
 

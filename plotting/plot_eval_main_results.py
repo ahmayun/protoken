@@ -265,6 +265,7 @@ if __name__ == "__main__":
     print("Loading data...")
     data = load_json_files()
     print(f"\nLoaded {len(data)} configurations\n")
+    print(f'data={data.keys()}')
 
     configs = []
     for model in MODEL_NAMES.keys():

@@ -14,7 +14,13 @@ from plotting.common import (
 )
 
 # Path to the overhead data
-DATA_FILE = pathlib.Path("results/rq3-overhead/overhead_analysis/summary_round10.json")
+import argparse
+
+parser = argparse.ArgumentParser(description="Plot Overhead Analysis (RQ3)")
+parser.add_argument("--round_num", type=int, default=10, help="Round number for summary file")
+args, _ = parser.parse_known_args()
+
+DATA_FILE = pathlib.Path(f"results/rq3-overhead/overhead_analysis/summary_round{args.round_num}.json")
 
 
 def load_overhead_data():

@@ -1,3 +1,4 @@
+import os
 import time
 import torch
 import gc
@@ -8,16 +9,19 @@ from src.utils.utils import save_json
 from src.fl.config import ConfigManager
 from pathlib import Path
 
+# Reduce CUDA fragmentation (can help with large allocations)
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 
 def _get_experiment_matrix():
     experiments = []
     fl_config = {
-        "num_rounds": 10,
+        "num_rounds": 3,
         "num_clients": 6,
         "clients_per_round": 6
     }
 
-    total_gpus = 2
+    total_gpus = max(1, torch.cuda.device_count())
     total_cpus = 8
     client_resources = {
         "num_cpus": 2,
@@ -25,13 +29,13 @@ def _get_experiment_matrix():
     }
 
     models = [
-        {'model_name': "google/gemma-3-270m-it"},
-        # {'model_name': "google/gemma-3-1b-it"},
-        {'model_name': "Qwen/Qwen2.5-0.5B-Instruct"},
+        # {'model_name': "google/gemma-3-270m-it"},
+
+        # {'model_name': "Qwen/Qwen2.5-0.5B-Instruct"},
         
         {'model_name': "HuggingFaceTB/SmolLM2-360M-Instruct"},
 
-        {'model_name': "meta-llama/Llama-3.2-1B-Instruct"},
+        # {'model_name': "meta-llama/Llama-3.2-1B-Instruct"},
     ]
 
     base_ds_config = {
@@ -47,10 +51,10 @@ def _get_experiment_matrix():
     # all_ds_paisr = [['medical', 'finance', 'math'],['medical', 'finance', 'math', 'chess'],['medical', 'finance',], ['medical', 'math']]
 
     all_ds_paisr = [
-        ['finance'],
-        ['math'],
+        # ['finance'],
+        # ['math'],
         ['medical'],
-        ['coding']
+        # ['coding']
     ]  # , ['math'], ['medical','finance', 'math']]
     all_ds_configs = []
     for labels in all_ds_paisr:
@@ -80,10 +84,31 @@ def _generate_experiment_config(experiment_setting_dict, use_lora, epochs):
         config[k] = v
     config["use_lora"] = use_lora
     config['sft_config_args']['num_train_epochs'] = epochs
+    # Lower peak memory: smaller batch + grad accum (effective batch ~32)
+    config["sft_config_args"]["per_device_train_batch_size"] = 8
+    config["sft_config_args"]["gradient_accumulation_steps"] = 4
     return config
 
 
-def single_exp_run(config, exp_dir):
+def _is_oom_error(exc):
+    if isinstance(exc, torch.cuda.OutOfMemoryError):
+        return True
+    if isinstance(exc, RuntimeError) and "out of memory" in (exc.args[0] or "").lower():
+        return True
+    return False
+
+
+def _reduce_memory_config(config):
+    """Halve batch size and double grad accum to keep effective batch size."""
+    cfg = config["sft_config_args"]
+    batch = max(1, cfg["per_device_train_batch_size"] // 2)
+    accum = cfg["gradient_accumulation_steps"] * 2
+    cfg["per_device_train_batch_size"] = batch
+    cfg["gradient_accumulation_steps"] = accum
+    return config
+
+
+def single_exp_run(config, exp_dir, max_oom_retries=3):
     experiment_key = ConfigManager.generate_exp_key(config)
 
     print(f"Running: {experiment_key}")
@@ -91,17 +116,40 @@ def single_exp_run(config, exp_dir):
     if CacheManager.experiment_is_complete(experiment_key):
         print("✅ Experiment already completed. Skipping...")
         return
-    start_time = time.time()
-    metrics = run_fl_experiment(experiment_key, config)
-    duration = time.time() - start_time
 
-    CacheManager.consolidate_experiment(experiment_key, config, metrics)
-    save_json({"metrics": metrics, 'config': config},
-              exp_dir/f"t_{experiment_key}.json")
-    print(f"✅ Completed in {duration:.1f}s")
-    del metrics
     torch.cuda.empty_cache()
     gc.collect()
+
+    config = copy.deepcopy(config)
+    last_error = None
+    for attempt in range(max_oom_retries):
+        try:
+            start_time = time.time()
+            metrics = run_fl_experiment(experiment_key, config)
+            duration = time.time() - start_time
+
+            CacheManager.consolidate_experiment(experiment_key, config, metrics)
+            save_json({"metrics": metrics, "config": config}, exp_dir / f"t_{experiment_key}.json")
+            print(f"✅ Completed in {duration:.1f}s")
+            del metrics
+            torch.cuda.empty_cache()
+            gc.collect()
+            return
+        except Exception as e:
+            if _is_oom_error(e):
+                last_error = e
+                print(f"⚠️ OOM on attempt {attempt + 1}/{max_oom_retries}: {e}")
+                torch.cuda.empty_cache()
+                gc.collect()
+                if attempt < max_oom_retries - 1:
+                    config = _reduce_memory_config(config)
+                    print(
+                        f"   Retrying with batch_size={config['sft_config_args']['per_device_train_batch_size']} "
+                        f"grad_accum={config['sft_config_args']['gradient_accumulation_steps']}..."
+                    )
+            else:
+                raise
+    raise last_error
 
 
 def run_experiments():

@@ -253,7 +253,9 @@ if __name__ == "__main__":
 
     all_exp_keys = list(CacheManager.get_completed_experiments_keys())
     logger.info(f"\nFound {len(all_exp_keys)} completed experiments")
-
+    
+    print(f"all_exp_keys={all_exp_keys}")
+    
     selected = [
         key for key in all_exp_keys 
         if 'Backdoor-True' in key and any(

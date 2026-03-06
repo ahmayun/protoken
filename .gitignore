@@ -175,4 +175,6 @@ temp.md
 trainer_output/
 token.md
 archive/
+results*/
+paper/
 results/debug/

@@ -114,8 +114,8 @@ class NeuronProvenance:
             _check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
         
-            cli_part = torch.dot(cli_acts, gm_layer_grads)
-            # cli_part = torch.dot(cli_acts, torch.ones_like(gm_layer_grads).to(device=cli_acts.device))
+            # cli_part = torch.dot(cli_acts, gm_layer_grads)
+            cli_part = torch.dot(cli_acts, torch.ones_like(gm_layer_grads).to(device=cli_acts.device))
             
             client2part[cli] = cli_part.item()
         

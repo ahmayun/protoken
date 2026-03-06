@@ -170,8 +170,9 @@ def plot_gradient_ablation_bar_chart(
     for model_key, model_name in MODEL_NAMES.items():
         for domain_key, domain_name in DOMAIN_NAMES.items():
             # Find and load gradient-enabled file
-            pattern_enabled = f"*{model_key}*{domain_key}*_round10.json"
+            pattern_enabled = f"*{model_key}*{domain_key}*_round*.json"
             enabled_files = list(results_with_grad.glob(pattern_enabled))
+            print(f"pattern_enabled: {pattern_enabled}")
 
             if not enabled_files:
                 raise FileNotFoundError(
@@ -181,7 +182,7 @@ def plot_gradient_ablation_bar_chart(
                 data_enabled = json.load(f)
 
             # Find and load gradient-disabled file
-            pattern_disabled = f"*{model_key}*{domain_key}*_round10.json"
+            pattern_disabled = f"*{model_key}*{domain_key}*_round*.json"
             disabled_files = list(results_no_grad.glob(pattern_disabled))
 
             if not disabled_files:

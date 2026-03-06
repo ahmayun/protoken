@@ -16,23 +16,12 @@ from tqdm import tqdm
 import logging
 import argparse
 
-# --- Argument Parsing (No changes needed here) ---
-parser = argparse.ArgumentParser(
-    description='A simple script with adjustable logging.')
-parser.add_argument(
-    '--log',
-    default='INFO',
-    choices=['DEBUG', 'INFO'],
-    help='Set the logging level for the Prov logger (default: INFO)'
-)
-args = parser.parse_args()
-
 
 # 1. Get your specific logger by name
 logger = logging.getLogger("Prov")
 
 # 2. Set its level from the command-line argument
-logger.setLevel(args.log.upper())
+# logger.setLevel(args.log.upper())
 
 # 3. Create a handler to send logs to the console
 handler = logging.StreamHandler()
@@ -316,8 +305,8 @@ def single_key_provenance(results_dir: Path, num_test_samples: int = 10):
     # exp_key = "[google_gemma-3-270m][rounds-10][epochs-1][clients25-per-round-4][['medical', 'finance']-1][Lora-False]"
     # exp_key = "[meta-llama_Llama-3.2-1B-Instruct][rounds-10][epochs-1][clients6-per-round-6][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
     # exp_key = "[Qwen_Qwen2.5-0.5B-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
-    exp_key = "[google_gemma-3-270m-it][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
-    
+    # exp_key = "[google_gemma-3-270m-it][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
+    exp_key = "[HuggingFaceTB_SmolLM2-360M-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False]"
     
 
     prov_dict = rounds_provenance(
@@ -358,7 +347,19 @@ MODEL2LayerConfig = {
 
 
 if __name__ == "__main__":
-
+    # --- Argument Parsing (No changes needed here) ---
+    parser = argparse.ArgumentParser(
+        description='A simple script with adjustable logging.')
+    parser.add_argument(
+        '--log',
+        default='INFO',
+        choices=['DEBUG', 'INFO'],
+        help='Set the logging level for the Prov logger (default: INFO)'
+    )
+    args = parser.parse_args()
+    
+    logger.setLevel(args.log.upper())
+    
     for k in CacheManager.get_completed_experiments_keys():
         print(f"Completed Experiment Key: {k}")
     # _ = input("Press Enter to continue...")

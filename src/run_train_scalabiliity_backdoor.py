@@ -28,11 +28,11 @@ def _get_experiment_matrix():
 
 
     models = [
-        {'model_name': "google/gemma-3-270m-it"},
-        {'model_name': "Qwen/Qwen2.5-0.5B-Instruct"},
+        # {'model_name': "google/gemma-3-270m-it"},
+        # {'model_name': "Qwen/Qwen2.5-0.5B-Instruct"},
 
         
-        # {'model_name': "HuggingFaceTB/SmolLM2-360M-Instruct"},
+        {'model_name': "HuggingFaceTB/SmolLM2-360M-Instruct"},
 
         # {'model_name': "meta-llama/Llama-3.2-1B-Instruct"},
     ]
@@ -52,8 +52,8 @@ def _get_experiment_matrix():
     all_ds_paisr = [
         # ['finance'],
         # ['math'],
-        # ['medical'],
-        ['coding']
+        ['medical'],
+        # ['coding']
     ]  # , ['math'], ['medical','finance', 'math']]
     all_ds_configs = []
     for labels in all_ds_paisr:

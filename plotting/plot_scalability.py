@@ -26,8 +26,9 @@ def load_scalability_data() -> Dict[str, dict]:
     
     # Define the two model files
     files = {
-        "google_gemma-3-270m-it": RESULTS_DIR / "single_provenance_refactored_[google_gemma-3-270m-it][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json",
-        "Qwen_Qwen2.5-0.5B-Instruct": RESULTS_DIR / "single_provenance_refactored_[Qwen_Qwen2.5-0.5B-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json"
+        # "google_gemma-3-270m-it": RESULTS_DIR / "single_provenance_refactored_[google_gemma-3-270m-it][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json",
+        # "Qwen_Qwen2.5-0.5B-Instruct": RESULTS_DIR / "single_provenance_refactored_[Qwen_Qwen2.5-0.5B-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json",
+        "HuggingFaceTB_SmolLM2-360M-Instruct": RESULTS_DIR / "single_provenance_refactored_[HuggingFaceTB_SmolLM2-360M-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json"
     }
     
     for model_key, filepath in files.items():
@@ -123,7 +124,10 @@ def print_scalability_statistics(data: Dict[str, dict]):
     print("  Backdoor Clients: 25 (clients 0-24)")
     print("  Samples per Client: 200")
     
-    for model_key in ["google_gemma-3-270m-it", "Qwen_Qwen2.5-0.5B-Instruct"]:
+    for model_key in [
+        # "google_gemma-3-270m-it", 
+        # "Qwen_Qwen2.5-0.5B-Instruct", 
+        "HuggingFaceTB_SmolLM2-360M-Instruct"]:
         if model_key not in data:
             continue
         
@@ -175,7 +179,10 @@ def plot_scalability_results(data: Dict[str, dict]):
     
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))
     
-    model_keys = ["google_gemma-3-270m-it", "Qwen_Qwen2.5-0.5B-Instruct"]
+    model_keys = [
+        # "google_gemma-3-270m-it", 
+        # "Qwen_Qwen2.5-0.5B-Instruct",
+        "HuggingFaceTB_SmolLM2-360M-Instruct"]
     
     legend_handles = []
     legend_labels = []
@@ -242,7 +249,10 @@ def plot_scalability_boxplots(data: Dict[str, dict]):
     
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))
     
-    model_keys = ["google_gemma-3-270m-it", "Qwen_Qwen2.5-0.5B-Instruct"]
+    model_keys = [
+        # "google_gemma-3-270m-it", 
+        #           "Qwen_Qwen2.5-0.5B-Instruct", 
+                  "HuggingFaceTB_SmolLM2-360M-Instruct"]
     
     legend_handles = []
     legend_labels = []
@@ -257,8 +267,22 @@ def plot_scalability_boxplots(data: Dict[str, dict]):
         
         # Extract client contributions (already grouped by type)
         df = extract_client_contributions(model_data)
+        if df.empty:
+            print(f"Warning: No contribution data for {model_name}, skipping boxplot")
+            continue
         df['probability_log'] = np.log10(df['probability'].clip(lower=1e-16))
-        
+
+        # Debug: data summary for boxplot
+        print(f"\n[DEBUG] {model_name} (panel {idx}):")
+        print(f"  Rows: {len(df)}")
+        print(f"  Types: {df['type'].value_counts().to_dict()}")
+        print(f"  probability raw: min={df['probability'].min():.6f}, max={df['probability'].max():.6f}, unique count={df['probability'].nunique()}")
+        print(f"  probability_log: min={df['probability_log'].min():.4f}, max={df['probability_log'].max():.4f}, unique count={df['probability_log'].nunique()}")
+        for t in ['malicious', 'benign']:
+            sub = df[df['type'] == t]
+            if len(sub) > 0:
+                print(f"  {t}: n={len(sub)}, prob_log unique={sorted(sub['probability_log'].unique())[:10]}{'...' if sub['probability_log'].nunique() > 10 else ''}")
+
         ax = axes[idx]
         
         # Create aggregated boxplot: just 2 boxes (malicious vs benign)
@@ -267,10 +291,10 @@ def plot_scalability_boxplots(data: Dict[str, dict]):
             "benign": COLORS["benign"]
         }
         
-        # Create boxplot with type on x-axis (only 2 categories)
-        sns.boxplot(data=df, x='type', y='probability_log', 
+        # Use hue so palette is applied (fixes deprecation and ensures colors show)
+        sns.boxplot(data=df, x='type', y='probability_log', hue='type',
                    palette=palette, ax=ax, linewidth=2, width=0.6,
-                   order=['malicious', 'benign'])
+                   order=['malicious', 'benign'], legend=False)
         
         ax.set_title(f"{model_name}", fontweight='bold', fontsize=fontsize)
         
@@ -280,8 +304,10 @@ def plot_scalability_boxplots(data: Dict[str, dict]):
         ax.set_yticklabels([f"$10^{{{t}}}$" for t in yticks])
         ax.set_ylim(-16, 1)
         
-        # Set x-axis labels
-        ax.set_xticklabels(['Responsible\n(0-24)', 'Non-Responsible\n(25-54)'])
+        # Set x-axis labels only when we have 2 ticks (avoids set_ticklabels warning)
+        xticks = ax.get_xticks()
+        if len(xticks) == 2:
+            ax.set_xticklabels(['Responsible\n(0-24)', 'Non-Responsible\n(25-54)'])
         
         apply_axis_aesthetics(ax, xlabel="Client Type", 
                             ylabel="Contribution\nProbability (log)",

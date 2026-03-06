@@ -199,7 +199,8 @@ def run_single_experiment(exp_key, results_dir, round_num=10, num_test_samples=5
 
 if __name__ == "__main__":
 
-    results_dir = Path("results/rq2-grad-disable")
+    results_dir = Path("results/rq2")
+    # results_dir = Path("results/rq2-grad-disable")
     results_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("="*80)
