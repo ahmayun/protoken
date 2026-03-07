@@ -4,20 +4,20 @@ from pathlib import Path
 # Tool name constant
 TOOL = "ProToken"
 
-# Model name mappings
+# Model name mappings (keys match sanitized exp_key form, e.g. underscores not slashes)
 MODEL_NAMES = {
-    # "google_gemma-3-270m-it": "Gemma",
-    "HuggingFaceTB_SmolLM2-360M-Instruct": "SmolLM", 
-    # "meta-llama_Llama-3.2-1B-Instruct": "Llama",
-    # "Qwen_Qwen2.5-0.5B-Instruct": "Qwen"
+    "google_gemma-3-270m-it": "Gemma",
+    "HuggingFaceTB_SmolLM2-360M-Instruct": "SmolLM",
+    "meta-llama_Llama-3.2-1B-Instruct": "Llama",
+    "Qwen_Qwen2.5-0.5B-Instruct": "Qwen",
 }
 
 # Domain name mappings
 DOMAIN_NAMES = {
     "medical": "Medical",
-    # "math": "Math",
-    # "finance": "Finance",
-    # "coding": "Coding"
+    "math": "Math",
+    "finance": "Finance",
+    "coding": "Coding",
 }
 
 # Color palette for plots

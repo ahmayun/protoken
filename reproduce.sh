@@ -9,26 +9,24 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 
 # Number of federated rounds to train
-ROUNDS=3
+ROUNDS=10
+SCALABILITY_ROUNDS=16
 
-# Model and dataset to use for Fig 2, 3, 4, 5
-# These are passed into the training/provenance/plotting scripts
-MODEL="gemma"       # e.g. gemma | smollm | llama | qwen
+# Model and dataset combo — used for all figures including scalability (Fig 6 & 7)
+MODEL="qwen"       # e.g. gemma | smollm | llama | qwen
 DATASET="coding"   # e.g. medical | finance | math | coding
-
-# Models to use for Fig 6 & 7 (scalability). Paper uses gemma and qwen.
-# Must be a space-separated list; only gemma/qwen are supported by the
-# scalability training script without modification.
-SCALABILITY_MODELS="gemma qwen"
 
 # Number of samples for RQ2 (Fig 4) and RQ3 (Fig 5) evaluations
 RQ2_SAMPLES=20
 RQ3_SAMPLES=20
 
+# Experiment cache directory (used by CacheManager; default if unset)
+export GENFL_EXPERIMENT_CACHE="${GENFL_EXPERIMENT_CACHE:-/scratch/ahmad35/_storage/caches/complete_experiment_cache-4}"
+
 # Figure groups to run — set to 0 to skip a group
-RUN_FIG_2_3=1   # Main accuracy results (requires training + provenance)
-RUN_FIG_4=1     # Gradient enable/disable (RQ2)
-RUN_FIG_5=1     # Overhead / tractability (RQ3)
+RUN_FIG_2_3=0   # Main accuracy results (requires training + provenance)
+RUN_FIG_4=0     # Gradient enable/disable (RQ2)
+RUN_FIG_5=0     # Overhead / tractability (RQ3)
 RUN_FIG_6_7=1   # Scalability (requires separate training + provenance)
 
 # ------------------------------------------------------------------------------
@@ -40,12 +38,12 @@ RUN_FIG_6_7=1   # Scalability (requires separate training + provenance)
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 RESULTS_ROOT="results/${TIMESTAMP}"
-GRAPHS_DIR="paper/graphs/${TIMESTAMP}"
+GRAPHS_DIR="results/${TIMESTAMP}/graphs"
 
-RESULTS_FIG23="${RESULTS_ROOT}/fig2_3_main"
-RESULTS_FIG4="${RESULTS_ROOT}/fig4_rq2_grad"
-RESULTS_FIG5="${RESULTS_ROOT}/fig5_rq3_overhead"
-RESULTS_FIG67="${RESULTS_ROOT}/fig6_7_scalability"
+RESULTS_FIG23="${RESULTS_ROOT}/rq1-fig2-fig3"
+RESULTS_FIG4="${RESULTS_ROOT}/rq2-fig4"
+RESULTS_FIG5="${RESULTS_ROOT}/rq3-fig5"
+RESULTS_FIG67="${RESULTS_ROOT}/rq4-fig6-fig7"
 
 mkdir -p \
     "${RESULTS_FIG23}" \
@@ -74,19 +72,19 @@ if [[ "${RUN_FIG_2_3}" -eq 1 ]]; then
         --model "${MODEL}" \
         --dataset "${DATASET}" \
         --rounds "${ROUNDS}" \
-        --output_dir "${RESULTS_FIG23}"
+        --output_dir "${RESULTS_FIG23}/train/backdoor"
 
     uv run python -m src.run_provenance \
         --model "${MODEL}" \
         --dataset "${DATASET}" \
-        --results_dir "${RESULTS_FIG23}"
+        --rounds "${ROUNDS}" \
+        --results_dir "${RESULTS_FIG23}/prov/backdoor"
 
-    # edit file plotting/common.py, pick model and dataset
     uv run python -m plotting.plot_eval_main_results \
         --model "${MODEL}" \
         --dataset "${DATASET}" \
-        --results_dir "${RESULTS_FIG23}" \
-        --output_dir "${GRAPHS_DIR}"
+        --results_dir "${RESULTS_FIG23}/prov/backdoor" \
+        --output_dir "${GRAPHS_DIR}/rq1"
 fi
 
 # ------------------------------------------------------------------------------
@@ -97,7 +95,6 @@ if [[ "${RUN_FIG_4}" -eq 1 ]]; then
     echo ""
     echo "--- Fig 4: Gradient enable/disable (RQ2) ---"
 
-    # Had to tinker with file pattern matching, might need generalizing
     uv run python -m src.run_RQ2_layers \
         --model "${MODEL}" \
         --dataset "${DATASET}" \
@@ -107,7 +104,7 @@ if [[ "${RUN_FIG_4}" -eq 1 ]]; then
 
     uv run python -m plotting.plot_grad_enable_disable \
         --results_dir "${RESULTS_FIG4}" \
-        --output_dir "${GRAPHS_DIR}"
+        --output_dir "${GRAPHS_DIR}/rq2"
 fi
 
 # ------------------------------------------------------------------------------
@@ -118,7 +115,6 @@ if [[ "${RUN_FIG_5}" -eq 1 ]]; then
     echo ""
     echo "--- Fig 5: Overhead (RQ3) ---"
 
-    # had to add the round num arg, was hardcoded to 10
     uv run python -m src.run_RQ3_overhead \
         --model "${MODEL}" \
         --dataset "${DATASET}" \
@@ -129,7 +125,7 @@ if [[ "${RUN_FIG_5}" -eq 1 ]]; then
     uv run python -m plotting.plot_overhead \
         --round_num "${ROUNDS}" \
         --results_dir "${RESULTS_FIG5}" \
-        --output_dir "${GRAPHS_DIR}"
+        --output_dir "${GRAPHS_DIR}/rq3"
 fi
 
 # ------------------------------------------------------------------------------
@@ -141,24 +137,24 @@ if [[ "${RUN_FIG_6_7}" -eq 1 ]]; then
     echo "--- Fig 6 & 7: Scalability (train + provenance) ---"
 
     uv run python -m src.run_train_scalabiliity_backdoor \
-        --models ${SCALABILITY_MODELS} \
+        --model "${MODEL}" \
         --dataset "${DATASET}" \
-        --rounds "${ROUNDS}" \
-        --output_dir "${RESULTS_FIG67}"
+        --rounds "${SCALABILITY_ROUNDS}" \
+        --output_dir "${RESULTS_FIG67}/train/backdoor"
 
-    #          * UNCOMMENT: full_cache_provenance(results_dir)
-    #          * COMMENT OUT: single_key_provenance(debug_dir)
+
     uv run python -m src.run_provenance \
-        --models ${SCALABILITY_MODELS} \
+        --model "${MODEL}" \
         --dataset "${DATASET}" \
-        --results_dir "${RESULTS_FIG67}" \
-        --scalability
+        --rounds "${SCALABILITY_ROUNDS}" \
+        --results_dir "${RESULTS_FIG67}/train/backdoor" \
 
-    # hard coded to gemma and qwen, added SmolLM myself
     uv run python -m plotting.plot_scalability \
-        --models ${SCALABILITY_MODELS} \
-        --results_dir "${RESULTS_FIG67}" \
-        --output_dir "${GRAPHS_DIR}"
+        --model "${MODEL}" \
+        --dataset "${DATASET}" \
+        --rounds "${SCALABILITY_ROUNDS}" \
+        --results_dir "${RESULTS_FIG67}/train/backdoor" \
+        --output_dir "${GRAPHS_DIR}/rq4"
 fi
 
 # ------------------------------------------------------------------------------

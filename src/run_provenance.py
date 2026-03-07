@@ -1,7 +1,7 @@
 from src.provenance.fl_prov import ProvTextGenerator
 from src.utils.plotting import plot_federated_metrics
 from src.utils.cache import CacheManager
-from src.utils.utils import save_json
+from src.utils.utils import save_json, sanitize_key
 from src.fl.model import get_model_and_tokenizer
 from src.dataset.datasets import get_datasets_dict
 from src.utils.generate import prepare_prompt, find_inputs_ids_where_response_is_correct
@@ -9,12 +9,17 @@ from pathlib import Path
 import torch
 import gc
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 import argparse
 from tqdm import tqdm
 
-import logging
-import argparse
+# Short names (from reproduce.sh) -> HuggingFace model id (exp_key uses sanitized form, e.g. / -> _)
+MODEL_SHORT_TO_ID = {
+    "gemma": "google/gemma-3-270m-it",
+    "smollm": "HuggingFaceTB/SmolLM2-360M-Instruct",
+    "llama": "meta-llama/Llama-3.2-1B-Instruct",
+    "qwen": "Qwen/Qwen2.5-0.5B-Instruct",
+}
 
 
 # 1. Get your specific logger by name
@@ -35,11 +40,12 @@ logger.addHandler(handler)
 
 
 class FL_Provenance:
-    def __init__(self, global_model, client_models, tokenizer, layer_config):
+    def __init__(self, global_model, client_models, tokenizer, layer_config, use_gradients=True):
         self.global_model = global_model
         self.client_models = client_models
         self.tokenizer = tokenizer
         self.layer_config = layer_config
+        self.use_gradients = use_gradients
 
     def run_provenance_on_samples(self, dataset_dict, num_samples, client_labels):
         per_client_accuracy = {}
@@ -93,7 +99,8 @@ class FL_Provenance:
         prompt = prepare_prompt(conversation, self.tokenizer)
 
         result = ProvTextGenerator.generate_text(
-            self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config, max_new_tokens=32)
+            self.global_model, self.client_models, self.tokenizer, prompt, self.layer_config,
+            max_new_tokens=32, use_gradients=self.use_gradients)
 
         # print("\nFull Conversation:")
         # print(conversation)
@@ -266,16 +273,43 @@ def rounds_provenance(exp_key, num_test_samples, debug_rounds=[]):
     }
 
 
-def full_cache_provenance(results_dir: Path, num_test_samples: int = 5):
+def _filter_keys_by_model_dataset_rounds(
+    keys: List[str],
+    model: Optional[str] = None,
+    dataset: Optional[str] = None,
+    rounds: Optional[int] = None,
+) -> List[str]:
+    """Return keys that contain the given model, dataset, and (optionally) round count."""
+    out = list(keys)
+    if model:
+        model_id = MODEL_SHORT_TO_ID.get(model.strip().lower(), model)
+        model_in_key = sanitize_key(model_id)
+        out = [k for k in out if model_in_key in k]
+    if dataset:
+        ds = dataset.strip()
+        out = [k for k in out if ds in k]
+    if rounds is not None:
+        round_tag = f"rounds-{rounds}"
+        out = [k for k in out if round_tag in k]
+    return out
+
+
+def full_cache_provenance(
+    results_dir: Path,
+    num_test_samples: int = 5,
+    model: Optional[str] = None,
+    dataset: Optional[str] = None,
+    rounds: Optional[int] = None,
+):
     print(f"{10*'-'} Running Provenance Analysis {10*'-'}")
 
-    for i, exp_key in enumerate(CacheManager.get_completed_experiments_keys()):
-        print(f"[{i}] Key: {exp_key}")
-
-    _ = input("\nPress Enter to start processing all experiment keys...")
-
-    all_keys =  list(CacheManager.get_completed_experiments_keys())
+    all_keys = list(CacheManager.get_completed_experiments_keys())
+    all_keys = _filter_keys_by_model_dataset_rounds(all_keys, model=model, dataset=dataset, rounds=rounds)
     all_keys.reverse()
+
+    for i, exp_key in enumerate(all_keys):
+        print(f"[{i}] Key: {exp_key}")
+    print(f"Processing {len(all_keys)} experiment key(s).")
 
     for i, exp_key in enumerate(all_keys):
         json_path = results_dir / f"provenance_refactored_{exp_key}.json"
@@ -346,29 +380,52 @@ MODEL2LayerConfig = {
 }
 
 
-if __name__ == "__main__":
-    # --- Argument Parsing (No changes needed here) ---
+def _parse_args():
     parser = argparse.ArgumentParser(
-        description='A simple script with adjustable logging.')
-    parser.add_argument(
-        '--log',
-        default='INFO',
-        choices=['DEBUG', 'INFO'],
-        help='Set the logging level for the Prov logger (default: INFO)'
+        description="Run provenance analysis on completed training experiments."
     )
-    args = parser.parse_args()
-    
-    logger.setLevel(args.log.upper())
-    
-    for k in CacheManager.get_completed_experiments_keys():
-        print(f"Completed Experiment Key: {k}")
-    # _ = input("Press Enter to continue...")
+    parser.add_argument(
+        "--log",
+        default="INFO",
+        choices=["DEBUG", "INFO"],
+        help="Logging level for the Prov logger (default: INFO)",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Model short name (gemma|smollm|llama|qwen) or HuggingFace id. Filter cache keys to this model.",
+    )
+    parser.add_argument(
+        "--dataset",
+        default=None,
+        help="Dataset name (e.g. medical, finance). Filter cache keys to experiments with this dataset.",
+    )
+    parser.add_argument(
+        "--rounds",
+        type=int,
+        default=None,
+        help="Number of FL rounds. Filter cache keys to experiments with this many rounds.",
+    )
+    parser.add_argument(
+        "--results_dir",
+        required=True,
+        help="Directory to read/write provenance JSON and plots.",
+    )
+    return parser.parse_args()
 
-    results_dir = Path("results/prov/backdoor/")     
+
+if __name__ == "__main__":
+    args = _parse_args()
+
+    logger.setLevel(args.log.upper())
+
+    results_dir = Path(args.results_dir)
     results_dir.mkdir(parents=True, exist_ok=True)
-    print(f"\n{10*'-'} Testing Different Layer Configs {10*'-'}")
-    # full_cache_provenance(results_dir)
-    
-    debug_dir = Path("results/debug/")
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    single_key_provenance(debug_dir)
+
+    print(f"\n{10*'-'} Provenance (filter: model={args.model}, dataset={args.dataset}, rounds={args.rounds}) {10*'-'}")
+    full_cache_provenance(
+        results_dir,
+        model=args.model,
+        dataset=args.dataset,
+        rounds=args.rounds,
+    )

@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 import torch
@@ -12,11 +13,22 @@ from pathlib import Path
 # Reduce CUDA fragmentation (can help with large allocations)
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
+# Short names (from reproduce.sh) -> HuggingFace model id
+MODEL_SHORT_TO_ID = {
+    "gemma": "google/gemma-3-270m-it",
+    "smollm": "HuggingFaceTB/SmolLM2-360M-Instruct",
+    "llama": "meta-llama/Llama-3.2-1B-Instruct",
+    "qwen": "Qwen/Qwen2.5-0.5B-Instruct",
+}
 
-def _get_experiment_matrix():
+
+def _get_experiment_matrix(model=None, dataset=None, rounds=None):
+    """Build experiment matrix. Defaults are hardcoded; provided args override them."""
     experiments = []
+    # Default FL config; rounds overridden if provided
+    num_rounds = 3 if rounds is None else int(rounds)
     fl_config = {
-        "num_rounds": 3,
+        "num_rounds": num_rounds,
         "num_clients": 6,
         "clients_per_round": 6
     }
@@ -28,15 +40,12 @@ def _get_experiment_matrix():
         "num_gpus": 1
     }
 
-    models = [
-        # {'model_name': "google/gemma-3-270m-it"},
-
-        # {'model_name': "Qwen/Qwen2.5-0.5B-Instruct"},
-        
-        {'model_name': "HuggingFaceTB/SmolLM2-360M-Instruct"},
-
-        # {'model_name': "meta-llama/Llama-3.2-1B-Instruct"},
-    ]
+    # Default: single SmolLM model; if model provided, use it (one model)
+    if model is None:
+        models = [{'model_name': "HuggingFaceTB/SmolLM2-360M-Instruct"}]
+    else:
+        model_id = MODEL_SHORT_TO_ID.get(model.strip().lower(), model)
+        models = [{'model_name': model_id}]
 
     base_ds_config = {
         "samples_per_client": 2048,
@@ -48,14 +57,11 @@ def _get_experiment_matrix():
         "backdoor_clients": ['0', '1']
     }
 
-    # all_ds_paisr = [['medical', 'finance', 'math'],['medical', 'finance', 'math', 'chess'],['medical', 'finance',], ['medical', 'math']]
-
-    all_ds_paisr = [
-        # ['finance'],
-        # ['math'],
-        ['medical'],
-        # ['coding']
-    ]  # , ['math'], ['medical','finance', 'math']]
+    # Default: medical only; if dataset provided, use it (single dataset)
+    if dataset is None:
+        all_ds_paisr = [['medical']]
+    else:
+        all_ds_paisr = [[d.strip() for d in dataset.split(",")]]
     all_ds_configs = []
     for labels in all_ds_paisr:
         ds_config = copy.deepcopy(base_ds_config)
@@ -152,16 +158,19 @@ def single_exp_run(config, exp_dir, max_oom_retries=3):
     raise last_error
 
 
-def run_experiments():
-    experiment_dir = Path("results/train/backdoor/json/")
+def run_experiments(
+    output_dir,
+    model=None,
+    dataset=None,
+    rounds=None,
+):
+    experiment_dir = Path(output_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    all_experiments = _get_experiment_matrix()
+    all_experiments = _get_experiment_matrix(model=model, dataset=dataset, rounds=rounds)
     epochs = 1
     for i, exp in enumerate(all_experiments):
         print(f"{i} Experiment Key: {ConfigManager.generate_exp_key(_generate_experiment_config(exp, use_lora=True, epochs=epochs))}")
-
-    _ = input("Only for test. Press enter to continue.")
 
     for i, exp in enumerate(all_experiments):
         config = _generate_experiment_config(
@@ -170,13 +179,23 @@ def run_experiments():
         print(f"Experiment [{i}/{len(all_experiments)}]")
         single_exp_run(config, experiment_dir)
 
-    # for i, exp in enumerate(all_experiments):
-    #     config = _generate_experiment_config(exp, use_lora=True, epochs=epochs)
-    #     print(f"Experiment [{i}/{len(all_experiments)}]")
-    #     single_exp_run(config)
-
     print(f"\n🎉 All {len(all_experiments)} experiments completed!")
 
 
+def _parse_args():
+    p = argparse.ArgumentParser(description="Train with backdoor for Fig 2 & 3.")
+    p.add_argument("--model", default=None, help="Model short name (gemma|smollm|llama|qwen) or HuggingFace id. Default: SmolLM.")
+    p.add_argument("--dataset", default=None, help="Dataset name(s), comma-separated (e.g. medical, finance). Default: medical.")
+    p.add_argument("--rounds", type=int, default=None, help="Number of FL rounds. Default: 3.")
+    p.add_argument("--output_dir", required=True, help="Directory for result JSONs.")
+    return p.parse_args()
+
+
 if __name__ == "__main__":
-    run_experiments()
+    args = _parse_args()
+    run_experiments(
+        output_dir=args.output_dir,
+        model=args.model,
+        dataset=args.dataset,
+        rounds=args.rounds,
+    )

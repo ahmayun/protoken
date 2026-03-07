@@ -4,6 +4,7 @@ from src.fl.model import get_model_and_tokenizer
 from src.dataset.datasets import get_datasets_dict
 from src.utils.generate import find_inputs_ids_where_response_is_correct, prepare_prompt, generate_text
 from src.provenance.fl_prov import ProvTextGenerator
+from src.run_provenance import _filter_keys_by_model_dataset_rounds
 from pathlib import Path
 import logging
 import argparse
@@ -13,20 +14,28 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-parser = argparse.ArgumentParser(description='RQ3: Computational Overhead Analysis')
-parser.add_argument('--log', default='INFO', choices=['DEBUG', 'INFO'])
-parser.add_argument('--num_samples', type=int, default=5)
-parser.add_argument('--round_num', type=int, default=10)
-parser.add_argument('--layer_interval', type=int, default=2)
-
-args = parser.parse_args()
-
 logger = logging.getLogger("RQ3")
-logger.setLevel(args.log.upper())
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+_handler = logging.StreamHandler()
+_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+logger.addHandler(_handler)
+
+
+def _parse_args():
+    p = argparse.ArgumentParser(description="RQ3: Computational overhead analysis (provenance time vs layers).")
+    p.add_argument("--log", default="INFO", choices=["DEBUG", "INFO"], help="Logging level")
+    p.add_argument("--model", default=None,
+                   help="Model short name (gemma|smollm|llama|qwen) or key. Filter cache to this model.")
+    p.add_argument("--dataset", default=None,
+                   help="Dataset name (e.g. medical, coding). Filter cache to this dataset.")
+    p.add_argument("--round_num", type=int, default=10,
+                   help="FL round to evaluate; also used to filter cache keys.")
+    p.add_argument("--num_samples", type=int, default=5,
+                   help="Number of test samples for timing.")
+    p.add_argument("--output_dir", required=True,
+                   help="Directory for overhead JSON and plots.")
+    p.add_argument("--layer_interval", type=int, default=2,
+                   help="Interval between layer configs (default: 2).")
+    return p.parse_args()
 
 
 def get_total_model_layers(model):
@@ -244,30 +253,34 @@ def run_single_experiment(exp_key, results_dir, round_num=10, num_test_samples=5
 
 
 if __name__ == "__main__":
-    results_dir = Path("results/rq3-overhead")
+    args = _parse_args()
+    logger.setLevel(args.log.upper())
+
+    results_dir = Path(args.output_dir)
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info("="*80)
-    logger.info("RQ3: Computational Overhead Analysis")
-    logger.info("="*80)
-
     all_exp_keys = list(CacheManager.get_completed_experiments_keys())
-    logger.info(f"\nFound {len(all_exp_keys)} completed experiments")
-    
-    print(f"all_exp_keys={all_exp_keys}")
-    
-    selected = [
-        key for key in all_exp_keys 
-        if 'Backdoor-True' in key and any(
-            m in key for m in ['google_gemma',
-                            'HuggingFaceTB_SmolLM', 'meta-llama_Llama', 'Qwen_Qwen']
-        ) and 'coding' in key
-    ]
+    selected = _filter_keys_by_model_dataset_rounds(
+        all_exp_keys,
+        model=args.model,
+        dataset=args.dataset,
+        rounds=args.round_num,
+    )
+    selected = [k for k in selected if "Backdoor-True" in k]
 
-    logger.info(f"Selected {len(selected)} backdoor experiments")
-    logger.info(f"\nParams: round={args.round_num}, samples={args.num_samples}, interval={args.layer_interval}")
+    logger.info("=" * 80)
+    logger.info("RQ3: Computational Overhead Analysis")
+    logger.info("=" * 80)
+    logger.info(f"  Output: {results_dir}")
+    logger.info(f"  Filter: model={args.model}, dataset={args.dataset}, round_num={args.round_num}")
+    logger.info(f"  Params: num_samples={args.num_samples}, layer_interval={args.layer_interval}")
+    logger.info(f"  Matched experiments: {len(selected)}")
+    for i, key in enumerate(selected):
+        logger.info(f"    [{i}] {key}")
 
-    _ = input("\nPress Enter to start...")
+    if not selected:
+        logger.warning("No experiment keys matched. Exiting.")
+        raise SystemExit(1)
 
     all_results = {}
     for i, exp_key in enumerate(selected):
@@ -276,13 +289,17 @@ if __name__ == "__main__":
         logger.info(f"{'#'*80}")
 
         results = run_single_experiment(
-            exp_key, results_dir, args.round_num, args.num_samples, args.layer_interval
+            exp_key,
+            results_dir,
+            round_num=args.round_num,
+            num_test_samples=args.num_samples,
+            layer_interval=args.layer_interval,
         )
         all_results[exp_key] = results
 
     summary = results_dir / f"overhead_analysis/summary_round{args.round_num}.json"
     save_json(all_results, summary)
     logger.info(f"\nSaved summary: {summary}")
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("RQ3 Complete!")
-    logger.info("="*80)
+    logger.info("=" * 80)

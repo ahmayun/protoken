@@ -90,12 +90,13 @@ class HookManager:
         return result
 
 class NeuronProvenance:
-    def __init__(self, gm_acts_grads_dict, c2model, layer_config):
+    def __init__(self, gm_acts_grads_dict, c2model, layer_config, use_gradients=True):
         self.gm_acts_grads_dict = gm_acts_grads_dict
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.c2model = c2model
         self.layer_config = layer_config
+        self.use_gradients = use_gradients
 
     @staticmethod
     def _evaluate_layer(layer, input_tensor):
@@ -105,21 +106,18 @@ class NeuronProvenance:
         return activations
 
     @staticmethod
-    def _calculate_layer_contribution(gm_layer_grads, client2layer_acts, alpha_imp=1):
+    def _calculate_layer_contribution(gm_layer_grads, client2layer_acts, use_gradients=True, alpha_imp=1):
         client2part = {cid: 0.0 for cid in client2layer_acts.keys()}
         _check_anomlies(gm_layer_grads)
         gm_layer_grads = gm_layer_grads.flatten()
+        # When gradients disabled, use ones so only activations (no gradients) drive contribution
+        weights = gm_layer_grads if use_gradients else torch.ones_like(gm_layer_grads).to(device=gm_layer_grads.device)
         for cli in client2part.keys():
             cli_acts = client2layer_acts[cli].flatten()
             _check_anomlies(cli_acts)
             cli_acts = cli_acts.to(dtype=gm_layer_grads.dtype)
-        
-            # cli_part = torch.dot(cli_acts, gm_layer_grads)
-            cli_part = torch.dot(cli_acts, torch.ones_like(gm_layer_grads).to(device=cli_acts.device))
-            
+            cli_part = torch.dot(cli_acts, weights)
             client2part[cli] = cli_part.item()
-        
-        # return _normalize_with_softmax(client2part)
         return client2part
 
     def _calculate_clients_contributions(self, gm_acts_grads_dict, client2layers, device):
@@ -140,7 +138,7 @@ class NeuronProvenance:
                 l, layer_inputs) for cid, l in c2l.items()}
 
             c2contribution_per_layer = NeuronProvenance._calculate_layer_contribution(
-                gm_layer_grads=layer_grads, client2layer_acts=c2acts)
+                gm_layer_grads=layer_grads, client2layer_acts=c2acts, use_gradients=self.use_gradients)
 
             # logger.debug(f"Layer: {key}, Contributions: {c2contribution_per_layer}")
 
@@ -178,7 +176,7 @@ class ProvTextGenerator:
 
     @staticmethod
     def generate_text(model, client2model, tokenizer, prompt, layer_config, max_new_tokens=64,
-                      context_size=2048):
+                      context_size=2048, use_gradients=True):
         terminal_ids = [tokenizer.eos_token_id]
 
         try:
@@ -199,7 +197,7 @@ class ProvTextGenerator:
             temp_id = next_token_id.item()
 
             neuron_prov = NeuronProvenance(
-                token_dict['acts_grads_dict'], client2model, layer_config)
+                token_dict['acts_grads_dict'], client2model, layer_config, use_gradients=use_gradients)
             per_token_contribution_dict = neuron_prov.run()
 
             logger.debug(

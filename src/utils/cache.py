@@ -64,10 +64,12 @@ def _load_rounds_dict(round_key, config):
         
 
 class CacheManager:
-    # print(f"Using TMPFS directory for caches: {tmpfs_dir}")
-    EXPERIMENT_CACHE = "/scratch/ahmad35/_storage/caches/complete_experiment_cache-3"
+    EXPERIMENT_CACHE = os.environ.get(
+        "GENFL_EXPERIMENT_CACHE",
+        "/scratch/ahmad35/_storage/caches/complete_experiment_cache-3",
+    )
 
-     
+
 
     @staticmethod
     def load_experiment_configuration(exp_key):

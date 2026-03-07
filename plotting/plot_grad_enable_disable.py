@@ -1,3 +1,4 @@
+import argparse
 import json
 import pandas as pd
 from pathlib import Path
@@ -148,72 +149,78 @@ def print_gradient_ablation_statistics(plot_df):
     print("\n" + "="*80 + "\n")
 
 
-def plot_gradient_ablation_bar_chart(
-    output_dir,
-    results_dir_with_grad="results/rq2/individual_layers",
-    results_dir_no_grad="results/rq2-grad-disable/individual_layers",
-):
+def plot_gradient_ablation_bar_chart(results_dir, output_dir):
+    """
+    Plot gradient ablation bar chart (RQ2).
+    results_dir: root dir containing enabled/ and disabled/ subdirs (from run_RQ2_layers).
+    output_dir: where to save the figure and CSV.
+    """
+    results_dir = Path(results_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Set matplotlib style
+    # run_RQ2_layers writes to results_dir/enabled/individual_layers and results_dir/disabled/individual_layers
+    results_with_grad = results_dir / "enabled" / "individual_layers"
+    results_no_grad = results_dir / "disabled" / "individual_layers"
+
     fontsize = 20
     setup_plot_style(font_size=fontsize)
 
-    results_with_grad = Path(results_dir_with_grad)
-    results_no_grad = Path(results_dir_no_grad)
+    # Discover paired JSONs: same filename in enabled and disabled (exclude summary file)
+    enabled_files = sorted(
+        p for p in results_with_grad.glob("*_round*.json")
+        if not p.name.startswith("all_experiments_summary")
+    )
+    if not enabled_files:
+        raise FileNotFoundError(f"No experiment *_round*.json files in {results_with_grad}")
 
-    # Collect data for plotting
     x_labels = []
     enabled_accuracies = []
     disabled_accuracies = []
 
-    # Process each model and domain
-    for model_key, model_name in MODEL_NAMES.items():
-        for domain_key, domain_name in DOMAIN_NAMES.items():
-            # Find and load gradient-enabled file
-            pattern_enabled = f"*{model_key}*{domain_key}*_round*.json"
-            enabled_files = list(results_with_grad.glob(pattern_enabled))
-            print(f"pattern_enabled: {pattern_enabled}")
+    for enabled_path in enabled_files:
+        disabled_path = results_no_grad / enabled_path.name
+        if not disabled_path.exists():
+            raise FileNotFoundError(f"Missing disabled counterpart: {disabled_path}")
 
-            if not enabled_files:
-                raise FileNotFoundError(
-                    f"No file found for {model_name} - {domain_name} (enabled)")
+        with open(enabled_path, "r") as f:
+            data_enabled = json.load(f)
+        with open(disabled_path, "r") as f:
+            data_disabled = json.load(f)
 
-            with open(enabled_files[0], 'r') as f:
-                data_enabled = json.load(f)
+        # Mean accuracy over layers (handle layer_X and layer_X_only keys)
+        def _sort_key(name):
+            s = name.replace("layer_", "").replace("_only", "")
+            return int(s) if s.isdigit() else 0
 
-            # Find and load gradient-disabled file
-            pattern_disabled = f"*{model_key}*{domain_key}*_round*.json"
-            disabled_files = list(results_no_grad.glob(pattern_disabled))
+        enabled_accs = [
+            data_enabled["layer_configs_results"][k]["overall_accuracy"]
+            for k in sorted(data_enabled["layer_configs_results"].keys(), key=_sort_key)
+        ]
+        disabled_accs = [
+            data_disabled["layer_configs_results"][k]["overall_accuracy"]
+            for k in sorted(data_disabled["layer_configs_results"].keys(), key=_sort_key)
+        ]
+        overall_enabled = np.mean(enabled_accs)
+        overall_disabled = np.mean(disabled_accs)
 
-            if not disabled_files:
-                raise FileNotFoundError(
-                    f"No file found for {model_name} - {domain_name} (disabled)")
+        # Label from experiment_key: try model + domain for display
+        exp_key = data_enabled.get("experiment_key", "")
+        model_display = exp_key
+        for key, name in MODEL_NAMES.items():
+            if key in exp_key:
+                model_display = name
+                break
+        domain_display = ""
+        for key, name in DOMAIN_NAMES.items():
+            if key in exp_key:
+                domain_display = name
+                break
+        label = f"{model_display}\n{domain_display}" if domain_display else model_display
 
-            with open(disabled_files[0], 'r') as f:
-                data_disabled = json.load(f)
-
-            # Extract accuracies for enabled (layer_X_only format)
-            enabled_accs = []
-            for layer_config in sorted(data_enabled['layer_configs_results'].keys(),
-                                       key=lambda x: int(x.replace('layer_', '').replace('_only', ''))):
-                enabled_accs.append(
-                    data_enabled['layer_configs_results'][layer_config]['overall_accuracy'])
-
-            # Extract accuracies for disabled (layer_X format)
-            disabled_accs = []
-            for layer_config in sorted(data_disabled['layer_configs_results'].keys(),
-                                       key=lambda x: int(x.replace('layer_', ''))):
-                disabled_accs.append(
-                    data_disabled['layer_configs_results'][layer_config]['overall_accuracy'])
-
-            # Calculate overall average across all layers
-            overall_enabled = np.mean(enabled_accs)
-            overall_disabled = np.mean(disabled_accs)
-
-            # Add to lists
-            x_labels.append(f"{model_name}\n{domain_name}")
-            enabled_accuracies.append(overall_enabled)
-            disabled_accuracies.append(overall_disabled)
+        x_labels.append(label)
+        enabled_accuracies.append(overall_enabled)
+        disabled_accuracies.append(overall_disabled)
 
     # Prepare data in long format for seaborn
     data_rows = []
@@ -283,27 +290,24 @@ def plot_gradient_ablation_bar_chart(
                   label=config, linewidth=0.7, alpha=0.85)
         )
     
+    # Reserve top of figure for legend so it doesn't cover bars or value labels
+    plt.tight_layout(rect=[0, 0, 1, 0.82])
     ax.legend(
         handles=legend_elements,
-        loc='upper right',
+        loc='lower center',
+        bbox_to_anchor=(0.5, 0.98),
         frameon=True,
         fancybox=True,
         shadow=True,
         prop={'weight': 'bold', 'size': fontsize},
         ncol=2,
-        bbox_to_anchor=(1.0, 1.1)
     )
 
-    # Optional: Add value labels on bars
     def add_value_labels(ax):
         for container in ax.containers:
-            ax.bar_label(container, fmt='%.1f', padding=3, fontsize=fontsize/1.2, weight='bold', rotation=45)
+            ax.bar_label(container, fmt='%.1f', padding=3, fontsize=fontsize / 1.2, weight='bold', rotation=45)
 
-    # Uncomment to add value labels on bars
     add_value_labels(ax)
-
-    # Adjust layout
-    plt.tight_layout()
 
 
     print(plot_df)
@@ -315,9 +319,17 @@ def plot_gradient_ablation_bar_chart(
 
     
 
-if __name__ == "__main__":
+def _parse_args():
+    p = argparse.ArgumentParser(description="Plot RQ2 gradient enable/disable bar chart.")
+    p.add_argument("--results_dir", required=True,
+                   help="Root results dir containing enabled/ and disabled/ subdirs (from run_RQ2_layers).")
+    p.add_argument("--output_dir", required=True, help="Directory for output figure and CSV.")
+    return p.parse_args()
 
-    print("\n" + "="*60)
-    print("Generating bar chart...")
-    print("="*60)
-    plot_gradient_ablation_bar_chart(output_dir=OUTPUT_DIR)
+
+if __name__ == "__main__":
+    args = _parse_args()
+    print("\n" + "=" * 60)
+    print("Generating gradient ablation bar chart...")
+    print("=" * 60)
+    plot_gradient_ablation_bar_chart(results_dir=args.results_dir, output_dir=args.output_dir)

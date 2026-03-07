@@ -1,6 +1,7 @@
+import argparse
 import json
 import pathlib
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -10,94 +11,127 @@ from plotting.common import (
     TOOL,
     MODEL_NAMES,
     COLORS,
-    OUTPUT_DIR,
     setup_plot_style,
     save_figure,
     apply_axis_aesthetics,
 )
 
-# Path to scalability data
-RESULTS_DIR = pathlib.Path("results/debug")
+# Short names (from reproduce.sh) -> substring that appears in exp_key / filename
+MODEL_SHORT_TO_KEY = {
+    "gemma": "google_gemma-3-270m-it",
+    "smollm": "HuggingFaceTB_SmolLM2-360M-Instruct",
+    "llama": "meta-llama_Llama-3.2-1B-Instruct",
+    "qwen": "Qwen_Qwen2.5-0.5B-Instruct",
+}
 
 
-def load_scalability_data() -> Dict[str, dict]:
-    """Load both Gemma and Qwen scalability JSON files."""
+def _parse_args():
+    p = argparse.ArgumentParser(description="Plot scalability results (Fig 6 & 7).")
+    p.add_argument("--model", default=None, help="Model short name (gemma|smollm|llama|qwen) or key. Filter to this model.")
+    p.add_argument("--dataset", default=None, help="Dataset name (e.g. medical, coding). Filter to this dataset.")
+    p.add_argument("--rounds", type=int, default=None, help="Round count (for filtering and round limit in plots). Default: 16.")
+    p.add_argument("--results_dir", required=True, help="Dir containing provenance_refactored_*.json (or scalability/json under it).")
+    p.add_argument("--output_dir", required=True, help="Directory for output figures.")
+    return p.parse_args()
+
+
+def load_scalability_data(
+    results_dir: pathlib.Path,
+    model_filter: Optional[str] = None,
+    dataset_filter: Optional[str] = None,
+    rounds_filter: Optional[int] = None,
+) -> Dict[str, dict]:
+    """Load provenance scalability JSONs from results_dir. Optionally filter by model/dataset/rounds in filename."""
+    results_dir = pathlib.Path(results_dir)
+    # Provenance files may be in results_dir, under results_dir/scalability/json, or in parent (e.g. run_provenance writes to train/backdoor/, training writes to train/backdoor/scalability/json/)
+    search_dirs = [results_dir]
+    if (results_dir / "scalability" / "json").exists():
+        search_dirs.append(results_dir / "scalability" / "json")
+    if results_dir.name == "json" and results_dir.parent.name == "scalability":
+        search_dirs.append(results_dir.parent.parent)
+
+    candidates = []
+    for d in search_dirs:
+        candidates.extend(d.glob("provenance_refactored_*.json"))
+        candidates.extend(d.glob("single_provenance_refactored_*.json"))
+
+    if model_filter:
+        model_in_key = MODEL_SHORT_TO_KEY.get(model_filter.strip().lower(), model_filter.strip().replace("/", "_"))
+    else:
+        model_in_key = None
+    if dataset_filter:
+        ds = dataset_filter.strip()
+    else:
+        ds = None
+    if rounds_filter is not None:
+        round_tag = f"rounds-{rounds_filter}"
+    else:
+        round_tag = None
+
     data = {}
-    
-    # Define the two model files
-    files = {
-        # "google_gemma-3-270m-it": RESULTS_DIR / "single_provenance_refactored_[google_gemma-3-270m-it][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json",
-        # "Qwen_Qwen2.5-0.5B-Instruct": RESULTS_DIR / "single_provenance_refactored_[Qwen_Qwen2.5-0.5B-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['coding']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json",
-        "HuggingFaceTB_SmolLM2-360M-Instruct": RESULTS_DIR / "single_provenance_refactored_[HuggingFaceTB_SmolLM2-360M-Instruct][rounds-16][epochs-1][clients55-per-round-10][Datasets-['medical']-None][partitioning-iid][Backdoor-True][Unsloth-False][Lora-False].json"
-    }
-    
-    for model_key, filepath in files.items():
-        if filepath.exists():
-            with open(filepath, 'r') as f:
-                data[model_key] = json.load(f)
-                print(f"Loaded: {MODEL_NAMES[model_key]}")
+    for path in candidates:
+        name = path.name
+        if model_in_key and model_in_key not in name:
+            continue
+        if ds and ds not in name:
+            continue
+        if round_tag and round_tag not in name:
+            continue
+        # Derive model_key from filename (first bracket segment)
+        if name.startswith("provenance_refactored_"):
+            exp_key = name[len("provenance_refactored_"): -len(".json")]
+        elif name.startswith("single_provenance_refactored_"):
+            exp_key = name[len("single_provenance_refactored_"): -len(".json")]
         else:
-            print(f"Warning: File not found: {filepath}")
-    
+            continue
+        model_key = exp_key.split("][")[0].replace("[", "") if "][" in exp_key else exp_key
+        with open(path, "r") as f:
+            data[model_key] = json.load(f)
+        print(f"Loaded: {MODEL_NAMES.get(model_key, model_key)} from {path.name}")
+        break  # one model-dataset combo
     return data
 
 
-def extract_training_metrics(data: dict) -> Tuple[List[int], List[float], List[float]]:
-    """Extract benign and poison accuracy from training data (rounds 0-15 only)."""
+def extract_training_metrics(data: dict, max_round: int = 16) -> Tuple[List[int], List[float], List[float]]:
+    """Extract benign and poison accuracy from training data (rounds 0 to max_round-1)."""
     rounds = []
     benign_accs = []
     poison_accs = []
-    
     training = data["training"]
     for round_data in training:
         round_num = round_data["round"]
-        
-        # Limit to rounds 0-15
-        if round_num > 15:
+        if round_num >= max_round:
             continue
-        
         benign_metrics = round_data["metrics_per_dataset"]["benign"]
         poison_metrics = round_data["metrics_per_dataset"]["poison"]
-        
         rounds.append(round_num)
         benign_accs.append(benign_metrics["eval_mean_token_accuracy"] * 100)
         poison_accs.append(poison_metrics["eval_mean_token_accuracy"] * 100)
-    
     return rounds, benign_accs, poison_accs
 
 
-def extract_provenance_accuracy(data: dict) -> Tuple[List[int], List[float]]:
-    """Extract provenance attribution accuracy per round (rounds 1-15 only)."""
+def extract_provenance_accuracy(data: dict, max_round: int = 16) -> Tuple[List[int], List[float]]:
+    """Extract provenance attribution accuracy per round (rounds 1 to max_round-1)."""
     rounds = []
     accuracies = []
-    
     provenance = data["provenance"]
     for round_str, round_data in sorted(provenance.items(), key=lambda x: int(x[0])):
         round_num = int(round_str)
-        
-        # Limit to rounds 1-15
-        if round_num > 15:
+        if round_num >= max_round:
             continue
-            
         rounds.append(round_num)
         accuracies.append(round_data["overall_accuracy"])
-    
     return rounds, accuracies
 
 
-def extract_client_contributions(data: dict) -> pd.DataFrame:
-    """Extract client contribution probabilities for boxplot visualization."""
+def extract_client_contributions(data: dict, max_round: int = 16) -> pd.DataFrame:
+    """Extract client contribution probabilities for boxplot (malicious 0-24, benign 25-54)."""
     records = []
-    
     provenance = data["provenance"]
-    # Malicious clients are 0-24, benign clients are 25-54
     for round_str, round_data in provenance.items():
         round_num = int(round_str)
-        
-        # Limit to rounds 1-15
-        if round_num > 15:
+        if round_num >= max_round:
             continue
-            
         for result in round_data["detailed_results"]:
             client2part = result["client2part"]
             for client, prob in client2part.items():
@@ -106,247 +140,193 @@ def extract_client_contributions(data: dict) -> pd.DataFrame:
                     "round": round_num,
                     "client": client_id,
                     "probability": prob,
-                    "type": "malicious" if client_id < 25 else "benign"
+                    "type": "malicious" if client_id < 25 else "benign",
                 })
-    
     return pd.DataFrame(records)
 
 
-def print_scalability_statistics(data: Dict[str, dict]):
-    """Print comprehensive scalability statistics."""
-    print("\n" + "="*80)
-    print("RQ4 SCALABILITY STATISTICS")
-    print("="*80)
+def print_scalability_statistics(data: Dict[str, dict], max_round: int = 16):
+    """Print scalability statistics for loaded model(s)."""
+    print("\n" + "=" * 80)
+    print("SCALABILITY STATISTICS")
+    print("=" * 80)
     print("\nExperimental Setup:")
     print("  Total Clients: 55")
     print("  Clients per Round: 10")
-    print("  Total Rounds: 16")
+    print(f"  Total Rounds: {max_round}")
     print("  Backdoor Clients: 25 (clients 0-24)")
     print("  Samples per Client: 200")
-    
-    for model_key in [
-        # "google_gemma-3-270m-it", 
-        # "Qwen_Qwen2.5-0.5B-Instruct", 
-        "HuggingFaceTB_SmolLM2-360M-Instruct"]:
-        if model_key not in data:
-            continue
-        
+
+    for model_key in data:
         model_data = data[model_key]
-        model_name = MODEL_NAMES[model_key]
-        
+        model_name = MODEL_NAMES.get(model_key, model_key)
+        train_rounds, benign_accs, poison_accs = extract_training_metrics(model_data, max_round)
+        prov_rounds, prov_accs = extract_provenance_accuracy(model_data, max_round)
+        overall_prov_acc = model_data.get("across_all_rounds_accuracy", np.mean(prov_accs) if prov_accs else 0)
+
         print(f"\n{'='*80}")
         print(f"{model_name}")
-        print("="*80)
-        
-        # Extract metrics
-        train_rounds, benign_accs, poison_accs = extract_training_metrics(model_data)
-        prov_rounds, prov_accs = extract_provenance_accuracy(model_data)
-        overall_prov_acc = model_data["across_all_rounds_accuracy"]
-        
-        # Training metrics
-        print("\nTraining Metrics:")
-        print(f"  Initial Benign Accuracy: {benign_accs[0]:.2f}%")
-        print(f"  Final Benign Accuracy: {benign_accs[-1]:.2f}%")
-        print(f"  Initial Backdoor Accuracy: {poison_accs[0]:.2f}%")
-        print(f"  Final Backdoor Accuracy: {poison_accs[-1]:.2f}%")
-        
-        # Provenance metrics
+        print("=" * 80)
+        if benign_accs and poison_accs:
+            print("\nTraining Metrics:")
+            print(f"  Initial Benign Accuracy: {benign_accs[0]:.2f}%")
+            print(f"  Final Benign Accuracy: {benign_accs[-1]:.2f}%")
+            print(f"  Initial Backdoor Accuracy: {poison_accs[0]:.2f}%")
+            print(f"  Final Backdoor Accuracy: {poison_accs[-1]:.2f}%")
         print(f"\n{TOOL} Provenance Metrics:")
         print(f"  Overall Accuracy (all rounds): {overall_prov_acc:.2f}%")
-        print(f"  Per-Round Accuracy Range: {min(prov_accs):.2f}% - {max(prov_accs):.2f}%")
-        print(f"  Mean Per-Round Accuracy: {np.mean(prov_accs):.2f}%")
-        print(f"  Rounds with 100% Accuracy: {sum(1 for acc in prov_accs if acc == 100.0)}/{len(prov_accs)}")
-        
-        # Detailed per-round
-        print(f"\n  Per-Round Breakdown:")
-        for round_num, acc in zip(prov_rounds, prov_accs):
-            print(f"    Round {round_num:2d}: {acc:6.2f}%")
-    
-    print("\n" + "="*80)
-    print("KEY FINDINGS")
-    print("="*80)
-    print(f"\n✓ {TOOL} successfully scales to 55 clients (vs 6 clients in RQ1)")
-    print(f"✓ Maintains high provenance accuracy with 25 malicious clients")
-    print(f"✓ Both models converge successfully in federated training")
-    print(f"✓ Backdoor injection works effectively at scale")
-    print("\n" + "="*80 + "\n")
+        if prov_accs:
+            print(f"  Per-Round Accuracy Range: {min(prov_accs):.2f}% - {max(prov_accs):.2f}%")
+            print(f"  Mean Per-Round Accuracy: {np.mean(prov_accs):.2f}%")
+            print(f"  Rounds with 100% Accuracy: {sum(1 for acc in prov_accs if acc == 100.0)}/{len(prov_accs)}")
+            print(f"\n  Per-Round Breakdown:")
+            for r, acc in zip(prov_rounds, prov_accs):
+                print(f"    Round {r:2d}: {acc:6.2f}%")
+    print("\n" + "=" * 80 + "\n")
 
 
-def plot_scalability_results(data: Dict[str, dict]):
-    """Create 1x2 grid with all metrics combined per model (matching RQ1 style)."""
-    fontsize = 25
+def plot_scalability_results(data: Dict[str, dict], output_dir: pathlib.Path, max_round: int = 16):
+    """Create plot(s) with provenance + training metrics per model (single panel if one model)."""
+    single = len(data) == 1
+    fontsize = 18 if single else 25
     setup_plot_style(font_size=fontsize)
-    
-    fig, axes = plt.subplots(1, 2, figsize=(20, 6))
-    
-    model_keys = [
-        # "google_gemma-3-270m-it", 
-        # "Qwen_Qwen2.5-0.5B-Instruct",
-        "HuggingFaceTB_SmolLM2-360M-Instruct"]
-    
+    model_keys = list(data.keys())
+    if not model_keys:
+        return
+    ncols = 1 if single else 2
+    fig, axes = plt.subplots(1, ncols, figsize=(8 if single else 20, 6))
+    if single:
+        axes = [axes]
     legend_handles = []
     legend_labels = []
-    
+
     for idx, model_key in enumerate(model_keys):
-        if model_key not in data:
-            print(f"Warning: Data not found for {model_key}")
-            continue
-        
         model_data = data[model_key]
-        model_name = MODEL_NAMES[model_key]
-        
-        # Extract data
-        train_rounds, benign_accs, poison_accs = extract_training_metrics(model_data)
-        prov_rounds, prov_accs = extract_provenance_accuracy(model_data)
-        
-        # Plot all three metrics in one subplot
+        model_name = MODEL_NAMES.get(model_key, model_key)
+        train_rounds, benign_accs, poison_accs = extract_training_metrics(model_data, max_round)
+        prov_rounds, prov_accs = extract_provenance_accuracy(model_data, max_round)
+
         ax = axes[idx]
-        
-        # ProToken attribution accuracy (blue circles)
-        h1 = ax.plot(prov_rounds, prov_accs, marker='o', linewidth=2.5,
-                     markersize=8, color=COLORS["attribution"],
-                     label=f"{TOOL} Attribution Accuracy")
-        
-        # Benign mean token accuracy (orange squares, solid)
-        h2 = ax.plot(train_rounds, benign_accs, marker='s', linewidth=2.5, 
-                     markersize=8, linestyle='-', color='#FF9B42',
-                     label="LLM (G) - Benign Mean Token Accuracy")
-        
-        # Backdoor mean token accuracy (red triangles, dashed)
-        h3 = ax.plot(train_rounds, poison_accs, marker='^', linewidth=2.5,
-                     markersize=8, linestyle='--', color=COLORS["token_acc"],
-                     label="LLM (G) - Backdoor Mean Token Accuracy")
-        
+        h1 = ax.plot(prov_rounds, prov_accs, marker="o", linewidth=2.5, markersize=8,
+                     color=COLORS["attribution"], label=f"{TOOL} Attribution Accuracy")
+        h2 = ax.plot(train_rounds, benign_accs, marker="s", linewidth=2.5, markersize=8,
+                     linestyle="-", color="#FF9B42", label="LLM (G) - Benign Mean Token Accuracy")
+        h3 = ax.plot(train_rounds, poison_accs, marker="^", linewidth=2.5, markersize=8,
+                     linestyle="--", color=COLORS["token_acc"], label="LLM (G) - Backdoor Mean Token Accuracy")
         ax.set_ylim(10, 105)
-        ax.set_title(f"{model_name}", fontweight='bold', fontsize=fontsize)
-        apply_axis_aesthetics(ax, xlabel="Federated Round", 
-                            ylabel="Accuracy (%)",
-                            row=0, col=idx, nrows=1, ncols=2)
-        
-        # Collect legend handles from first model only
+        ax.set_title(f"{model_name}", fontweight="bold", fontsize=fontsize + 2)
+        ax.grid(True, alpha=0.3, linestyle="--", axis="y", zorder=0)
+        ax.set_axisbelow(True)
+        apply_axis_aesthetics(ax, xlabel="Federated Round", ylabel="Accuracy (%)",
+                            row=0, col=idx, nrows=1, ncols=ncols)
         if idx == 0:
             legend_handles = h1 + h2 + h3
             legend_labels = [
                 f"{TOOL} Attribution Accuracy",
                 "LLM - Benign Mean Token Accuracy",
-                "LLM - Backdoor Mean Token Accuracy"
+                "LLM - Backdoor Mean Token Accuracy",
             ]
-    
-    # Create combined legend
-    fig.legend(legend_handles, legend_labels, loc='center',
-               ncol=2, frameon=True, bbox_to_anchor= (0.54, 0.35),
-              prop={'weight': 'bold', 'size': fontsize}, framealpha=0.9)
-    
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    
-    save_figure(fig, "scalability_results")
+
+    fig.legend(legend_handles, legend_labels, loc="lower center", ncol=3, frameon=True,
+               bbox_to_anchor=(0.5, 1.02), prop={"weight": "bold", "size": fontsize}, framealpha=0.95)
+    plt.tight_layout(rect=[0, 0, 1, 0.88])
+    output_dir = pathlib.Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    save_figure(fig, "scalability_results", output_dir=output_dir)
 
 
-def plot_scalability_boxplots(data: Dict[str, dict]):
-    """Create 1x2 aggregated boxplot showing malicious vs benign client distributions."""
-    fontsize = 25
+def plot_scalability_boxplots(data: Dict[str, dict], output_dir: pathlib.Path, max_round: int = 16):
+    """Create aggregated boxplot(s): malicious vs benign client distributions (single panel if one model)."""
+    single = len(data) == 1
+    fontsize = 18 if single else 25
     setup_plot_style(font_size=fontsize)
-    
-    fig, axes = plt.subplots(1, 2, figsize=(20, 6))
-    
-    model_keys = [
-        # "google_gemma-3-270m-it", 
-        #           "Qwen_Qwen2.5-0.5B-Instruct", 
-                  "HuggingFaceTB_SmolLM2-360M-Instruct"]
-    
-    legend_handles = []
-    legend_labels = []
-    
+    model_keys = list(data.keys())
+    if not model_keys:
+        return
+    ncols = 1 if single else 2
+    fig, axes = plt.subplots(1, ncols, figsize=(8 if single else 20, 6))
+    if single:
+        axes = [axes]
+
     for idx, model_key in enumerate(model_keys):
-        if model_key not in data:
-            print(f"Warning: Data not found for {model_key}")
-            continue
-        
         model_data = data[model_key]
-        model_name = MODEL_NAMES[model_key]
-        
-        # Extract client contributions (already grouped by type)
-        df = extract_client_contributions(model_data)
+        model_name = MODEL_NAMES.get(model_key, model_key)
+        df = extract_client_contributions(model_data, max_round)
         if df.empty:
             print(f"Warning: No contribution data for {model_name}, skipping boxplot")
             continue
-        df['probability_log'] = np.log10(df['probability'].clip(lower=1e-16))
-
-        # Debug: data summary for boxplot
-        print(f"\n[DEBUG] {model_name} (panel {idx}):")
-        print(f"  Rows: {len(df)}")
-        print(f"  Types: {df['type'].value_counts().to_dict()}")
-        print(f"  probability raw: min={df['probability'].min():.6f}, max={df['probability'].max():.6f}, unique count={df['probability'].nunique()}")
-        print(f"  probability_log: min={df['probability_log'].min():.4f}, max={df['probability_log'].max():.4f}, unique count={df['probability_log'].nunique()}")
-        for t in ['malicious', 'benign']:
-            sub = df[df['type'] == t]
-            if len(sub) > 0:
-                print(f"  {t}: n={len(sub)}, prob_log unique={sorted(sub['probability_log'].unique())[:10]}{'...' if sub['probability_log'].nunique() > 10 else ''}")
+        df["probability_log"] = np.log10(df["probability"].clip(lower=1e-16))
 
         ax = axes[idx]
-        
-        # Create aggregated boxplot: just 2 boxes (malicious vs benign)
-        palette = {
-            "malicious": COLORS["malicious"],
-            "benign": COLORS["benign"]
-        }
-        
-        # Use hue so palette is applied (fixes deprecation and ensures colors show)
-        sns.boxplot(data=df, x='type', y='probability_log', hue='type',
-                   palette=palette, ax=ax, linewidth=2, width=0.6,
-                   order=['malicious', 'benign'], legend=False)
-        
-        ax.set_title(f"{model_name}", fontweight='bold', fontsize=fontsize)
-        
-        # Set y-axis with log scale
+        malicious_vals = df[df["type"] == "malicious"]["probability_log"].values
+        benign_vals = df[df["type"] == "benign"]["probability_log"].values
+        if len(malicious_vals) == 0:
+            malicious_vals = np.array([np.nan])
+        if len(benign_vals) == 0:
+            benign_vals = np.array([np.nan])
+        bp = ax.boxplot(
+            [malicious_vals, benign_vals],
+            positions=[0, 1],
+            widths=0.5,
+            patch_artist=True,
+            showfliers=True,
+            flierprops=dict(marker="o", markerfacecolor="none", markeredgecolor="gray", markersize=4),
+            boxprops=dict(linewidth=1.5),
+            medianprops=dict(linewidth=2, color="black"),
+            whiskerprops=dict(linewidth=1.5),
+            capprops=dict(linewidth=1.5),
+        )
+        bp["boxes"][0].set_facecolor(COLORS["malicious"])
+        bp["boxes"][0].set_edgecolor("black")
+        bp["boxes"][1].set_facecolor(COLORS["benign"])
+        bp["boxes"][1].set_edgecolor("black")
+
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(["Responsible\n(0-24)", "Non-Responsible\n(25-54)"])
+        ax.set_title(f"{model_name}", fontweight="bold", fontsize=fontsize + 2)
         yticks = [-15, -12, -9, -6, -3, 0]
         ax.set_yticks(yticks)
         ax.set_yticklabels([f"$10^{{{t}}}$" for t in yticks])
         ax.set_ylim(-16, 1)
-        
-        # Set x-axis labels only when we have 2 ticks (avoids set_ticklabels warning)
-        xticks = ax.get_xticks()
-        if len(xticks) == 2:
-            ax.set_xticklabels(['Responsible\n(0-24)', 'Non-Responsible\n(25-54)'])
-        
-        apply_axis_aesthetics(ax, xlabel="Client Type", 
-                            ylabel="Contribution\nProbability (log)",
-                            row=0, col=idx, nrows=1, ncols=2)
-        
-        # Collect legend handles from first model only
-        if idx == 0:
-            malicious_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["malicious"])
-            benign_patch = plt.Rectangle((0, 0), 1, 1, fc=COLORS["benign"])
-            legend_handles = [malicious_patch, benign_patch]
-            legend_labels = ['Responsible Clients (0-24)', 'Non-Responsible Clients (25-54)']
-    
-    # # Create combined legend
-    # fig.legend(legend_handles, legend_labels, loc='upper center',
-    #           bbox_to_anchor=(0.5, 1.01), ncol=2, frameon=True,
-    #           prop={'weight': 'bold', 'size': fontsize}, framealpha=0.9)
-    
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    
-    save_figure(fig, "scalability_probability_boxplots")
+        ax.grid(True, alpha=0.3, linestyle="--", axis="y", zorder=0)
+        ax.set_axisbelow(True)
+        apply_axis_aesthetics(ax, xlabel="Client Type", ylabel="Contribution probability (log)",
+                            row=0, col=idx, nrows=1, ncols=ncols)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
+    output_dir = pathlib.Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    save_figure(fig, "scalability_probability_boxplots", output_dir=output_dir)
 
 
 if __name__ == "__main__":
-    print("="*80)
-    print("RQ4: Scalability Evaluation")
-    print("="*80)
-    
-    print("\nLoading scalability data...")
-    data = load_scalability_data()
-    print(f"Loaded data for {len(data)} models")
-    
-    # Print comprehensive statistics
-    print_scalability_statistics(data)
-    
-    print("\nGenerating scalability plots...")
-    plot_scalability_results(data)
-    
-    print("\nGenerating probability distribution boxplots...")
-    plot_scalability_boxplots(data)
-    
+    args = _parse_args()
+    results_dir = pathlib.Path(args.results_dir)
+    output_dir = pathlib.Path(args.output_dir)
+    max_round = args.rounds if args.rounds is not None else 16
+
+    print("=" * 80)
+    print("Scalability Evaluation (Fig 6 & 7)")
+    print("=" * 80)
+    print(f"\nLoading from: {results_dir}")
+    data = load_scalability_data(
+        results_dir,
+        model_filter=args.model,
+        dataset_filter=args.dataset,
+        rounds_filter=args.rounds,
+    )
+    if not data:
+        print("No matching provenance JSONs found. Exiting.")
+        raise SystemExit(1)
+    print(f"Loaded data for {len(data)} model(s)")
+
+    print_scalability_statistics(data, max_round=max_round)
+
+    print("Generating scalability plots...")
+    plot_scalability_results(data, output_dir=output_dir, max_round=max_round)
+
+    print("Generating probability distribution boxplots...")
+    plot_scalability_boxplots(data, output_dir=output_dir, max_round=max_round)
+
     print("\n✓ Scalability analysis complete!")
-    print(f"Output saved to: {OUTPUT_DIR.absolute()}")
+    print(f"Output saved to: {output_dir.absolute()}")
