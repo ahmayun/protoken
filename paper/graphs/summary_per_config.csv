@@ -1,2 +1,0 @@
-Model,Domain,Mean_Acc,Min_Acc,Max_Acc,Configs_100,Mal_Prob,Ben_Prob,Separation
-SmolLM,Medical,100.0,100.0,100.0,1,0.4998847333093484,5.7634169673933165e-05,3.9381898326870854

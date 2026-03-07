@@ -1,5 +1,0 @@
-Model-Dataset,Accuracy,Configuration
-"SmolLM
-Medical",43.484848484848484,ProToken Gradients Enabled
-"SmolLM
-Medical",100.0,ProToken Gradients Disabled
