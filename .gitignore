@@ -181,4 +181,4 @@ results/debug/
 arch.txt
 plot.sh
 useful_commands.sh
-
+tests/
