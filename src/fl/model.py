@@ -5,15 +5,23 @@ from peft import get_peft_model_state_dict, set_peft_model_state_dict, LoraConfi
 from collections import OrderedDict
 
 
-model_name2tokenizer = {
-    'google/gemma-3-1b-pt': AutoTokenizer.from_pretrained('google/gemma-3-1b-it'),
-    'google/gemma-3-270m': AutoTokenizer.from_pretrained('google/gemma-3-270m-it'),
-    'meta-llama/Llama-3.2-1B': AutoTokenizer.from_pretrained('meta-llama/Llama-3.2-1B-Instruct'),
+# Lazy mappings: only model IDs (strings). No HuggingFace loading until a model is requested.
+MODEL_NAME_TO_TOKENIZER_ID = {
+    'google/gemma-3-1b-pt': 'google/gemma-3-1b-it',
+    'google/gemma-3-270m': 'google/gemma-3-270m-it',
+    'meta-llama/Llama-3.2-1B': 'meta-llama/Llama-3.2-1B-Instruct',
 }
 
-model2unsloth_chat_template = {
-    'google/gemma-3-270m-it': 'gemma-3'
+MODEL_NAME_TO_UNSLOTH_CHAT_TEMPLATE = {
+    'google/gemma-3-270m-it': 'gemma-3',
 }
+
+
+def _get_tokenizer_for_model(model_name: str):
+    """Load tokenizer only when this model is explicitly requested (avoids HF auth at import)."""
+    if model_name in MODEL_NAME_TO_TOKENIZER_ID:
+        return AutoTokenizer.from_pretrained(MODEL_NAME_TO_TOKENIZER_ID[model_name])
+    raise ValueError(f"Tokenizer for model {model_name} not found. Add it to MODEL_NAME_TO_TOKENIZER_ID in fl/model.py.")
 
 
 def _get_unsloth_model_and_tokenizer(config):
@@ -28,8 +36,9 @@ def _get_unsloth_model_and_tokenizer(config):
 
     model, tokenizer = FastModel.from_pretrained(**model_config)
 
-    tokenizer = get_chat_template(
-        tokenizer, chat_template=model2unsloth_chat_template[model_config['model_name']])
+    chat_template = MODEL_NAME_TO_UNSLOTH_CHAT_TEMPLATE.get(model_config['model_name'])
+    if chat_template is not None:
+        tokenizer = get_chat_template(tokenizer, chat_template=chat_template)
 
     return model, tokenizer
 
@@ -44,8 +53,7 @@ def get_model_and_tokenizer(config):
     if model_config['model_name'].endswith('-it') or model_config['model_name'].endswith('-Instruct'):
         tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
     else:
-        tokenizer = model_name2tokenizer[model_config['model_name']]
-        raise ValueError(f"Tokenizer for model {model_config['model_name']} not found.")
+        tokenizer = _get_tokenizer_for_model(model_config['model_name'])
 
     if config['use_lora']:
         model = get_peft_model(model, LoraConfig(**config['lora_config']))
