@@ -5,66 +5,114 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------------------
-# TOP-LEVEL CONFIGURATION — edit these before running
+# DEFAULTS
 # ------------------------------------------------------------------------------
-
-# Number of federated rounds to train
 ROUNDS=10
 SCALABILITY_ROUNDS=16
-
-# Model and dataset combo — used for all figures including scalability (Fig 6 & 7)
-MODEL="qwen"       # e.g. gemma | smollm | llama | qwen
-DATASET="coding"   # e.g. medical | finance | math | coding
-
-# Number of samples for RQ2 (Fig 4) and RQ3 (Fig 5) evaluations
+MODEL="qwen"
+DATASET="coding"
 RQ2_SAMPLES=20
 RQ3_SAMPLES=20
-
-# Experiment cache directory (used by CacheManager; default if unset)
-export GENFL_EXPERIMENT_CACHE="${GENFL_EXPERIMENT_CACHE:-/scratch/ahmad35/_storage/caches/complete_experiment_cache-4}"
-
-# Figure groups to run — set to 0 to skip a group
-RUN_FIG_2_3=0   # Main accuracy results (requires training + provenance)
-RUN_FIG_4=0     # Gradient enable/disable (RQ2)
-RUN_FIG_5=0     # Overhead / tractability (RQ3)
-RUN_FIG_6_7=1   # Scalability (requires separate training + provenance)
+RUN_FIG_2_3=0
+RUN_FIG_4=0
+RUN_FIG_5=0
+RUN_FIG_6_7=0
 
 # ------------------------------------------------------------------------------
-# DIRECTORY SETUP
-# Timestamped root keeps runs from clobbering each other.
-# Each figure group gets its own results subdir.
-# All plots land in a matching timestamped subdir under paper/graphs/.
+# ARGUMENT PARSING
 # ------------------------------------------------------------------------------
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --rounds)
+            ROUNDS="$2"
+            shift 2
+            ;;
+        --scalability-rounds)
+            SCALABILITY_ROUNDS="$2"
+            shift 2
+            ;;
+        --model)
+            MODEL="$2"
+            shift 2
+            ;;
+        --dataset)
+            DATASET="$2"
+            shift 2
+            ;;
+        --rq2-samples)
+            RQ2_SAMPLES="$2"
+            shift 2
+            ;;
+        --rq3-samples)
+            RQ3_SAMPLES="$2"
+            shift 2
+            ;;
+        --cache)
+            export GENFL_EXPERIMENT_CACHE="$2"
+            shift 2
+            ;;
+        --rq1)
+            RUN_FIG_2_3=1
+            shift
+            ;;
+        --rq2)
+            RUN_FIG_4=1
+            shift
+            ;;
+        --rq3)
+            RUN_FIG_5=1
+            shift
+            ;;
+        --rq4)
+            RUN_FIG_6_7=1
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS] [FLAGS]"
+            echo ""
+            echo "Options:"
+            echo "  --rounds N              Federated rounds (default: 10)"
+            echo "  --scalability-rounds N  Rounds for scalability (default: 16)"
+            echo "  --model NAME            Model: gemma|smollm|llama|qwen (default: qwen)"
+            echo "  --dataset NAME          Dataset: medical|finance|math|coding (default: coding)"
+            echo "  --rq2-samples N         Samples for RQ2/Fig4 (default: 20)"
+            echo "  --rq3-samples N         Samples for RQ3/Fig5 (default: 20)"
+            echo "  --cache DIR             Experiment cache (default: /tmp/genfl_experiment_cache)"
+            echo ""
+            echo "Flags (which RQs to run):"
+            echo "  --rq1   Fig 2 & 3 — Main accuracy + provenance"
+            echo "  --rq2   Fig 4 — Gradient enable/disable"
+            echo "  --rq3   Fig 5 — Overhead / tractability"
+            echo "  --rq4   Fig 6 & 7 — Scalability"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
 
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-RESULTS_ROOT="results/${TIMESTAMP}"
-GRAPHS_DIR="results/${TIMESTAMP}/graphs"
+export GENFL_EXPERIMENT_CACHE="${GENFL_EXPERIMENT_CACHE:-/tmp/genfl_experiment_cache}"
 
-RESULTS_FIG23="${RESULTS_ROOT}/rq1-fig2-fig3"
-RESULTS_FIG4="${RESULTS_ROOT}/rq2-fig4"
-RESULTS_FIG5="${RESULTS_ROOT}/rq3-fig5"
-RESULTS_FIG67="${RESULTS_ROOT}/rq4-fig6-fig7"
-
-mkdir -p \
-    "${RESULTS_FIG23}" \
-    "${RESULTS_FIG4}" \
-    "${RESULTS_FIG5}" \
-    "${RESULTS_FIG67}" \
-    "${GRAPHS_DIR}"
+GRAPHS_DIR="results/graphs"
 
 echo "=================================================="
-echo "  ProToken reproduction run: ${TIMESTAMP}"
+echo "  ProToken reproduction"
 echo "  Model: ${MODEL}  |  Dataset: ${DATASET}  |  Rounds: ${ROUNDS}"
-echo "  Results root : ${RESULTS_ROOT}"
-echo "  Graphs dir   : ${GRAPHS_DIR}"
+echo "  RQ1: ${RUN_FIG_2_3}  RQ2: ${RUN_FIG_4}  RQ3: ${RUN_FIG_5}  RQ4: ${RUN_FIG_6_7}"
 echo "=================================================="
 
 # ------------------------------------------------------------------------------
 # Fig 2, Fig 3 — Main accuracy + client contribution distributions
 # Requires: training with backdoor, provenance run, then plotting.
-# edit file: rounds = 3, pick model, pick dataset
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_2_3}" -eq 1 ]]; then
+    RESULTS_FIG23="results/rq1-fig2-fig3"
+    rm -rf "${RESULTS_FIG23}"
+    mkdir -p "${RESULTS_FIG23}"
+    mkdir -p "${GRAPHS_DIR}/rq1"
+
     echo ""
     echo "--- Fig 2 & 3: Main results (train + provenance) ---"
 
@@ -89,9 +137,13 @@ fi
 
 # ------------------------------------------------------------------------------
 # Fig 4 — Gradient weighting enable/disable (RQ2: Relevance Filtering)
-# change output dir and line 117/118 in fl_prov.py
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_4}" -eq 1 ]]; then
+    RESULTS_FIG4="results/rq2-fig4"
+    rm -rf "${RESULTS_FIG4}"
+    mkdir -p "${RESULTS_FIG4}"
+    mkdir -p "${GRAPHS_DIR}/rq2"
+
     echo ""
     echo "--- Fig 4: Gradient enable/disable (RQ2) ---"
 
@@ -109,9 +161,13 @@ fi
 
 # ------------------------------------------------------------------------------
 # Fig 5 — Computational overhead vs. layer count (RQ3: Tractability)
-# By default plots for code dataset, change in file
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_5}" -eq 1 ]]; then
+    RESULTS_FIG5="results/rq3-fig5"
+    rm -rf "${RESULTS_FIG5}"
+    mkdir -p "${RESULTS_FIG5}"
+    mkdir -p "${GRAPHS_DIR}/rq3"
+
     echo ""
     echo "--- Fig 5: Overhead (RQ3) ---"
 
@@ -130,9 +186,13 @@ fi
 
 # ------------------------------------------------------------------------------
 # Fig 6, Fig 7 — Scalability (55 clients)
-# Comment in/out relevant models and datasets
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_6_7}" -eq 1 ]]; then
+    RESULTS_FIG67="results/rq4-fig6-fig7"
+    rm -rf "${RESULTS_FIG67}"
+    mkdir -p "${RESULTS_FIG67}"
+    mkdir -p "${GRAPHS_DIR}/rq4"
+
     echo ""
     echo "--- Fig 6 & 7: Scalability (train + provenance) ---"
 
@@ -142,12 +202,11 @@ if [[ "${RUN_FIG_6_7}" -eq 1 ]]; then
         --rounds "${SCALABILITY_ROUNDS}" \
         --output_dir "${RESULTS_FIG67}/train/backdoor"
 
-
     uv run python -m src.run_provenance \
         --model "${MODEL}" \
         --dataset "${DATASET}" \
         --rounds "${SCALABILITY_ROUNDS}" \
-        --results_dir "${RESULTS_FIG67}/train/backdoor" \
+        --results_dir "${RESULTS_FIG67}/train/backdoor"
 
     uv run python -m plotting.plot_scalability \
         --model "${MODEL}" \
@@ -162,7 +221,5 @@ fi
 # ------------------------------------------------------------------------------
 echo ""
 echo "=================================================="
-echo "  All done. Outputs:"
-echo "  Results : ${RESULTS_ROOT}"
-echo "  Graphs  : ${GRAPHS_DIR}"
+echo "  All done. Results: results/rq*-*  |  Graphs: ${GRAPHS_DIR}"
 echo "=================================================="
