@@ -179,6 +179,19 @@ def create_client_fn(exp_key, cfg, train_dataset_dict):
 def run_fl_experiment(exp_key, cfg):
     CacheManager.clear_training_with_key(exp_key)
 
+    # Flower simulation uses Ray as its backend. Ray is not available on all
+    # Python versions/distributions, so fail early with a helpful message.
+    try:
+        import ray  # noqa: F401
+    except Exception as e:
+        import sys
+        pyver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        raise ImportError(
+            "Flower simulation requires the `ray` backend, but `ray` could not be imported.\n"
+            f"Detected Python {pyver}. Use Python 3.12 and install with `flwr[simulation]` "
+            "(or run `./setup.sh` which pins a Python 3.12 env)."
+        ) from e
+
     datasets_dict = get_datasets_dict(
         cfg["fl"]["num_clients"],  **cfg["dataset"])
     global_metrics_history = []
