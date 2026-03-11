@@ -33,9 +33,7 @@ def _get_unsloth_model_and_tokenizer(config):
         raise NotImplementedError("LoRA with Unsloth is not yet implemented.")
 
     model_config = config["model_config"]
-    # Unsloth supports torch_dtype; default to float16 for memory
-    if "torch_dtype" not in model_config:
-        model_config = {**model_config, "torch_dtype": torch.float16}
+
     model, tokenizer = FastModel.from_pretrained(**model_config)
 
     chat_template = MODEL_NAME_TO_UNSLOTH_CHAT_TEMPLATE.get(model_config['model_name'])
@@ -45,25 +43,13 @@ def _get_unsloth_model_and_tokenizer(config):
     return model, tokenizer
 
 
-def _get_torch_dtype(model_config):
-    """Resolve torch dtype from config (e.g. 'float16', 'bfloat16', 'float32')."""
-    dtype_str = model_config.get('torch_dtype', 'float16')
-    if isinstance(dtype_str, str):
-        return getattr(torch, dtype_str)
-    return dtype_str
-
-
 def get_model_and_tokenizer(config):
 
     if config.get('use_unsloth', False):
         return _get_unsloth_model_and_tokenizer(config)
 
     model_config = config["model_config"]
-    torch_dtype = _get_torch_dtype(model_config)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_config['model_name'],
-        torch_dtype=torch_dtype,
-    )
+    model = AutoModelForCausalLM.from_pretrained(model_config['model_name'])
     if model_config['model_name'].endswith('-it') or model_config['model_name'].endswith('-Instruct'):
         tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
     else:
@@ -85,8 +71,7 @@ class ModelUtils:
             state_dict = get_peft_model_state_dict(model)
         else:
             state_dict = model.state_dict()
-        # Preserve model dtype (e.g. float16) to reduce memory and transfer size
-        return [val.cpu().numpy() for _, val in state_dict.items()]
+        return [val.cpu().float().numpy() for _, val in state_dict.items()]
 
     @staticmethod
     def set_parameters(net: torch.nn.Module, parameters: list) -> None:
@@ -94,20 +79,15 @@ class ModelUtils:
         use_lora = hasattr(net, 'peft_config')
         if use_lora:
             state_dict = get_peft_model_state_dict(net)
-            # Cast to model dtype (e.g. float16) in case aggregation returned float32/64
-            dtype = next(iter(state_dict.values())).dtype
             params_dict = zip(state_dict.keys(), parameters)
-            state_dict = OrderedDict({
-                k: torch.tensor(v, dtype=dtype) for k, v in params_dict
-            })
+            state_dict = OrderedDict({k: torch.tensor(v)
+                                     for k, v in params_dict})
             set_peft_model_state_dict(net, state_dict)
         else:
             state_dict = net.state_dict()
-            dtype = next(iter(state_dict.values())).dtype
             params_dict = zip(state_dict.keys(), parameters)
-            state_dict = OrderedDict({
-                k: torch.tensor(v, dtype=dtype) for k, v in params_dict
-            })
+            state_dict = OrderedDict({k: torch.tensor(v)
+                                     for k, v in params_dict})
             net.load_state_dict(state_dict, strict=True)
 
 

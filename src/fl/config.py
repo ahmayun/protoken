@@ -96,8 +96,6 @@ def get_default_config():
             "load_in_4bit": False,
             "load_in_8bit": False,
             "full_finetuning": False,
-            # Weights dtype: "float16" (default, less memory), "bfloat16", or "float32"
-            "torch_dtype": "float16",
         },
 
         "use_lora": False,
