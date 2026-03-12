@@ -2,6 +2,15 @@
 
 This repository is the artifact for the [MLSys 2026 paper](https://arxiv.org/pdf/2601.19672) with the same name.
 
+## Overview
+
+There are two ways to run this artifact and reproduce results: 
+- If you are familiar with [Chameleon](https://chameleoncloud.org/), the most painless way to do this is use our [Trovi Artifact](https://trovi.chameleoncloud.org/dashboard/artifacts/0c08e6e5-1191-4774-8506-d951e8e7c15f). Open the link and click `Launch on Chameleon`. From there, open the `trovi-mlsys-ae.ipynb` file and follow the instructions. Note: You will need an active lease on Chameleon with appropriate hardware (detailed below) before you start. 
+
+**OR**
+
+- If you have access to your own hardware that you are comfotable using and that meets the requirements, you may continue following instructions in this README.
+
 ## 1: Pre-requisites
 
 ### 1A: Software Requirements
@@ -13,6 +22,7 @@ This repository is the artifact for the [MLSys 2026 paper](https://arxiv.org/pdf
 
 - 1 x NVidia A100 GPU (or better)
 - 512G RAM (or better)
+- 512G of usable storage in `/tmp`
 
 ## 2: Setup
 
