@@ -49,8 +49,7 @@ The expected time to run all the commands in this section is 2-3 hours.
 ```bash
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq1
 ```
-
-**Reference output (main accuracy and client contribution distributions):**
+> The command will produce two .png files in results/graphs/rq1. Open them and compare with reference outputs below.
 
 RQ1 (a) — Main accuracy
 
@@ -71,6 +70,7 @@ RQ1 (b) — Client contribution distributions
 ```bash
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq2
 ```
+> The command will produce one .png file in results/graphs/rq2. Open it and compare with reference output below.
 
 ![See reference-outputs/rq2.png](reference-outputs/rq2.png)
 
@@ -85,6 +85,7 @@ RQ2 — Gradient enable/disable
 ```bash
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq3
 ```
+> The command will produce one .png file in results/graphs/rq3. Open it and compare with reference output below.
 
 ![See reference-outputs/rq3.png](reference-outputs/rq3.png)
 
@@ -99,6 +100,8 @@ RQ3 — Computational overhead
 ```bash
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq4
 ```
+> The command will produce two .png files in results/graphs/rq4. Open them and compare with reference outputs below.
+
 
 RQ4 (a) — Scalability
 
