@@ -72,7 +72,7 @@ RQ1 (b) — Client contribution distributions
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq2
 ```
 
-**Reference output (gradient enable/disable):**
+![See reference-outputs/rq2.png](reference-outputs/rq2.png)
 
 RQ2 — Gradient enable/disable
 
@@ -86,7 +86,7 @@ RQ2 — Gradient enable/disable
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq3
 ```
 
-**Reference output (overhead analysis):**
+![See reference-outputs/rq3.png](reference-outputs/rq3.png)
 
 RQ3 — Computational overhead
 
@@ -100,12 +100,14 @@ RQ3 — Computational overhead
 PATH=$PATH:~/.local/bin ./reproduce.sh --model smollm --dataset coding --rq4
 ```
 
-**Reference output (scalability):**
-
 RQ4 (a) — Scalability
+
+![See reference-outputs/rq4-a.png](reference-outputs/rq4-a.png)
 
 *Important features:* Same as for RQ1 (a)
 
 RQ4 (b) — Scalability
+
+![See reference-outputs/rq4-b.png](reference-outputs/rq4-b.png)
 
 *Important features:*  Same as for RQ1 (b)
