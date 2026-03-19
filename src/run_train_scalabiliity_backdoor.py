@@ -22,13 +22,19 @@ MODEL_SHORT_TO_ID = {
 }
 
 
-def _get_experiment_matrix(model=None, dataset=None, rounds=None):
-    """Build experiment matrix for scalability (55 clients). Defaults hardcoded; args override."""
+def _get_experiment_matrix(model=None, dataset=None, rounds=None, max_clients: int = 55):
+    """Build experiment matrix for scalability.
+
+    Notes:
+      - `num_clients` is configurable via `max_clients`.
+      - Defaults to 55 for backwards compatibility.
+    """
     experiments = []
     num_rounds = 16 if rounds is None else int(rounds)
+    num_clients = int(max_clients)
     fl_config = {
         "num_rounds": num_rounds,
-        "num_clients": 55,
+        "num_clients": num_clients,
         "clients_per_round": 10,
     }
 
@@ -152,11 +158,16 @@ def single_exp_run(config, exp_dir, max_oom_retries=3):
     raise last_error
 
 
-def run_experiments(output_dir, model=None, dataset=None, rounds=None):
+def run_experiments(output_dir, model=None, dataset=None, rounds=None, max_clients: int = 55):
     experiment_dir = Path(output_dir) / "scalability" / "json"
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    all_experiments = _get_experiment_matrix(model=model, dataset=dataset, rounds=rounds)
+    all_experiments = _get_experiment_matrix(
+        model=model,
+        dataset=dataset,
+        rounds=rounds,
+        max_clients=max_clients,
+    )
     epochs = 1
     for i, exp in enumerate(all_experiments):
         print(f"{i} Experiment Key: {ConfigManager.generate_exp_key(_generate_experiment_config(exp, use_lora=True, epochs=epochs))}")
@@ -170,10 +181,11 @@ def run_experiments(output_dir, model=None, dataset=None, rounds=None):
 
 
 def _parse_args():
-    p = argparse.ArgumentParser(description="Train with backdoor for scalability (Fig 6 & 7, 55 clients).")
+    p = argparse.ArgumentParser(description="Train with backdoor for scalability (Fig 6 & 7).")
     p.add_argument("--model", default=None, help="Model short name (gemma|smollm|llama|qwen) or HuggingFace id.")
     p.add_argument("--dataset", default=None, help="Dataset name(s), comma-separated (e.g. medical). Default: medical.")
     p.add_argument("--rounds", type=int, default=None, help="Number of FL rounds. Default: 16.")
+    p.add_argument("--max-clients", type=int, default=55, help="Total number of FL clients. Default: 55.")
     p.add_argument("--output_dir", required=True, help="Output root; creates scalability/json under it.")
     return p.parse_args()
 
@@ -185,4 +197,5 @@ if __name__ == "__main__":
         model=args.model,
         dataset=args.dataset,
         rounds=args.rounds,
+        max_clients=args.max_clients,
     )

@@ -24,12 +24,15 @@ MODEL_SHORT_TO_KEY = {
     "qwen": "Qwen_Qwen2.5-0.5B-Instruct",
 }
 
+BACKDOOR_CLIENTS = 25
+
 
 def _parse_args():
     p = argparse.ArgumentParser(description="Plot scalability results (Fig 6 & 7).")
     p.add_argument("--model", default=None, help="Model short name (gemma|smollm|llama|qwen) or key. Filter to this model.")
     p.add_argument("--dataset", default=None, help="Dataset name (e.g. medical, coding). Filter to this dataset.")
     p.add_argument("--rounds", type=int, default=None, help="Round count (for filtering and round limit in plots). Default: 16.")
+    p.add_argument("--max-clients", type=int, default=55, help="Total number of FL clients used in training. Default: 55.")
     p.add_argument("--results_dir", required=True, help="Dir containing provenance_refactored_*.json (or scalability/json under it).")
     p.add_argument("--output_dir", required=True, help="Directory for output figures.")
     return p.parse_args()
@@ -40,6 +43,7 @@ def load_scalability_data(
     model_filter: Optional[str] = None,
     dataset_filter: Optional[str] = None,
     rounds_filter: Optional[int] = None,
+    max_clients_filter: Optional[int] = None,
 ) -> Dict[str, dict]:
     """Load provenance scalability JSONs from results_dir. Optionally filter by model/dataset/rounds in filename."""
     results_dir = pathlib.Path(results_dir)
@@ -67,6 +71,10 @@ def load_scalability_data(
         round_tag = f"rounds-{rounds_filter}"
     else:
         round_tag = None
+    clients_tag = None
+    if max_clients_filter is not None:
+        # Matches ConfigManager.generate_exp_key format: clients{num_clients}-per-round-{clients_per_round}
+        clients_tag = f"clients{int(max_clients_filter)}-per-round-10"
 
     data = {}
     for path in candidates:
@@ -76,6 +84,8 @@ def load_scalability_data(
         if ds and ds not in name:
             continue
         if round_tag and round_tag not in name:
+            continue
+        if clients_tag and clients_tag not in name:
             continue
         # Derive model_key from filename (first bracket segment)
         if name.startswith("provenance_refactored_"):
@@ -124,8 +134,16 @@ def extract_provenance_accuracy(data: dict, max_round: int = 16) -> Tuple[List[i
     return rounds, accuracies
 
 
-def extract_client_contributions(data: dict, max_round: int = 16) -> pd.DataFrame:
-    """Extract client contribution probabilities for boxplot (malicious 0-24, benign 25-54)."""
+def extract_client_contributions(
+    data: dict,
+    max_round: int = 16,
+    backdoor_clients: int = BACKDOOR_CLIENTS,
+) -> pd.DataFrame:
+    """Extract client contribution probabilities for boxplot.
+
+    Malicious clients are the first `backdoor_clients` clients: 0..backdoor_clients-1.
+    Remaining clients are treated as benign.
+    """
     records = []
     provenance = data["provenance"]
     for round_str, round_data in provenance.items():
@@ -140,21 +158,21 @@ def extract_client_contributions(data: dict, max_round: int = 16) -> pd.DataFram
                     "round": round_num,
                     "client": client_id,
                     "probability": prob,
-                    "type": "malicious" if client_id < 25 else "benign",
+                    "type": "malicious" if client_id < backdoor_clients else "benign",
                 })
     return pd.DataFrame(records)
 
 
-def print_scalability_statistics(data: Dict[str, dict], max_round: int = 16):
+def print_scalability_statistics(data: Dict[str, dict], max_round: int = 16, max_clients: int = 55):
     """Print scalability statistics for loaded model(s)."""
     print("\n" + "=" * 80)
     print("SCALABILITY STATISTICS")
     print("=" * 80)
     print("\nExperimental Setup:")
-    print("  Total Clients: 55")
+    print(f"  Total Clients: {max_clients}")
     print("  Clients per Round: 10")
     print(f"  Total Rounds: {max_round}")
-    print("  Backdoor Clients: 25 (clients 0-24)")
+    print(f"  Backdoor Clients: {BACKDOOR_CLIENTS} (clients 0-{BACKDOOR_CLIENTS-1})")
     print("  Samples per Client: 200")
 
     for model_key in data:
@@ -235,7 +253,13 @@ def plot_scalability_results(data: Dict[str, dict], output_dir: pathlib.Path, ma
     save_figure(fig, "scalability_results", output_dir=output_dir)
 
 
-def plot_scalability_boxplots(data: Dict[str, dict], output_dir: pathlib.Path, max_round: int = 16):
+def plot_scalability_boxplots(
+    data: Dict[str, dict],
+    output_dir: pathlib.Path,
+    max_round: int = 16,
+    max_clients: int = 55,
+    backdoor_clients: int = BACKDOOR_CLIENTS,
+):
     """Create aggregated boxplot(s): malicious vs benign client distributions (single panel if one model)."""
     single = len(data) == 1
     fontsize = 18 if single else 25
@@ -251,7 +275,7 @@ def plot_scalability_boxplots(data: Dict[str, dict], output_dir: pathlib.Path, m
     for idx, model_key in enumerate(model_keys):
         model_data = data[model_key]
         model_name = MODEL_NAMES.get(model_key, model_key)
-        df = extract_client_contributions(model_data, max_round)
+        df = extract_client_contributions(model_data, max_round, backdoor_clients=backdoor_clients)
         if df.empty:
             print(f"Warning: No contribution data for {model_name}, skipping boxplot")
             continue
@@ -282,7 +306,13 @@ def plot_scalability_boxplots(data: Dict[str, dict], output_dir: pathlib.Path, m
         bp["boxes"][1].set_edgecolor("black")
 
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(["Responsible\n(0-24)", "Non-Responsible\n(25-54)"])
+        non_resp_end = int(max_clients) - 1
+        if non_resp_end >= backdoor_clients:
+            non_responsible = f"Non-Responsible\n({backdoor_clients}-{non_resp_end})"
+        else:
+            non_responsible = "Non-Responsible\n(none)"
+        responsible = f"Responsible\n(0-{backdoor_clients-1})"
+        ax.set_xticklabels([responsible, non_responsible])
         ax.set_title(f"{model_name}", fontweight="bold", fontsize=fontsize + 2)
         yticks = [-15, -12, -9, -6, -3, 0]
         ax.set_yticks(yticks)
@@ -304,6 +334,10 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
     output_dir = pathlib.Path(args.output_dir)
     max_round = args.rounds if args.rounds is not None else 16
+    max_clients = int(args.max_clients)
+
+    if max_clients < BACKDOOR_CLIENTS:
+        raise SystemExit(f"--max-clients must be >= {BACKDOOR_CLIENTS} (backdoor clients), got {max_clients}.")
 
     print("=" * 80)
     print("Scalability Evaluation (Fig 6 & 7)")
@@ -314,19 +348,20 @@ if __name__ == "__main__":
         model_filter=args.model,
         dataset_filter=args.dataset,
         rounds_filter=args.rounds,
+        max_clients_filter=max_clients,
     )
     if not data:
         print("No matching provenance JSONs found. Exiting.")
         raise SystemExit(1)
     print(f"Loaded data for {len(data)} model(s)")
 
-    print_scalability_statistics(data, max_round=max_round)
+    print_scalability_statistics(data, max_round=max_round, max_clients=max_clients)
 
     print("Generating scalability plots...")
     plot_scalability_results(data, output_dir=output_dir, max_round=max_round)
 
     print("Generating probability distribution boxplots...")
-    plot_scalability_boxplots(data, output_dir=output_dir, max_round=max_round)
+    plot_scalability_boxplots(data, output_dir=output_dir, max_round=max_round, max_clients=max_clients)
 
     print("\n✓ Scalability analysis complete!")
     print(f"Output saved to: {output_dir.absolute()}")

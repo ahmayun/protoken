@@ -9,8 +9,10 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 ROUNDS=10
 SCALABILITY_ROUNDS=16
+MAX_CLIENTS=55
 MODEL="qwen"
 DATASET="coding"
+RESULTS_DIR="results"
 RQ2_SAMPLES=20
 RQ3_SAMPLES=20
 RUN_FIG_2_3=0
@@ -31,12 +33,20 @@ while [[ $# -gt 0 ]]; do
             SCALABILITY_ROUNDS="$2"
             shift 2
             ;;
+        --max-clients)
+            MAX_CLIENTS="$2"
+            shift 2
+            ;;
         --model)
             MODEL="$2"
             shift 2
             ;;
         --dataset)
             DATASET="$2"
+            shift 2
+            ;;
+        --results)
+            RESULTS_DIR="$2"
             shift 2
             ;;
         --rq2-samples)
@@ -73,8 +83,10 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --rounds N              Federated rounds (default: 10)"
             echo "  --scalability-rounds N  Rounds for scalability (default: 16)"
+            echo "  --max-clients N        Max clients for scalability (default: 55)"
             echo "  --model NAME            Model: gemma|smollm|llama|qwen (default: qwen)"
             echo "  --dataset NAME          Dataset: medical|finance|math|coding (default: coding)"
+            echo "  --results DIR          Results output directory (default: results)"
             echo "  --rq2-samples N         Samples for RQ2/Fig4 (default: 20)"
             echo "  --rq3-samples N         Samples for RQ3/Fig5 (default: 20)"
             echo "  --cache DIR             Experiment cache (default: /tmp/genfl_experiment_cache)"
@@ -95,7 +107,7 @@ done
 
 export GENFL_EXPERIMENT_CACHE="${GENFL_EXPERIMENT_CACHE:-/tmp/genfl_experiment_cache}"
 
-GRAPHS_DIR="results/graphs"
+GRAPHS_DIR="${RESULTS_DIR}/graphs"
 
 echo "=================================================="
 echo "  ProToken reproduction"
@@ -108,7 +120,7 @@ echo "=================================================="
 # Requires: training with backdoor, provenance run, then plotting.
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_2_3}" -eq 1 ]]; then
-    RESULTS_FIG23="results/rq1-fig2-fig3"
+    RESULTS_FIG23="${RESULTS_DIR}/rq1-fig2-fig3"
     rm -rf "${RESULTS_FIG23}"
     mkdir -p "${RESULTS_FIG23}"
     mkdir -p "${GRAPHS_DIR}/rq1"
@@ -139,7 +151,7 @@ fi
 # Fig 4 — Gradient weighting enable/disable (RQ2: Relevance Filtering)
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_4}" -eq 1 ]]; then
-    RESULTS_FIG4="results/rq2-fig4"
+    RESULTS_FIG4="${RESULTS_DIR}/rq2-fig4"
     rm -rf "${RESULTS_FIG4}"
     mkdir -p "${RESULTS_FIG4}"
     mkdir -p "${GRAPHS_DIR}/rq2"
@@ -163,7 +175,7 @@ fi
 # Fig 5 — Computational overhead vs. layer count (RQ3: Tractability)
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_5}" -eq 1 ]]; then
-    RESULTS_FIG5="results/rq3-fig5"
+    RESULTS_FIG5="${RESULTS_DIR}/rq3-fig5"
     rm -rf "${RESULTS_FIG5}"
     mkdir -p "${RESULTS_FIG5}"
     mkdir -p "${GRAPHS_DIR}/rq3"
@@ -185,10 +197,10 @@ if [[ "${RUN_FIG_5}" -eq 1 ]]; then
 fi
 
 # ------------------------------------------------------------------------------
-# Fig 6, Fig 7 — Scalability (55 clients)
+# Fig 6, Fig 7 — Scalability (${MAX_CLIENTS} clients)
 # ------------------------------------------------------------------------------
 if [[ "${RUN_FIG_6_7}" -eq 1 ]]; then
-    RESULTS_FIG67="results/rq4-fig6-fig7"
+    RESULTS_FIG67="${RESULTS_DIR}/rq4-fig6-fig7"
     rm -rf "${RESULTS_FIG67}"
     mkdir -p "${RESULTS_FIG67}"
     mkdir -p "${GRAPHS_DIR}/rq4"
@@ -200,6 +212,7 @@ if [[ "${RUN_FIG_6_7}" -eq 1 ]]; then
         --model "${MODEL}" \
         --dataset "${DATASET}" \
         --rounds "${SCALABILITY_ROUNDS}" \
+        --max-clients "${MAX_CLIENTS}" \
         --output_dir "${RESULTS_FIG67}/train/backdoor"
 
     uv run python -m src.run_provenance \
@@ -212,6 +225,7 @@ if [[ "${RUN_FIG_6_7}" -eq 1 ]]; then
         --model "${MODEL}" \
         --dataset "${DATASET}" \
         --rounds "${SCALABILITY_ROUNDS}" \
+        --max-clients "${MAX_CLIENTS}" \
         --results_dir "${RESULTS_FIG67}/train/backdoor" \
         --output_dir "${GRAPHS_DIR}/rq4"
 fi
@@ -221,5 +235,5 @@ fi
 # ------------------------------------------------------------------------------
 echo ""
 echo "=================================================="
-echo "  All done. Results: results/rq*-*  |  Graphs: ${GRAPHS_DIR}"
+echo "  All done. Results: ${RESULTS_DIR}/rq*-*  |  Graphs: ${GRAPHS_DIR}"
 echo "=================================================="
