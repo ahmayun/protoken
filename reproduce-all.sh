@@ -1,6 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cleanup() {
+    local label="${1:-}"
+    echo "--- cleanup: ${label} ---"
+
+    # 1. Kill child processes spawned by reproduce.sh
+    pkill -P $$ 2>/dev/null || true
+    sleep 2
+
+    # 2. Kill any lingering Python processes (holding model weights in RAM/VRAM)
+    pkill -f "python" 2>/dev/null || true
+    sleep 3
+
+    # 3. Release GPU memory via nvidia-smi (no reset, just process cleanup)
+    if command -v nvidia-smi &>/dev/null; then
+        # Kill any GPU-using processes owned by current user
+        nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null \
+            | xargs -r kill 2>/dev/null || true
+        sleep 3
+    fi
+
+    # 4. Optional: log memory state so you can verify cleanup is working
+    free -h | awk '/Mem:/ {print "RAM free: " $4}'
+    if command -v nvidia-smi &>/dev/null; then
+        nvidia-smi --query-gpu=memory.free --format=csv,noheader \
+            | awk '{print "VRAM free: " $0}'
+    fi
+
+    sleep 2
+    echo "--- cleanup done ---"
+}
+
 # This script is intentionally hardcoded to reproduce exactly the figures
 # needed by the paper (see 2601.19672v2.pdf):
 # - Figure 2 & 3 (--rq1): all 4 models x all 4 datasets
@@ -55,6 +86,7 @@ for model in "${MODELS[@]}"; do
             --dataset "${dataset}" \
             --results "${combo_dir}" \
             --rq1
+        cleanup "rq1-${model}-${dataset}"
     done
 done
 
@@ -74,6 +106,7 @@ for model in "${MODELS[@]}"; do
             --dataset "${dataset}" \
             --results "${combo_dir}" \
             --rq2
+        cleanup "rq2-${model}-${dataset}"
     done
 done
 
@@ -92,6 +125,8 @@ echo "=================================================="
     --results "${combo_dir}" \
     --rq3
 
+cleanup "rq3"
+
 combo_dir="${RESULTS_ROOT}/smollm-coding"
 echo "=================================================="
 echo "Figure 5 (RQ3): model=smollm dataset=coding"
@@ -103,6 +138,8 @@ echo "=================================================="
     --dataset coding \
     --results "${combo_dir}" \
     --rq3
+
+cleanup "rq3"
 
 combo_dir="${RESULTS_ROOT}/llama-coding"
 echo "=================================================="
@@ -116,6 +153,8 @@ echo "=================================================="
     --results "${combo_dir}" \
     --rq3
 
+cleanup "rq3"
+
 combo_dir="${RESULTS_ROOT}/qwen-coding"
 echo "=================================================="
 echo "Figure 5 (RQ3): model=qwen dataset=coding"
@@ -127,6 +166,8 @@ echo "=================================================="
     --dataset coding \
     --results "${combo_dir}" \
     --rq3
+
+cleanup "rq3"
 
 # ------------------------------------------------------------------------------
 # Figures 6 & 7: Scalability (RQ4) — coding dataset, gemma + qwen only
@@ -143,6 +184,9 @@ echo "=================================================="
     --results "${combo_dir}" \
     --rq4
 
+cleanup "rq4"
+
+
 combo_dir="${RESULTS_ROOT}/qwen-coding"
 echo "=================================================="
 echo "Figures 6&7 (RQ4): model=qwen dataset=coding"
@@ -154,4 +198,6 @@ echo "=================================================="
     --dataset coding \
     --results "${combo_dir}" \
     --rq4
+
+cleanup "rq4"
 
